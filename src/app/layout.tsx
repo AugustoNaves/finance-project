@@ -1,6 +1,7 @@
 import "./globals.css";
 import StyledComponentsRegistry from "@/lib/registry";
 import { GlobalStyle } from "@/styles/global";
+import { TransactionsProvider } from "@/contexts/TransactionsContenxt"; // <-- Importação nova
 
 export const metadata = {
   title: "Finanças Pessoais",
@@ -14,10 +15,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body>
+      <body suppressHydrationWarning>
         <StyledComponentsRegistry>
           <GlobalStyle />
-          {children}
+          {/* Envolvendo a aplicação inteira com o Provider */}
+          <TransactionsProvider>{children}</TransactionsProvider>
         </StyledComponentsRegistry>
       </body>
     </html>
