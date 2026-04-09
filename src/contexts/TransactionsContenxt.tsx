@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useState, useEffect } from "react";
 
 export interface Transaction {
-  id: number;
+  id: string;
   description: string;
   amount: number;
   category: string;
@@ -13,7 +13,9 @@ export interface Transaction {
 
 interface TransactionsContextType {
   transactions: Transaction[];
-  addTransaction: (transaction: Omit<Transaction, "id" | "date">) => void;
+  addTransaction: (
+    transaction: Omit<Transaction, "id" | "date">,
+  ) => Promise<void>;
 }
 
 export const TransactionsContext = createContext<TransactionsContextType>(
@@ -21,41 +23,40 @@ export const TransactionsContext = createContext<TransactionsContextType>(
 );
 
 export function TransactionsProvider({ children }: { children: ReactNode }) {
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: 1,
-      description: "Salário",
-      amount: 5000,
-      category: "Receita",
-      date: "01/04/2026",
-      payer: "Eu",
-    },
-    {
-      id: 2,
-      description: "Salário",
-      amount: 3800,
-      category: "Receita",
-      date: "01/04/2026",
-      payer: "Namorada",
-    },
-    {
-      id: 3,
-      description: "Aluguel",
-      amount: -1800,
-      category: "Moradia",
-      date: "05/04/2026",
-      payer: "Eu",
-    },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  function addTransaction(newTx: Omit<Transaction, "id" | "date">) {
-    const newTransaction = {
-      ...newTx,
-      id: Math.random(), // Criamos um ID falso por enquanto
-      date: new Intl.DateTimeFormat("pt-BR").format(new Date()), // Pega a data de hoje
-    };
+  useEffect(() => {
+    async function fetchTransactions() {
+      try {
+        const response = await fetch("/api/transactions");
+        const data = await response.json();
+        setTransactions(data);
+      } catch (error) {
+        console.error("Erro ao buscar transações:", error);
+      }
+    }
 
-    setTransactions([newTransaction, ...transactions]);
+    fetchTransactions();
+  }, []);
+
+  async function addTransaction(newTx: Omit<Transaction, "id" | "date">) {
+    try {
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newTx),
+      });
+
+      if (response.ok) {
+        const transactionCreated = await response.json();
+
+        setTransactions([transactionCreated, ...transactions]);
+      }
+    } catch (error) {
+      console.error("Erro ao salvar a transação:", error);
+    }
   }
 
   return (

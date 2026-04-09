@@ -18,7 +18,6 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <StyledComponentsRegistry>
           <GlobalStyle />
-          {/* Envolvendo a aplicação inteira com o Provider */}
           <TransactionsProvider>{children}</TransactionsProvider>
         </StyledComponentsRegistry>
       </body>
