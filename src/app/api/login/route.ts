@@ -28,8 +28,6 @@ export async function POST(request: Request) {
 
     const googleData = await googleResponse.json();
 
-    console.log("Resposta completa do Google:", googleData);
-
     if (!googleData.success || googleData.score < 0.5) {
       return NextResponse.json(
         { error: "Acesso bloqueado. Atividade suspeita detectada." },
@@ -37,8 +35,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. NOVA PARTE: Validação da Senha
-    // Em produção, você colocaria essa senha no arquivo .env
     const EMAIL = process.env.EMAIL_ACESSO || "";
     const SENHA_DO_CASAL = process.env.SENHA_ACESSO || "";
 

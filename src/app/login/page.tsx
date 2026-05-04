@@ -15,13 +15,11 @@ function FormularioDeLogin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!executeRecaptcha) {
-      console.log("Aguarde, reCAPTCHA carregando...");
       return;
     }
 
     try {
       const token = await executeRecaptcha("login");
-      console.log("Token gerado com sucesso:", token);
 
       const dadosParaEnviar = {
         email: email,
