@@ -36,11 +36,31 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
-    return NextResponse.json({
+
+    // 2. NOVA PARTE: Validação da Senha
+    // Em produção, você colocaria essa senha no arquivo .env
+    const EMAIL = process.env.EMAIL_ACESSO || "";
+    const SENHA_DO_CASAL = process.env.SENHA_ACESSO || "";
+
+    if (senha !== SENHA_DO_CASAL || email !== EMAIL) {
+      return NextResponse.json(
+        { error: "Credenciais inválidas!" },
+        { status: 401 },
+      );
+    }
+
+    const response = NextResponse.json({
       success: true,
-      mensagem: "Autenticação bem-sucedida! Você não é um robô.",
-      score: googleData.score,
+      mensagem: "Login efetuado!",
     });
+    response.cookies.set("auth_token", "autorizado", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 30, // 30 dias
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Erro na rota de login:", error);
     return NextResponse.json(

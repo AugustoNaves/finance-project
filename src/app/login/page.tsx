@@ -38,7 +38,7 @@ function FormularioDeLogin() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(`Sucesso! O backend te aprovou. Nota: ${data.score}`);
+        window.location.href = "/";
       } else {
         alert(`Bloqueado: ${data.error}`);
       }
