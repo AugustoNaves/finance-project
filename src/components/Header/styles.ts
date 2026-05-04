@@ -1,4 +1,3 @@
-// src/components/Header/styles.ts
 "use client";
 import styled from "styled-components";
 
@@ -9,6 +8,10 @@ export const Nav = styled.header`
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  @media (max-width: 768px) {
+    padding: 0 16px;
+  }
 `;
 
 export const Brand = styled.div`
@@ -48,5 +51,10 @@ export const NewTransactionButton = styled.button`
   &:hover {
     background: #00b37e;
     color: #1a1a2e;
+  }
+
+  @media (max-width: 768px) {
+    padding: 10px 16px;
+    font-size: 13px;
   }
 `;

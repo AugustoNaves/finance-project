@@ -1,19 +1,28 @@
 // src/components/TransactionTable/styles.ts
 "use client";
+import { ReactNode } from "react";
 import styled from "styled-components";
 
 export const TableWrapper = styled.div`
   background: #ffffff;
   border-radius: 8px;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 4px;
+  }
 `;
 
 export const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
+  min-width: 600px;
 `;
-
 export const Thead = styled.thead`
   background: #f5f5f5;
 `;
@@ -66,4 +75,24 @@ export const PayerBadge = styled.span<{ $payer: "Eu" | "Namorada" }>`
   border-radius: 9999px;
   background: ${({ $payer }) => ($payer === "Eu" ? "#e6f1fb" : "#f0eaf7")};
   color: ${({ $payer }) => ($payer === "Eu" ? "#185fa5" : "#7b3fa8")};
+`;
+
+export const TrashButton = styled.button`
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+
+  &:hover {
+    background: #fdecea;
+  }
+`;
+
+export const DeleteButton = styled.button`
+  background-color: red;
+  padding: 10px;
+  margin-top: 25px;
+  border-radius: 5px;
+  color: white;
 `;

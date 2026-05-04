@@ -16,6 +16,7 @@ interface TransactionsContextType {
   addTransaction: (
     transaction: Omit<Transaction, "id" | "date">,
   ) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
 }
 
 export const TransactionsContext = createContext<TransactionsContextType>(
@@ -59,8 +60,27 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function deleteTransaction(id: string) {
+    try {
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        const novasTransacoes = transactions.filter(
+          (transaction) => transaction.id !== id,
+        );
+        setTransactions(novasTransacoes);
+      }
+    } catch (error) {
+      console.error("Erro ao deletar a transação:", error);
+    }
+  }
+
   return (
-    <TransactionsContext.Provider value={{ transactions, addTransaction }}>
+    <TransactionsContext.Provider
+      value={{ transactions, addTransaction, deleteTransaction }}
+    >
       {children}
     </TransactionsContext.Provider>
   );
