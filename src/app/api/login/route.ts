@@ -28,12 +28,12 @@ export async function POST(request: Request) {
 
     const googleData = await googleResponse.json();
 
-    if (!googleData.success || googleData.score < 0.5) {
-      return NextResponse.json(
-        { error: "Acesso bloqueado. Atividade suspeita detectada." },
-        { status: 403 },
-      );
-    }
+    // if (!googleData.success || googleData.score < 0.5) {
+    //   return NextResponse.json(
+    //     { error: "Acesso bloqueado. Atividade suspeita detectada." },
+    //     { status: 403 },
+    //   );
+    // }
 
     const EMAIL = process.env.EMAIL_ACESSO || "";
     const SENHA_DO_CASAL = process.env.SENHA_ACESSO || "";
