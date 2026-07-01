@@ -1,16 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getSessionFromRequest } from "@/lib/session";
 
-export function proxy(request: NextRequest) {
-  const authToken = request.cookies.get("auth_token")?.value;
-
+export async function proxy(request: NextRequest) {
+  const session = await getSessionFromRequest(request);
   const urlAtual = request.nextUrl.pathname;
 
-  if (!authToken && urlAtual === "/") {
+  const rotasProtegidas = [
+    "/",
+    "/transactions",
+    "/categories",
+    "/budgets",
+    "/reports",
+    "/settings",
+  ];
+
+  if (!session && rotasProtegidas.includes(urlAtual)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (authToken && urlAtual === "/login") {
+  if (session && urlAtual === "/login") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -18,5 +27,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login"],
+  matcher: [
+    "/",
+    "/transactions",
+    "/categories",
+    "/budgets",
+    "/reports",
+    "/settings",
+    "/login",
+  ],
 };

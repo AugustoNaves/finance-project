@@ -1,72 +1,129 @@
 "use client";
 import { useState, useContext } from "react";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt"; // <-- Importação do contexto
-import { Header } from "@/components/Header";
+import { AppShell } from "@/components/AppShell";
+import { InsightCard } from "@/components/InsightCard";
+import { LatestTransactions } from "@/components/LatestTransactions";
+import { MonthSummary } from "@/components/MonthSummary";
+import { PageHeader } from "@/components/PageHeader";
 import { SummaryCard } from "@/components/SummaryCard";
-import { TransactionTable } from "@/components/TransactionTable";
 import { NewTransactionModal } from "@/components/NewTransactionModal";
 import {
-  PageWrapper,
-  HeaderWrapper,
-  SummaryGrid,
-  ContentWrapper,
-} from "./styles";
+  calculateSavingsRate,
+  calculateSummary,
+  getMonthlyTransactions,
+} from "@/utils/finance";
+import { formatCurrency, formatMonthYear } from "@/utils/formatters";
+import { DashboardGrid, InsightsGrid, MainColumn, SummaryGrid } from "./styles";
 
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const { transactions } = useContext(TransactionsContext);
 
-  const summary = transactions.reduce(
-    (acc, transaction) => {
-      if (transaction.amount > 0) {
-        acc.income += transaction.amount;
-        acc.total += transaction.amount;
-      } else {
-        acc.outcome += transaction.amount;
-        acc.total += transaction.amount;
-      }
+  const now = new Date();
+  const summary = calculateSummary(transactions);
+  const currentMonthTransactions = getMonthlyTransactions(transactions, now);
+  const monthSummary = calculateSummary(currentMonthTransactions);
+
+  const biggestExpense = currentMonthTransactions
+    .filter((transaction) => transaction.amount < 0)
+    .sort((a, b) => a.amount - b.amount)[0];
+
+  const categoryTotals = currentMonthTransactions
+    .filter((transaction) => transaction.amount < 0)
+    .reduce<Record<string, number>>((acc, transaction) => {
+      acc[transaction.category] =
+        (acc[transaction.category] ?? 0) + Math.abs(transaction.amount);
       return acc;
-    },
-    { income: 0, outcome: 0, total: 0 },
+    }, {});
+
+  const topCategory = Object.entries(categoryTotals).sort(
+    ([, amountA], [, amountB]) => amountB - amountA,
+  )[0];
+
+  const savingsRate = calculateSavingsRate(monthSummary.income, monthSummary.total);
+
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  };
+
+  const monthLabel = formatMonthYear(now);
 
   return (
-    <PageWrapper>
-      <HeaderWrapper>
-        <Header onNewTransaction={() => setModalOpen(true)} />
-        <SummaryGrid>
-          <SummaryCard
-            title="Receitas"
-            amount={formatCurrency(summary.income)}
-            type="income"
-          />
-          <SummaryCard
-            title="Despesas"
-            amount={formatCurrency(summary.outcome)}
-            type="outcome"
-          />
-          <SummaryCard
-            title="Saldo Total"
-            amount={formatCurrency(summary.total)}
-            type="total"
-          />
-        </SummaryGrid>
-      </HeaderWrapper>
+    <AppShell>
+      <PageHeader
+        eyebrow="Visão geral"
+        title="Controle financeiro"
+        subtitle="Acompanhe suas receitas, despesas e saldo total em um painel simples para o dia a dia."
+        actionLabel="+ Nova Transação"
+        onAction={() => setModalOpen(true)}
+      />
 
-      <ContentWrapper>
-        <TransactionTable />
-      </ContentWrapper>
+      <SummaryGrid>
+        <SummaryCard
+          title="Receitas"
+          amount={formatCurrency(summary.income)}
+          type="income"
+        />
+        <SummaryCard
+          title="Despesas"
+          amount={formatCurrency(summary.outcome)}
+          type="outcome"
+        />
+        <SummaryCard
+          title="Saldo Total"
+          amount={formatCurrency(summary.total)}
+          type="total"
+        />
+      </SummaryGrid>
+
+      <DashboardGrid>
+        <MainColumn>
+          <LatestTransactions transactions={sortedTransactions} />
+        </MainColumn>
+
+        <MonthSummary
+          monthLabel={monthLabel}
+          income={formatCurrency(monthSummary.income)}
+          outcome={formatCurrency(monthSummary.outcome)}
+          balance={formatCurrency(monthSummary.total)}
+          savingsRate={savingsRate}
+        />
+      </DashboardGrid>
+
+      <InsightsGrid>
+        <InsightCard
+          title="Maior despesa"
+          value={biggestExpense ? formatCurrency(biggestExpense.amount) : "Sem dados"}
+          description={
+            biggestExpense
+              ? `${biggestExpense.description} foi a maior saída deste mês.`
+              : "Cadastre despesas para visualizar este indicador."
+          }
+          variant="red"
+        />
+        <InsightCard
+          title="Categoria em destaque"
+          value={topCategory ? topCategory[0] : "Sem dados"}
+          description={
+            topCategory
+              ? `${formatCurrency(topCategory[1])} concentrados nesta categoria.`
+              : "As categorias aparecerão conforme você registrar transações."
+          }
+          variant="blue"
+        />
+        <InsightCard
+          title="Movimento do mês"
+          value={`${currentMonthTransactions.length}`}
+          description="Total de transações registradas no mês atual."
+          variant="green"
+        />
+      </InsightsGrid>
 
       <NewTransactionModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
       />
-    </PageWrapper>
+    </AppShell>
   );
 }

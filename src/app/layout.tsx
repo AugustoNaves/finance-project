@@ -1,7 +1,20 @@
 import "./globals.css";
+import { DM_Sans, Syne } from "next/font/google";
 import StyledComponentsRegistry from "@/lib/registry";
 import { GlobalStyle } from "@/styles/global";
 import { TransactionsProvider } from "@/contexts/TransactionsContenxt"; // <-- Importação nova
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+});
+
+const syne = Syne({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-syne",
+});
 
 export const metadata = {
   title: "Finanças Pessoais",
@@ -14,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={`${dmSans.variable} ${syne.variable}`}>
       <body suppressHydrationWarning>
         <StyledComponentsRegistry>
           <GlobalStyle />
