@@ -1,21 +1,20 @@
 "use client";
 
 import { createContext, ReactNode, useState, useEffect } from "react";
+import {
+  createTransaction,
+  fetchTransactions,
+  patchTransaction,
+  removeTransaction,
+} from "@/services/transactions";
+import { Transaction, TransactionPayload } from "@/types/transaction";
 
-export interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  category: string;
-  date: string;
-  payer: "Eu" | "Namorada";
-}
+export type { Transaction } from "@/types/transaction";
 
 interface TransactionsContextType {
   transactions: Transaction[];
-  addTransaction: (
-    transaction: Omit<Transaction, "id" | "date">,
-  ) => Promise<void>;
+  addTransaction: (transaction: TransactionPayload) => Promise<void>;
+  updateTransaction: (id: string, transaction: TransactionPayload) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 }
 
@@ -27,50 +26,58 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    async function fetchTransactions() {
+    async function loadTransactions() {
       try {
-        const response = await fetch("/api/transactions");
-        const data = await response.json();
+        const data = await fetchTransactions();
         setTransactions(data);
       } catch (error) {
         console.error("Erro ao buscar transações:", error);
+        setTransactions([]);
       }
     }
 
-    fetchTransactions();
+    loadTransactions();
   }, []);
 
-  async function addTransaction(newTx: Omit<Transaction, "id" | "date">) {
+  async function addTransaction(newTx: TransactionPayload) {
     try {
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newTx),
-      });
+      const transactionCreated = await createTransaction(newTx);
 
-      if (response.ok) {
-        const transactionCreated = await response.json();
-
-        setTransactions([transactionCreated, ...transactions]);
+      if (transactionCreated) {
+        setTransactions((currentTransactions) => [
+          transactionCreated,
+          ...currentTransactions,
+        ]);
       }
     } catch (error) {
       console.error("Erro ao salvar a transação:", error);
     }
   }
 
+  async function updateTransaction(id: string, updatedTx: TransactionPayload) {
+    try {
+      const transactionUpdated = await patchTransaction(id, updatedTx);
+
+      if (transactionUpdated) {
+        setTransactions((currentTransactions) =>
+          currentTransactions.map((transaction) =>
+            transaction.id === id ? transactionUpdated : transaction,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar a transação:", error);
+    }
+  }
+
   async function deleteTransaction(id: string) {
     try {
-      const response = await fetch(`/api/transactions/${id}`, {
-        method: "DELETE",
-      });
+      const removed = await removeTransaction(id);
 
-      if (response.ok) {
-        const novasTransacoes = transactions.filter(
-          (transaction) => transaction.id !== id,
+      if (removed) {
+        setTransactions((currentTransactions) =>
+          currentTransactions.filter((transaction) => transaction.id !== id),
         );
-        setTransactions(novasTransacoes);
       }
     } catch (error) {
       console.error("Erro ao deletar a transação:", error);
@@ -79,7 +86,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
 
   return (
     <TransactionsContext.Provider
-      value={{ transactions, addTransaction, deleteTransaction }}
+      value={{ transactions, addTransaction, updateTransaction, deleteTransaction }}
     >
       {children}
     </TransactionsContext.Provider>

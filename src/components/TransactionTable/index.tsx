@@ -22,7 +22,7 @@ export const TransactionTable = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   function HandleDeleteModal(Id: string) {
-    setDeleteId((prev) => (prev = Id));
+    setDeleteId(Id);
   }
   return (
     <>
@@ -62,8 +62,15 @@ export const TransactionTable = () => {
                   <TrashButton
                     onClick={() => HandleDeleteModal(tx.id)}
                     title="Excluir transação"
+                    aria-label="Excluir transação"
                   >
-                    <img src={"/trash.svg"} />
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M4 7H20" />
+                      <path d="M10 11V17" />
+                      <path d="M14 11V17" />
+                      <path d="M6 7L7 20H17L18 7" />
+                      <path d="M9 7V4H15V7" />
+                    </svg>
                   </TrashButton>
                 </td>
               </Tr>

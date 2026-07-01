@@ -45,7 +45,6 @@ const shimmer = keyframes`
 
 // ─── Global Style (inject Google Font) ───────────────────────────────────────
 export const LoginGlobalStyle = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 `;
 
@@ -67,7 +66,7 @@ export const WrapperLogin = styled.div`
       rgba(14, 165, 233, 0.06) 0%,
       transparent 55%
     );
-  font-family: "DM Sans", sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   overflow: hidden;
   position: relative;
 
@@ -123,7 +122,7 @@ export const BrandMark = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Syne", sans-serif;
+  font-family: var(--font-syne), sans-serif;
   font-weight: 800;
   font-size: 22px;
   color: #fff;
@@ -132,7 +131,7 @@ export const BrandMark = styled.div`
 `;
 
 export const DecorativeTitle = styled.h2`
-  font-family: "Syne", sans-serif;
+  font-family: var(--font-syne), sans-serif;
   font-size: 1.75rem;
   font-weight: 700;
   color: ${colors.white};
@@ -186,7 +185,7 @@ export const FloatingCard = styled.div`
   }
 
   .card-number {
-    font-family: "Syne", sans-serif;
+    font-family: var(--font-syne), sans-serif;
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.8);
     letter-spacing: 3px;
@@ -219,7 +218,7 @@ export const BalanceWidget = styled.div`
   }
 
   .balance-value {
-    font-family: "Syne", sans-serif;
+    font-family: var(--font-syne), sans-serif;
     font-size: 1.2rem;
     font-weight: 700;
     color: ${colors.green};
@@ -305,7 +304,7 @@ export const LogoMark = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Syne", sans-serif;
+  font-family: var(--font-syne), sans-serif;
   font-weight: 800;
   font-size: 18px;
   color: #fff;
@@ -313,7 +312,7 @@ export const LogoMark = styled.div`
 `;
 
 export const FormTitle = styled.h1`
-  font-family: "Syne", sans-serif;
+  font-family: var(--font-syne), sans-serif;
   font-size: 1.75rem;
   font-weight: 700;
   color: ${colors.white};
@@ -373,7 +372,7 @@ export const StyledInput = styled.input`
   border: 1px solid ${colors.border};
   border-radius: 10px;
   color: ${colors.white};
-  font-family: "DM Sans", sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.9rem;
   outline: none;
   transition:
@@ -428,7 +427,7 @@ export const SubmitButton = styled.button`
   border: none;
   border-radius: 10px;
   color: #fff;
-  font-family: "Syne", sans-serif;
+  font-family: var(--font-syne), sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -447,6 +446,13 @@ export const SubmitButton = styled.button`
 
   &:active {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+    transform: none;
+    box-shadow: none;
   }
 
   /* shimmer on hover via pseudo */
@@ -514,6 +520,33 @@ export const FormFooter = styled.p`
       text-decoration: underline;
     }
   }
+`;
+
+export const FooterButton = styled.button`
+  border: 0;
+  background: transparent;
+  color: ${colors.green};
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+export const FormMessage = styled.p<{ $variant: "error" | "success" }>`
+  border: 1px solid
+    ${({ $variant }) =>
+      $variant === "error" ? "rgba(248, 113, 113, 0.35)" : "rgba(0, 196, 140, 0.35)"};
+  border-radius: 10px;
+  background: ${({ $variant }) =>
+    $variant === "error" ? "rgba(248, 113, 113, 0.09)" : "rgba(0, 196, 140, 0.09)"};
+  color: ${({ $variant }) => ($variant === "error" ? "#fecaca" : colors.textLight)};
+  font-size: 0.82rem;
+  line-height: 1.4;
+  padding: 10px 12px;
 `;
 
 // ─── Security Badge ───────────────────────────────────────────────────────────

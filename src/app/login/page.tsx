@@ -30,6 +30,8 @@ import {
   SubmitButton,
   Divider,
   FormFooter,
+  FooterButton,
+  FormMessage,
   SecurityBadge,
 } from "./style";
 
@@ -63,6 +65,22 @@ const IconLock = () => (
   >
     <rect x="3" y="11" width="18" height="11" rx="2" />
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const IconUser = () => (
+  <svg
+    className="input-icon"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M20 21a8 8 0 0 0-16 0" />
+    <circle cx="12" cy="7" r="4" />
   </svg>
 );
 
@@ -153,30 +171,54 @@ function SideWidgets() {
 
 // ─── Form (lógica preservada integralmente) ───────────────────────────────────
 function FormularioDeLogin() {
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   const { executeRecaptcha } = useGoogleReCaptcha();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!executeRecaptcha) {
-      return;
-    }
+    setMessage(null);
+    setIsSubmitting(true);
 
     try {
-      const token = await executeRecaptcha("login");
+      if (isRegisterMode) {
+        const response = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, senha }),
+        });
+        const data = await response.json();
 
-      const dadosParaEnviar = {
-        email: email,
-        senha: senha,
-        recaptchaToken: token,
-      };
+        if (!response.ok) {
+          setMessage({ type: "error", text: data.error || "Não foi possível criar a conta." });
+          return;
+        }
+
+        setIsRegisterMode(false);
+        setSenha("");
+        setMessage({
+          type: "success",
+          text: "Conta criada com sucesso. Agora entre com seu e-mail e senha.",
+        });
+        return;
+      }
+
+      if (!executeRecaptcha) {
+        setMessage({ type: "error", text: "reCAPTCHA ainda não carregou. Tente novamente." });
+        return;
+      }
+
+      const token = await executeRecaptcha("login");
 
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosParaEnviar),
+        body: JSON.stringify({ email, senha, recaptchaToken: token }),
       });
 
       const data = await response.json();
@@ -184,16 +226,36 @@ function FormularioDeLogin() {
       if (response.ok) {
         window.location.href = "/";
       } else {
-        alert(`Bloqueado: ${data.error}`);
+        setMessage({ type: "error", text: data.error || "Não foi possível entrar." });
       }
     } catch (error) {
       console.error("Erro ao gerar o token do reCAPTCHA:", error);
+      setMessage({ type: "error", text: "Erro inesperado. Tente novamente." });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <StyledForm onSubmit={handleLogin}>
-      {/* E-mail */}
+    <StyledForm onSubmit={handleSubmit}>
+      {isRegisterMode && (
+        <InputGroup>
+          <InputLabel htmlFor="name">Nome</InputLabel>
+          <InputWrapper>
+            <StyledInput
+              id="name"
+              type="text"
+              placeholder="Seu nome"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isSubmitting}
+              required
+            />
+            <IconUser />
+          </InputWrapper>
+        </InputGroup>
+      )}
+
       <InputGroup>
         <InputLabel htmlFor="email">E-mail</InputLabel>
         <InputWrapper>
@@ -203,13 +265,13 @@ function FormularioDeLogin() {
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={isSubmitting}
             required
           />
           <IconMail />
         </InputWrapper>
       </InputGroup>
 
-      {/* Senha */}
       <InputGroup>
         <InputLabel htmlFor="senha">Senha</InputLabel>
         <InputWrapper>
@@ -219,22 +281,42 @@ function FormularioDeLogin() {
             placeholder="••••••••"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
+            disabled={isSubmitting}
+            minLength={isRegisterMode ? 8 : undefined}
             required
           />
           <IconLock />
         </InputWrapper>
       </InputGroup>
 
-      <ForgotLink href="#">Esqueceu a senha?</ForgotLink>
+      {!isRegisterMode && <ForgotLink href="#">Esqueceu a senha?</ForgotLink>}
 
-      <SubmitButton type="submit">Entrar na conta</SubmitButton>
+      {message && <FormMessage $variant={message.type}>{message.text}</FormMessage>}
+
+      <SubmitButton type="submit" disabled={isSubmitting}>
+        {isSubmitting
+          ? "Aguarde..."
+          : isRegisterMode
+            ? "Criar conta"
+            : "Entrar na conta"}
+      </SubmitButton>
 
       <Divider>
         <span>protegido por reCAPTCHA</span>
       </Divider>
 
       <FormFooter>
-        Não tem uma conta? <a href="#">Cadastre-se</a>
+        {isRegisterMode ? "Já tem uma conta? " : "Não tem uma conta? "}
+        <FooterButton
+          type="button"
+          onClick={() => {
+            setIsRegisterMode((current) => !current);
+            setMessage(null);
+          }}
+          disabled={isSubmitting}
+        >
+          {isRegisterMode ? "Entrar" : "Cadastre-se"}
+        </FooterButton>
       </FormFooter>
 
       <SecurityBadge>
@@ -250,7 +332,7 @@ export default function LoginPage() {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
 
   return (
-    <GoogleReCaptchaProvider reCaptchaKey={siteKey} useEnterprise={true}>
+    <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
       <LoginGlobalStyle />
       <WrapperLogin>
         <LoginLayout>
@@ -272,9 +354,9 @@ export default function LoginPage() {
           <FormCard>
             <FormHeader>
               <LogoMark>F</LogoMark>
-              <FormTitle>Bem-vindo de volta</FormTitle>
+              <FormTitle>Bem-vindo</FormTitle>
               <FormSubtitle>
-                Acesse sua conta para continuar gerenciando suas finanças.
+                Acesse ou crie sua conta para gerenciar suas finanças com dados isolados.
               </FormSubtitle>
             </FormHeader>
 

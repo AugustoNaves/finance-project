@@ -1,39 +1,47 @@
 // src/app/styles.ts
 "use client";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 
-export const PageWrapper = styled.div`
-  min-height: 100vh;
-  background: #f0f2f5;
-`;
-
-export const HeaderWrapper = styled.div`
-  background: #1a1a2e;
-  padding-bottom: 80px;
+const fadeUp = keyframes`
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
 `;
 
 export const SummaryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 32px;
-  transform: translateY(50%);
+  gap: 18px;
+  margin-bottom: 32px;
+  animation: ${fadeUp} 0.6s ease both;
 
-  @media (max-width: 768px) {
+  @media (max-width: 860px) {
     grid-template-columns: 1fr;
-    transform: none;
-    padding: 24px 16px;
   }
 `;
 
-export const ContentWrapper = styled.main`
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 80px 32px 40px;
+export const DashboardGrid = styled.section`
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
+  gap: 18px;
+  margin-bottom: 18px;
+  animation: ${fadeUp} 0.65s 0.08s ease both;
 
-  @media (max-width: 768px) {
-    padding: 24px 16px;
+  @media (max-width: 920px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const MainColumn = styled.div`
+  min-width: 0;
+`;
+
+export const InsightsGrid = styled.section`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  animation: ${fadeUp} 0.7s 0.12s ease both;
+
+  @media (max-width: 920px) {
+    grid-template-columns: 1fr;
   }
 `;

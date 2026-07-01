@@ -1,8 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-export async function GET() {
+import { getAuthenticatedUser } from "@/lib/auth";
+
+export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
+
     const transactions = await prisma.transaction.findMany({
+      where: { userId: user.id },
       orderBy: {
         date: "desc",
       },
@@ -18,10 +27,16 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { description, amount, category, payer } = body;
+    const { description, amount, category, payer, type, paymentMethod, notes } = body;
 
     const newTransaction = await prisma.transaction.create({
       data: {
@@ -29,6 +44,10 @@ export async function POST(request: Request) {
         amount,
         category,
         payer,
+        type,
+        paymentMethod,
+        notes,
+        userId: user.id,
       },
     });
 
