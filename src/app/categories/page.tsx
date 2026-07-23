@@ -120,13 +120,16 @@ export default function CategoriesPage() {
   const outcomeCategories = categories
     .filter((category) => category.type === "outcome")
     .map(getCategoryMetrics);
+  const investmentCategories = categories
+    .filter((category) => category.type === "investment")
+    .map(getCategoryMetrics);
 
   return (
     <AppShell>
       <PageHeader
         eyebrow="Categorias"
         title="Organize seus grupos"
-        subtitle="Crie categorias de receitas e despesas para acompanhar onde o dinheiro entra e sai."
+        subtitle="Crie categorias de receitas, despesas e investimentos para acompanhar onde o dinheiro entra, sai e é aplicado."
         actionLabel="+ Nova Categoria"
         onAction={() => setModalOpen(true)}
       />
@@ -163,6 +166,27 @@ export default function CategoriesPage() {
           ) : (
             <SectionGrid>
               {incomeCategories.map((category) => (
+                <CategoryCard
+                  key={category.id}
+                  category={category}
+                  onEdit={() => setEditingCategory(category)}
+                  onDelete={() => setDeleteCategory(category)}
+                />
+              ))}
+            </SectionGrid>
+          )}
+        </Section>
+
+        <Section>
+          <SectionHeader>
+            <h2>Investimentos</h2>
+            <span>{investmentCategories.length} categoria(s)</span>
+          </SectionHeader>
+          {investmentCategories.length === 0 ? (
+            <EmptyState>Nenhuma categoria de investimento cadastrada.</EmptyState>
+          ) : (
+            <SectionGrid>
+              {investmentCategories.map((category) => (
                 <CategoryCard
                   key={category.id}
                   category={category}

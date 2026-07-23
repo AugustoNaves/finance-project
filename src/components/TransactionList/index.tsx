@@ -5,6 +5,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Modal } from "@/components/CustomModal";
 import { TransactionForm, TransactionFormData } from "@/components/TransactionForm";
 import { Transaction } from "@/types/transaction";
+import { getTransactionType } from "@/utils/finance";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import {
   ActionButton,
@@ -18,7 +19,6 @@ import {
   EmptyState,
   ListHeader,
   MobileList,
-  PayerBadge,
   Section,
   Table,
   TableWrapper,
@@ -37,7 +37,6 @@ function getTransactionFormValues(transaction: Transaction): TransactionFormData
     description: transaction.description,
     amount: transaction.amount,
     category: transaction.category,
-    payer: transaction.payer,
     type: transaction.type ?? (transaction.amount > 0 ? "income" : "outcome"),
     paymentMethod: transaction.paymentMethod ?? "Pix",
     notes: transaction.notes ?? "",
@@ -87,82 +86,88 @@ export function TransactionList({
                   <th>Valor</th>
                   <th>Categoria</th>
                   <th>Data</th>
-                  <th>Pagante</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id}>
-                    <td>{transaction.description}</td>
-                    <td>
-                      <Amount $positive={transaction.amount > 0}>
-                        {transaction.amount > 0 ? "+" : ""}
-                        {formatCurrency(transaction.amount)}
-                      </Amount>
-                    </td>
-                    <td>
-                      <Tag>{transaction.category}</Tag>
-                    </td>
-                    <td>{formatDate(transaction.date)}</td>
-                    <td>
-                      <PayerBadge $payer={transaction.payer}>{transaction.payer}</PayerBadge>
-                    </td>
-                    <td>
-                      <Actions>
-                        <ActionButton
-                          type="button"
-                          onClick={() => setEditingTransaction(transaction)}
-                        >
-                          Editar
-                        </ActionButton>
-                        <ActionButton
-                          type="button"
-                          $danger
-                          onClick={() => setDeleteId(transaction.id)}
-                        >
-                          Excluir
-                        </ActionButton>
-                      </Actions>
-                    </td>
-                  </tr>
-                ))}
+                {transactions.map((transaction) => {
+                  const transactionType = getTransactionType(transaction);
+
+                  return (
+                    <tr key={transaction.id}>
+                      <td>{transaction.description}</td>
+                      <td>
+                        <Amount $variant={transactionType}>
+                          {transactionType === "investment"
+                            ? formatCurrency(Math.abs(transaction.amount))
+                            : `${transaction.amount > 0 ? "+" : ""}${formatCurrency(transaction.amount)}`}
+                        </Amount>
+                      </td>
+                      <td>
+                        <Tag>{transaction.category}</Tag>
+                      </td>
+                      <td>{formatDate(transaction.date)}</td>
+                      <td>
+                        <Actions>
+                          <ActionButton
+                            type="button"
+                            onClick={() => setEditingTransaction(transaction)}
+                          >
+                            Editar
+                          </ActionButton>
+                          <ActionButton
+                            type="button"
+                            $danger
+                            onClick={() => setDeleteId(transaction.id)}
+                          >
+                            Excluir
+                          </ActionButton>
+                        </Actions>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           </TableWrapper>
 
           <MobileList>
-            {transactions.map((transaction) => (
-              <Card key={transaction.id}>
-                <CardHeader>
-                  <div>
-                    <strong>{transaction.description}</strong>
-                    <CardMeta>
-                      {transaction.category} • {formatDate(transaction.date)} • {transaction.payer}
-                    </CardMeta>
-                  </div>
-                  <CardAmount $positive={transaction.amount > 0}>
-                    {transaction.amount > 0 ? "+" : ""}
-                    {formatCurrency(transaction.amount)}
-                  </CardAmount>
-                </CardHeader>
-                <CardActions>
-                  <ActionButton
-                    type="button"
-                    onClick={() => setEditingTransaction(transaction)}
-                  >
-                    Editar
-                  </ActionButton>
-                  <ActionButton
-                    type="button"
-                    $danger
-                    onClick={() => setDeleteId(transaction.id)}
-                  >
-                    Excluir
-                  </ActionButton>
-                </CardActions>
-              </Card>
-            ))}
+            {transactions.map((transaction) => {
+              const transactionType = getTransactionType(transaction);
+
+              return (
+                <Card key={transaction.id}>
+                  <CardHeader>
+                    <div>
+                      <strong>{transaction.description}</strong>
+                      <CardMeta>
+                        {transaction.category} • {formatDate(transaction.date)}
+                      </CardMeta>
+                    </div>
+                    <CardAmount $variant={transactionType}>
+                      {transactionType === "investment"
+                        ? formatCurrency(Math.abs(transaction.amount))
+                        : `${transaction.amount > 0 ? "+" : ""}${formatCurrency(transaction.amount)}`}
+                    </CardAmount>
+                  </CardHeader>
+                  <CardActions>
+                    <ActionButton
+                      type="button"
+                      onClick={() => setEditingTransaction(transaction)}
+                    >
+                      Editar
+                    </ActionButton>
+                    <ActionButton
+                      type="button"
+                      $danger
+                      onClick={() => setDeleteId(transaction.id)}
+                    >
+                      Excluir
+                    </ActionButton>
+                  </CardActions>
+                </Card>
+              );
+            })}
           </MobileList>
         </>
       )}

@@ -49,10 +49,10 @@ export const Brand = styled(Link)`
   align-items: center;
   gap: 12px;
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 `;
 
 export const BrandMark = styled.span`

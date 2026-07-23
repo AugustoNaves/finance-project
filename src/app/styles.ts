@@ -9,12 +9,16 @@ const fadeUp = keyframes`
 
 export const SummaryGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
   margin-bottom: 32px;
   animation: ${fadeUp} 0.6s ease both;
 
-  @media (max-width: 860px) {
+  @media (max-width: 1080px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 560px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -37,11 +41,15 @@ export const MainColumn = styled.div`
 
 export const InsightsGrid = styled.section`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
   animation: ${fadeUp} 0.7s 0.12s ease both;
 
-  @media (max-width: 920px) {
+  @media (max-width: 1080px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 560px) {
     grid-template-columns: 1fr;
   }
 `;

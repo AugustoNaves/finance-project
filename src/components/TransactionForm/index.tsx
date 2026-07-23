@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { fetchCategories } from "@/services/categories";
 import { Category } from "@/types/category";
-import { Payer, TransactionPayload, TransactionType } from "@/types/transaction";
+import { TransactionPayload, TransactionType } from "@/types/transaction";
 import {
   Form,
   FormGroup,
@@ -32,16 +32,13 @@ export function TransactionForm({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [type, setType] = useState<TransactionType>(
-    initialValues?.type ?? "income",
+    initialValues?.type ?? "outcome",
   );
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [amount, setAmount] = useState(
     initialValues ? String(Math.abs(initialValues.amount)) : "",
   );
   const [category, setCategory] = useState(initialValues?.category ?? "");
-  const [payer, setPayer] = useState<Payer>(
-    initialValues?.payer ?? "Eu",
-  );
   const [paymentMethod, setPaymentMethod] = useState(
     initialValues?.paymentMethod ?? "Pix",
   );
@@ -104,13 +101,13 @@ export function TransactionForm({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    const amountAsNumber = type === "outcome" ? -Number(amount) : Number(amount);
+    const rawAmount = Number(amount);
+    const amountAsNumber = type === "income" ? rawAmount : -rawAmount;
 
     await onSubmit({
       description,
       amount: amountAsNumber,
       category,
-      payer,
       type,
       paymentMethod,
       notes: notes.trim() || null,
@@ -119,8 +116,7 @@ export function TransactionForm({
     setDescription("");
     setAmount("");
     setCategory("");
-    setType("income");
-    setPayer("Eu");
+    setType("outcome");
     setPaymentMethod("Pix");
     setNotes("");
   }
@@ -170,19 +166,15 @@ export function TransactionForm({
           >
             Saída
           </TypeButton>
+          <TypeButton
+            $active={type === "investment"}
+            $variant="investment"
+            onClick={() => handleTypeChange("investment")}
+            type="button"
+          >
+            Investimento
+          </TypeButton>
         </TypeSelector>
-      </FormGroup>
-
-      <FormGroup>
-        <Label htmlFor="transaction-payer">Quem pagou?</Label>
-        <Select
-          id="transaction-payer"
-          value={payer}
-          onChange={(event) => setPayer(event.target.value as Payer)}
-        >
-          <option value="Eu">Eu</option>
-          <option value="Namorada">Minha Namorada</option>
-        </Select>
       </FormGroup>
 
       <FormGroup>

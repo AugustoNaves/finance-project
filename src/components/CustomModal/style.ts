@@ -62,7 +62,7 @@ export const ModalHeader = styled.div`
 `;
 
 export const ModalTitle = styled.h2`
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
   color: #ffffff;

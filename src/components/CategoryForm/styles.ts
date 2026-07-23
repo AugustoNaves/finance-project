@@ -122,7 +122,7 @@ export const SubmitButton = styled.button`
   background-size: 200% auto;
   border-radius: 10px;
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.03em;

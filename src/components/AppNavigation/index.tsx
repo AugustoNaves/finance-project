@@ -23,8 +23,8 @@ import {
 const navItems = [
   { label: "Início", href: "/" },
   { label: "Transações", href: "/transactions" },
-  { label: "Categorias", href: "/categories" },
-  { label: "Orçamentos", href: "/budgets" },
+  { label: "Investimentos", href: "/investments" },
+  { label: "Planejamento", href: "/planning" },
   { label: "Relatórios", href: "/reports" },
   { label: "Configurações", href: "/settings" },
 ];

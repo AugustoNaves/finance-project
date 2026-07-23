@@ -16,7 +16,7 @@ export async function PATCH(
     const resolvedParams = await params;
     const id = resolvedParams.id;
     const body = await request.json();
-    const { description, amount, category, payer, type, paymentMethod, notes } = body;
+    const { description, amount, category, type, paymentMethod, notes } = body;
 
     const result = await prisma.transaction.updateMany({
       where: { id, userId: user.id },
@@ -24,7 +24,6 @@ export async function PATCH(
         description,
         amount,
         category,
-        payer,
         type,
         paymentMethod,
         notes,

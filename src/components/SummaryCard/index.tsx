@@ -5,7 +5,7 @@ import { Card, CardTitle, CardAmount, CardIcon } from "./styles";
 interface SummaryCardProps {
   title: string;
   amount: string;
-  type: "income" | "outcome" | "total";
+  type: "income" | "outcome" | "investment" | "total";
 }
 
 const IconIncome = () => (
@@ -29,9 +29,20 @@ const IconTotal = () => (
   </svg>
 );
 
+const IconInvestment = () => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 2v20" />
+    <path d="M17 5H12V10H17V5Z" />
+    <path d="M7 15H12V20H7V15Z" />
+    <path d="M17 12L12 12" />
+    <path d="M7 8L12 8" />
+  </svg>
+);
+
 const ICONS = {
   income: IconIncome,
   outcome: IconOutcome,
+  investment: IconInvestment,
   total: IconTotal,
 };
 

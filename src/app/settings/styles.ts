@@ -66,7 +66,7 @@ export const DetailItem = styled.div`
 
   strong {
     color: ${colors.textLight};
-    font-family: var(--font-syne), sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
     font-size: 0.98rem;
   }
 `;

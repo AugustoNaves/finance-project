@@ -14,11 +14,12 @@ export const Bar = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.07);
 `;
 
-export const Fill = styled.div<{ $value: number }>`
+export const Fill = styled.div<{ $value: number; $color?: string }>`
   width: ${({ $value }) => $value}%;
   height: 100%;
   border-radius: inherit;
-  background: ${({ $value }) => {
+  background: ${({ $value, $color }) => {
+    if ($color) return $color;
     if ($value >= 100) return "linear-gradient(90deg, #f75a68, #ff8a4c)";
     if ($value >= 80) return "linear-gradient(90deg, #f59e0b, #f75a68)";
     return "linear-gradient(90deg, #00c48c, #0ea5e9)";

@@ -31,7 +31,12 @@ interface CategoryCardProps {
 }
 
 export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) {
-  const typeLabel = category.type === "income" ? "Receita" : "Despesa";
+  const typeLabel =
+    category.type === "income"
+      ? "Receita"
+      : category.type === "investment"
+        ? "Investimento"
+        : "Despesa";
 
   return (
     <Card $accent={category.color ?? undefined}>

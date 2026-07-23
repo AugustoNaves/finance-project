@@ -43,7 +43,7 @@ export const ListHeader = styled.header`
 
 export const Title = styled.h2`
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -94,8 +94,9 @@ export const Table = styled.table`
   }
 `;
 
-export const Amount = styled.span<{ $positive: boolean }>`
-  color: ${({ $positive }) => ($positive ? colors.green : colors.red)};
+export const Amount = styled.span<{ $variant: "income" | "outcome" | "investment" }>`
+  color: ${({ $variant }) =>
+    $variant === "income" ? colors.green : $variant === "investment" ? "#8b5cf6" : colors.red};
   font-weight: 700;
 `;
 
@@ -109,21 +110,6 @@ export const Tag = styled.span`
   color: ${colors.textLight};
   font-size: 0.76rem;
   font-weight: 500;
-`;
-
-export const PayerBadge = styled.span<{ $payer: "Eu" | "Namorada" }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: ${({ $payer }) =>
-    $payer === "Eu" ? "rgba(14, 165, 233, 0.13)" : "rgba(0, 196, 140, 0.13)"};
-  color: ${({ $payer }) => ($payer === "Eu" ? colors.blue : colors.green)};
-  border: 1px solid
-    ${({ $payer }) =>
-      $payer === "Eu" ? "rgba(14, 165, 233, 0.24)" : "rgba(0, 196, 140, 0.24)"};
-  font-size: 0.74rem;
-  font-weight: 600;
 `;
 
 export const Actions = styled.div`
@@ -203,10 +189,11 @@ export const CardMeta = styled.span`
   line-height: 1.5;
 `;
 
-export const CardAmount = styled.strong<{ $positive: boolean }>`
+export const CardAmount = styled.strong<{ $variant: "income" | "outcome" | "investment" }>`
   flex: 0 0 auto;
-  color: ${({ $positive }) => ($positive ? colors.green : colors.red)};
-  font-family: var(--font-syne), sans-serif;
+  color: ${({ $variant }) =>
+    $variant === "income" ? colors.green : $variant === "investment" ? "#8b5cf6" : colors.red};
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: -0.03em;

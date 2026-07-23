@@ -55,7 +55,7 @@ export const Header = styled.header`
 
 export const Title = styled.h3`
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.14rem;
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -67,7 +67,7 @@ export const Percentage = styled.strong<{ $status: BudgetStatus }>`
   background: ${({ $status }) => `${statusColor[$status]}1f`};
   border: 1px solid ${({ $status }) => `${statusColor[$status]}40`};
   color: ${({ $status }) => statusColor[$status]};
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.88rem;
 `;
 
@@ -96,7 +96,7 @@ export const Metric = styled.div`
 
   strong {
     color: ${colors.textLight};
-    font-family: var(--font-syne), sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
     font-size: 0.95rem;
   }
 `;

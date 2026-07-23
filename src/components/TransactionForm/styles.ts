@@ -15,6 +15,7 @@ const colors = {
 const variantColor = {
   income: colors.green,
   outcome: colors.red,
+  investment: "#8b5cf6",
 };
 
 export const Form = styled.form`
@@ -120,13 +121,13 @@ export const Textarea = styled.textarea`
 
 export const TypeSelector = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 `;
 
 export const TypeButton = styled.button<{
   $active: boolean;
-  $variant: "income" | "outcome";
+  $variant: "income" | "outcome" | "investment";
 }>`
   position: relative;
   display: flex;
@@ -220,7 +221,7 @@ export const SubmitButton = styled.button`
   background-size: 200% auto;
   border: none;
   border-radius: 10px;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.03em;

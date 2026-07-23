@@ -71,7 +71,7 @@ export const Value = styled.strong`
   z-index: 1;
   display: block;
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: clamp(1.35rem, 2.4vw, 1.8rem);
   font-weight: 700;
   letter-spacing: -0.05em;

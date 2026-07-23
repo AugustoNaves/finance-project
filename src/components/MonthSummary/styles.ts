@@ -48,7 +48,7 @@ export const SummaryHeader = styled.header`
 
 export const SummaryTitle = styled.h2`
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -81,7 +81,7 @@ export const MetricLabel = styled.span`
 
 export const MetricValue = styled.strong<{ $variant: MetricVariant }>`
   color: ${({ $variant }) => metricColor[$variant]};
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.02rem;
   font-weight: 700;
   letter-spacing: -0.03em;

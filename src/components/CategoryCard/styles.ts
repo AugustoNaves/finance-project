@@ -62,14 +62,14 @@ export const ColorMark = styled.span<{ $accent?: string }>`
   background: ${({ $accent }) => `${$accent ?? colors.green}24`};
   border: 1px solid ${({ $accent }) => `${$accent ?? colors.green}55`};
   color: ${({ $accent }) => $accent ?? colors.green};
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.82rem;
   font-weight: 800;
 `;
 
 export const Name = styled.h3`
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.12rem;
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -118,7 +118,7 @@ export const Metric = styled.div`
 
   strong {
     color: ${colors.textLight};
-    font-family: var(--font-syne), sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
     font-size: 0.95rem;
   }
 `;

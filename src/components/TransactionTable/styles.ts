@@ -100,21 +100,6 @@ export const CategoryTag = styled.span`
   border: 1px solid rgba(255, 255, 255, 0.08);
 `;
 
-export const PayerBadge = styled.span<{ $payer: "Eu" | "Namorada" }>`
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.74rem;
-  font-weight: 600;
-  padding: 5px 11px;
-  border-radius: 9999px;
-  background: ${({ $payer }) =>
-    $payer === "Eu" ? "rgba(14, 165, 233, 0.13)" : "rgba(0, 196, 140, 0.13)"};
-  color: ${({ $payer }) => ($payer === "Eu" ? colors.blue : colors.green)};
-  border: 1px solid
-    ${({ $payer }) =>
-      $payer === "Eu" ? "rgba(14, 165, 233, 0.24)" : "rgba(0, 196, 140, 0.24)"};
-`;
-
 export const TrashButton = styled.button`
   width: 36px;
   height: 36px;
@@ -153,7 +138,7 @@ export const DeleteButton = styled.button`
   margin-top: 25px;
   border-radius: 10px;
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(247, 90, 104, 0.22);

@@ -12,7 +12,10 @@ const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 
 function getAttemptKey(request: NextRequest, email: string) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwardedFor = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")[0]
+    ?.trim();
   const ip = forwardedFor || request.headers.get("x-real-ip") || "unknown";
 
   return `${email.toLowerCase()}:${ip}`;
@@ -54,12 +57,13 @@ async function validateRecaptcha(token: string, request: NextRequest) {
     },
   );
 
-  const googleData = await googleResponse.json() as {
+  const googleData = (await googleResponse.json()) as {
     success?: boolean;
     score?: number;
     action?: string;
     hostname?: string;
   };
+  console.log("API recaptcha", JSON.stringify(googleData));
   const requestHost = request.nextUrl.hostname;
 
   if (
@@ -68,7 +72,10 @@ async function validateRecaptcha(token: string, request: NextRequest) {
     googleData.action !== "login" ||
     (googleData.hostname && googleData.hostname !== requestHost)
   ) {
-    return { valid: false, error: "Acesso bloqueado. Atividade suspeita detectada." };
+    return {
+      valid: false,
+      error: "Acesso bloqueado. Atividade suspeita detectada.",
+    };
   }
 
   return { valid: true };

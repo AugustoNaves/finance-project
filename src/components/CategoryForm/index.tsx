@@ -62,6 +62,7 @@ export function CategoryForm({
         >
           <option value="income">Receita</option>
           <option value="outcome">Despesa</option>
+          <option value="investment">Investimento</option>
         </Select>
       </Field>
 

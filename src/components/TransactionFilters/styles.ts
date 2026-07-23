@@ -22,7 +22,7 @@ export const FiltersPanel = styled.section`
 
 export const FiltersGrid = styled.div`
   display: grid;
-  grid-template-columns: 1.4fr repeat(4, minmax(130px, 1fr)) auto;
+  grid-template-columns: 1.4fr repeat(5, minmax(130px, 1fr)) auto;
   gap: 12px;
   align-items: end;
 

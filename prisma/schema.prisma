@@ -16,6 +16,7 @@ model User {
   transactions Transaction[]
   categories   Category[]
   budgets      Budget[]
+  goals        Goal[]
 
   @@map("users")
 }
@@ -25,7 +26,6 @@ model Transaction {
   description   String
   amount        Float
   category      String
-  payer         String
   date          DateTime @default(now())
   type          String?
   paymentMethod String?
@@ -68,4 +68,20 @@ model Budget {
   @@unique([userId, category, month])
   @@index([userId])
   @@map("budgets")
+}
+
+model Goal {
+  id            String    @id @default(uuid())
+  name          String
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  deadline      DateTime?
+  color         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("goals")
 }

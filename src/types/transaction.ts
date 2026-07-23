@@ -1,6 +1,4 @@
-export type TransactionType = "income" | "outcome";
-
-export type Payer = "Eu" | "Namorada";
+export type TransactionType = "income" | "outcome" | "investment";
 
 export interface Transaction {
   id: string;
@@ -8,7 +6,6 @@ export interface Transaction {
   amount: number;
   category: string;
   date: string;
-  payer: Payer;
   type?: TransactionType | null;
   paymentMethod?: string | null;
   notes?: string | null;

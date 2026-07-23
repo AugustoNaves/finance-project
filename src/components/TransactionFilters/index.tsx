@@ -10,14 +10,13 @@ import {
   Select,
 } from "./styles";
 
-export type TransactionTypeFilter = "all" | "income" | "outcome";
+export type TransactionTypeFilter = "all" | "income" | "outcome" | "investment";
 export type TransactionSortOption = "dateDesc" | "dateAsc" | "valueDesc" | "valueAsc";
 
 export interface TransactionFiltersState {
   search: string;
   type: TransactionTypeFilter;
   category: string;
-  payer: string;
   startDate: string;
   endDate: string;
   sort: TransactionSortOption;
@@ -69,6 +68,7 @@ export function TransactionFilters({
             <option value="all">Todos</option>
             <option value="income">Receitas</option>
             <option value="outcome">Despesas</option>
+            <option value="investment">Investimentos</option>
           </Select>
         </Field>
 
@@ -85,19 +85,6 @@ export function TransactionFilters({
                 {category}
               </option>
             ))}
-          </Select>
-        </Field>
-
-        <Field>
-          <Label htmlFor="transaction-payer">Pagante</Label>
-          <Select
-            id="transaction-payer"
-            value={filters.payer}
-            onChange={(event) => updateFilter("payer", event.target.value)}
-          >
-            <option value="all">Todos</option>
-            <option value="Eu">Eu</option>
-            <option value="Namorada">Namorada</option>
           </Select>
         </Field>
 

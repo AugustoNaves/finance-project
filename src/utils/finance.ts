@@ -23,7 +23,11 @@ export function getTransactionType(transaction: Transaction) {
 export function calculateSummary(transactions: Transaction[]) {
   return transactions.reduce(
     (acc, transaction) => {
-      if (transaction.amount > 0) {
+      const type = getTransactionType(transaction);
+
+      if (type === "investment") {
+        acc.investment += transaction.amount;
+      } else if (transaction.amount > 0) {
         acc.income += transaction.amount;
       } else {
         acc.outcome += transaction.amount;
@@ -32,8 +36,14 @@ export function calculateSummary(transactions: Transaction[]) {
       acc.total += transaction.amount;
       return acc;
     },
-    { income: 0, outcome: 0, total: 0 },
+    { income: 0, outcome: 0, investment: 0, total: 0 },
   );
+}
+
+export function calculateInvestments(transactions: Transaction[]) {
+  return transactions
+    .filter((transaction) => getTransactionType(transaction) === "investment")
+    .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0);
 }
 
 export function calculateSavingsRate(income: number, balance: number) {

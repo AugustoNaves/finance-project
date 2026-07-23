@@ -31,7 +31,7 @@ export const Brand = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 22px;
   font-weight: 800;
   color: #ffffff;
@@ -74,7 +74,7 @@ export const NewTransactionButton = styled.button`
   background-size: 200% auto;
   border-radius: 10px;
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.02em;

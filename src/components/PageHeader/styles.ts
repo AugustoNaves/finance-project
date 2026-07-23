@@ -49,11 +49,11 @@ export const HeaderEyebrow = styled.span`
 
 export const HeaderTitle = styled.h1`
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: clamp(2rem, 5vw, 3.25rem);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.07em;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
 `;
 
 export const HeaderSubtitle = styled.p`
@@ -74,7 +74,7 @@ export const HeaderAction = styled.button`
   background: linear-gradient(90deg, ${colors.green} 0%, #00b8d9 100%);
   background-size: 200% auto;
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.02em;

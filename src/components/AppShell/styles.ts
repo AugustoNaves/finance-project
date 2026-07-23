@@ -27,18 +27,6 @@ export const Shell = styled.div`
   overflow-x: hidden;
   position: relative;
 
-  &::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(${colors.border} 1px, transparent 1px),
-      linear-gradient(90deg, ${colors.border} 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
   &::after {
     content: "";
     position: fixed;

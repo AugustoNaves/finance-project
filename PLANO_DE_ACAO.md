@@ -1,8 +1,8 @@
 # Plano de Ação - Próximas Etapas
 
-Este plano mantém apenas o que ainda não foi implementado. As etapas antigas de layout, dashboard, transações, categorias, orçamentos, relatórios, configurações, gráficos e ajustes visuais já foram concluídas e removidas deste documento para reduzir ruído.
+Este plano mantém o histórico resumido do que foi concluído e os próximos ajustes priorizados. As etapas antigas de layout, dashboard, transações, categorias, orçamentos, relatórios, configurações e gráficos já foram concluídas.
 
-## 1. Autenticação Real Com Usuários
+## 1. Autenticação Real Com Usuários - Concluída
 
 Objetivo: substituir o login atual baseado em `EMAIL_ACESSO` e `SENHA_ACESSO` do `.env` por autenticação real com usuários no banco, dados isolados por usuário e reCAPTCHA v3 ativo em produção.
 
@@ -151,7 +151,104 @@ Critério de conclusão:
 - Rodar `npm run lint`.
 - Rodar `npm run build`.
 
-## 2. Itens Futuros Após Autenticação
+Status:
+
+- Implementado model `User` no Prisma.
+- Implementado vínculo `userId` em `Transaction`, `Category` e `Budget`.
+- Migration aplicada com preservação dos dados existentes.
+- Dados antigos vinculados ao usuário inicial.
+- Login passou a validar email e senha no banco.
+- Senha passou a ser salva apenas como hash com `bcryptjs`.
+- Criado cadastro em `/api/register`.
+- Criado `/api/me` para retornar dados seguros da sessão.
+- Cookie antigo `auth_token=autorizado` foi substituído por `session_token` assinado.
+- `src/proxy.ts` valida sessão real, assinatura e expiração.
+- Logout limpa o cookie de sessão real.
+- APIs financeiras filtram dados pelo usuário autenticado.
+- reCAPTCHA v3 foi ativado no login com validação de `success`, `score`, `action` e `hostname`.
+- Login e cadastro mostram mensagens no formulário, sem `alert`.
+- `/settings` mostra nome e email da conta logada.
+- `npm run lint` e `npm run build` passaram.
+
+Pendências operacionais antes de produção:
+
+- Garantir `SESSION_SECRET` forte no ambiente da Vercel.
+- Garantir `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` e `RECAPTCHA_SECRET_KEY` atualizadas na Vercel.
+- Garantir domínio da Vercel/domínio final autorizado no Google reCAPTCHA.
+- Fazer validação manual final com usuário A e usuário B para confirmar isolamento completo.
+
+## 2. Ajustes Visuais E Tema
+
+Objetivo: refinar a identidade visual removendo elementos que não combinaram com o produto e adicionar alternância entre tema escuro e claro.
+
+### 2.1. Fonte Dos Títulos - Concluída
+
+- Remover a fonte `Syne` dos títulos e elementos de destaque.
+- Usar `DM Sans` também para títulos, mantendo consistência com o restante da interface.
+- Ajustar pesos, espaçamentos e `letter-spacing` dos títulos para evitar aparência exagerada.
+- Remover o import e a variável `--font-syne` se não houver mais uso.
+
+Critério de conclusão:
+
+- Títulos ficam visualmente mais limpos e alinhados ao estilo do app.
+- Não há referências desnecessárias a `--font-syne`.
+- Layout continua responsivo em desktop e mobile.
+
+Status:
+
+- Fonte `Syne` removida do layout.
+- Projeto passou a usar apenas `DM Sans`.
+- Referências a `--font-syne` substituídas por `--font-dm-sans`.
+- Títulos principais ficaram com peso e espaçamento menos agressivos.
+- `npm run lint` e `npm run build` passaram.
+
+### 2.2. Remover Background Quadriculado - Concluída
+
+- Remover o grid/quadriculado do `AppShell`.
+- Remover o grid/quadriculado da tela de login.
+- Manter fundos com gradientes/radiais suaves, sem textura quadriculada.
+- Verificar contraste e legibilidade após a remoção.
+
+Critério de conclusão:
+
+- Nenhuma tela principal exibe background quadriculado.
+- Visual permanece consistente no tema escuro.
+- Login e app interno mantêm profundidade visual sem ruído.
+
+Status:
+
+- Grid visual removido do `AppShell`.
+- Grid visual removido da tela de login.
+- Gradientes/radiais suaves foram preservados.
+- `npm run lint` e `npm run build` passaram.
+
+### 2.3. Alternância Entre Tema Claro E Escuro - Pendente
+
+- Criar controle global de tema.
+- Manter tema escuro como padrão inicial.
+- Adicionar botão na navegação para alternar entre claro e escuro.
+- Persistir preferência em `localStorage`.
+- Aplicar o tema via atributo global, por exemplo `data-theme`.
+- Migrar cores principais para CSS variables: fundo, superfícies, texto, texto secundário, bordas e elementos de destaque.
+- Adaptar navegação, cards, tabelas/listas, formulários, modais e login para respeitarem o tema.
+- Evitar mudanças grandes de estrutura; priorizar substituição de cores fixas por variáveis.
+
+Critério de conclusão:
+
+- Botão alterna corretamente entre tema claro e escuro.
+- Preferência persiste ao recarregar a página.
+- App mantém contraste adequado nos dois temas.
+- Login, dashboard, transações, categorias, orçamentos, relatórios e configurações continuam usáveis nos dois temas.
+
+### 2.4. Validação Final Dos Ajustes Visuais
+
+- Testar desktop e mobile.
+- Testar reload com tema claro e escuro.
+- Testar navegação entre páginas mantendo o tema escolhido.
+- Rodar `npm run lint`.
+- Rodar `npm run build`.
+
+## 3. Itens Futuros Após Autenticação
 
 - Recuperação de senha por email.
 - Verificação de email.

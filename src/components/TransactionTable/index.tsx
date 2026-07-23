@@ -10,7 +10,6 @@ import {
   Tr,
   Td,
   Amount,
-  PayerBadge,
   CategoryTag,
   TrashButton,
   DeleteButton,
@@ -34,7 +33,6 @@ export const TransactionTable = () => {
               <Th>Valor</Th>
               <Th>Categoria</Th>
               <Th>Data</Th>
-              <Th>Pagante</Th>
               <Th></Th>
             </tr>
           </Thead>
@@ -55,9 +53,6 @@ export const TransactionTable = () => {
                   <CategoryTag>{tx.category}</CategoryTag>
                 </Td>
                 <Td>{new Date(tx.date).toLocaleDateString("pt-BR")}</Td>
-                <Td>
-                  <PayerBadge $payer={tx.payer}>{tx.payer}</PayerBadge>
-                </Td>
                 <td>
                   <TrashButton
                     onClick={() => HandleDeleteModal(tx.id)}

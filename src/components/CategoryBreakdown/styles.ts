@@ -34,7 +34,7 @@ export const Header = styled.header`
 
 export const Name = styled.strong`
   color: ${colors.textLight};
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.96rem;
 `;
 

@@ -17,7 +17,6 @@ const initialFilters: TransactionFiltersState = {
   search: "",
   type: "all",
   category: "all",
-  payer: "all",
   startDate: "",
   endDate: "",
   sort: "dateDesc",
@@ -45,7 +44,6 @@ export default function TransactionsPage() {
         getTransactionType(transaction) === filters.type;
       const matchesCategory =
         filters.category === "all" || transaction.category === filters.category;
-      const matchesPayer = filters.payer === "all" || transaction.payer === filters.payer;
       const matchesStartDate = filters.startDate
         ? transactionDate >= new Date(`${filters.startDate}T00:00:00`)
         : true;
@@ -57,7 +55,6 @@ export default function TransactionsPage() {
         matchesSearch &&
         matchesType &&
         matchesCategory &&
-        matchesPayer &&
         matchesStartDate &&
         matchesEndDate
       );
@@ -83,7 +80,7 @@ export default function TransactionsPage() {
       <PageHeader
         eyebrow="Transações"
         title="Todas as movimentações"
-        subtitle="Busque, filtre e acompanhe todas as receitas e despesas cadastradas."
+        subtitle="Busque, filtre e acompanhe todas as receitas, despesas e investimentos cadastrados."
         actionLabel="+ Nova Transação"
         onAction={() => setModalOpen(true)}
       />

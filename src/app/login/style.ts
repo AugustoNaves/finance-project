@@ -69,18 +69,6 @@ export const WrapperLogin = styled.div`
   font-family: var(--font-dm-sans), sans-serif;
   overflow: hidden;
   position: relative;
-
-  /* subtle grid texture */
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(${colors.border} 1px, transparent 1px),
-      linear-gradient(90deg, ${colors.border} 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-  }
 `;
 
 // ─── Layout Split ─────────────────────────────────────────────────────────────
@@ -122,7 +110,7 @@ export const BrandMark = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-weight: 800;
   font-size: 22px;
   color: #fff;
@@ -131,7 +119,7 @@ export const BrandMark = styled.div`
 `;
 
 export const DecorativeTitle = styled.h2`
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.75rem;
   font-weight: 700;
   color: ${colors.white};
@@ -185,7 +173,7 @@ export const FloatingCard = styled.div`
   }
 
   .card-number {
-    font-family: var(--font-syne), sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.8);
     letter-spacing: 3px;
@@ -218,7 +206,7 @@ export const BalanceWidget = styled.div`
   }
 
   .balance-value {
-    font-family: var(--font-syne), sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
     font-size: 1.2rem;
     font-weight: 700;
     color: ${colors.green};
@@ -304,7 +292,7 @@ export const LogoMark = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-weight: 800;
   font-size: 18px;
   color: #fff;
@@ -312,7 +300,7 @@ export const LogoMark = styled.div`
 `;
 
 export const FormTitle = styled.h1`
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.75rem;
   font-weight: 700;
   color: ${colors.white};
@@ -427,7 +415,7 @@ export const SubmitButton = styled.button`
   border: none;
   border-radius: 10px;
   color: #fff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.03em;

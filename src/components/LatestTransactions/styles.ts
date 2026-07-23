@@ -6,6 +6,7 @@ const colors = {
   navyMid: "#161b27",
   green: "#00c48c",
   red: "#f75a68",
+  purple: "#8b5cf6",
   textMuted: "#8892a4",
   textLight: "#c9d1e0",
   border: "rgba(255, 255, 255, 0.07)",
@@ -42,7 +43,7 @@ export const Header = styled.header`
 
 export const Title = styled.h2`
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -92,8 +93,9 @@ export const Table = styled.table`
   }
 `;
 
-export const Amount = styled.span<{ $positive: boolean }>`
-  color: ${({ $positive }) => ($positive ? colors.green : colors.red)};
+export const Amount = styled.span<{ $variant: "income" | "outcome" | "investment" }>`
+  color: ${({ $variant }) =>
+    $variant === "income" ? colors.green : $variant === "investment" ? colors.purple : colors.red};
   font-weight: 700;
 `;
 
@@ -147,10 +149,11 @@ export const CardMeta = styled.span`
   font-size: 0.8rem;
 `;
 
-export const CardAmount = styled.strong<{ $positive: boolean }>`
+export const CardAmount = styled.strong<{ $variant: "income" | "outcome" | "investment" }>`
   flex: 0 0 auto;
-  color: ${({ $positive }) => ($positive ? colors.green : colors.red)};
-  font-family: var(--font-syne), sans-serif;
+  color: ${({ $variant }) =>
+    $variant === "income" ? colors.green : $variant === "investment" ? colors.purple : colors.red};
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: -0.03em;

@@ -40,7 +40,7 @@ export const Header = styled.header`
 
 export const Title = styled.h2`
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.22rem;
   font-weight: 700;
   letter-spacing: -0.04em;

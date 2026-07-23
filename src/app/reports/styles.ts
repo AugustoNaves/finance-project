@@ -94,7 +94,7 @@ export const SectionHeader = styled.header`
 
   h2 {
     color: #ffffff;
-    font-family: var(--font-syne), sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
     font-size: 1.3rem;
     font-weight: 700;
     letter-spacing: -0.04em;
@@ -157,7 +157,7 @@ export const EvolutionFill = styled.div<{ $positive: boolean; $value: number }>`
 
 export const EvolutionAmount = styled.strong<{ $positive: boolean }>`
   color: ${({ $positive }) => ($positive ? colors.green : colors.red)};
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.92rem;
   white-space: nowrap;
 `;

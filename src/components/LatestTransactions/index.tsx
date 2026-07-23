@@ -1,6 +1,7 @@
 "use client";
 
 import { Transaction } from "@/types/transaction";
+import { getTransactionType } from "@/utils/finance";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import {
   Amount,
@@ -49,42 +50,52 @@ export function LatestTransactions({ transactions }: LatestTransactionsProps) {
                 </tr>
               </thead>
               <tbody>
-                {latest.map((transaction) => (
-                  <tr key={transaction.id}>
-                    <td>{transaction.description}</td>
-                    <td>
-                      <Amount $positive={transaction.amount > 0}>
-                        {transaction.amount > 0 ? "+" : ""}
-                        {formatCurrency(transaction.amount)}
-                      </Amount>
-                    </td>
-                    <td>
-                      <Tag>{transaction.category}</Tag>
-                    </td>
-                    <td>{formatDate(transaction.date)}</td>
-                  </tr>
-                ))}
+                {latest.map((transaction) => {
+                  const transactionType = getTransactionType(transaction);
+
+                  return (
+                    <tr key={transaction.id}>
+                      <td>{transaction.description}</td>
+                      <td>
+                        <Amount $variant={transactionType}>
+                          {transactionType === "investment"
+                            ? formatCurrency(Math.abs(transaction.amount))
+                            : `${transaction.amount > 0 ? "+" : ""}${formatCurrency(transaction.amount)}`}
+                        </Amount>
+                      </td>
+                      <td>
+                        <Tag>{transaction.category}</Tag>
+                      </td>
+                      <td>{formatDate(transaction.date)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           </TableWrapper>
 
           <MobileList>
-            {latest.map((transaction) => (
-              <MobileCard key={transaction.id}>
-                <CardHeader>
-                  <div>
-                    <strong>{transaction.description}</strong>
-                    <CardMeta>
-                      {transaction.category} • {formatDate(transaction.date)}
-                    </CardMeta>
-                  </div>
-                  <CardAmount $positive={transaction.amount > 0}>
-                    {transaction.amount > 0 ? "+" : ""}
-                    {formatCurrency(transaction.amount)}
-                  </CardAmount>
-                </CardHeader>
-              </MobileCard>
-            ))}
+            {latest.map((transaction) => {
+              const transactionType = getTransactionType(transaction);
+
+              return (
+                <MobileCard key={transaction.id}>
+                  <CardHeader>
+                    <div>
+                      <strong>{transaction.description}</strong>
+                      <CardMeta>
+                        {transaction.category} • {formatDate(transaction.date)}
+                      </CardMeta>
+                    </div>
+                    <CardAmount $variant={transactionType}>
+                      {transactionType === "investment"
+                        ? formatCurrency(Math.abs(transaction.amount))
+                        : `${transaction.amount > 0 ? "+" : ""}${formatCurrency(transaction.amount)}`}
+                    </CardAmount>
+                  </CardHeader>
+                </MobileCard>
+              );
+            })}
           </MobileList>
         </>
       )}

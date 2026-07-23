@@ -42,7 +42,7 @@ export const ConfirmButton = styled.button`
   border-radius: 10px;
   background: linear-gradient(90deg, #f75a68 0%, #ff7a7a 100%);
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(247, 90, 104, 0.22);

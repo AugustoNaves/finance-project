@@ -2,13 +2,14 @@
 "use client";
 import styled from "styled-components";
 
-type CardType = "income" | "outcome" | "total";
+type CardType = "income" | "outcome" | "investment" | "total";
 
 const colors = {
   navyMid: "#161b27",
   green: "#00c48c",
   blue: "#0ea5e9",
   red: "#f75a68",
+  purple: "#8b5cf6",
   textMuted: "#8892a4",
   border: "rgba(255, 255, 255, 0.07)",
 };
@@ -16,6 +17,7 @@ const colors = {
 const accentByType = {
   income: colors.green,
   outcome: colors.red,
+  investment: colors.purple,
   total: colors.blue,
 };
 
@@ -104,7 +106,7 @@ export const CardIcon = styled.span<{ $type: CardType }>`
 export const CardAmount = styled.p<{ $type: CardType }>`
   position: relative;
   z-index: 1;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: clamp(1.55rem, 3vw, 2rem);
   font-weight: 700;
   color: ${({ $type }) =>
@@ -112,6 +114,8 @@ export const CardAmount = styled.p<{ $type: CardType }>`
       ? colors.green
       : $type === "outcome"
         ? colors.red
-        : "#ffffff"};
+        : $type === "investment"
+          ? colors.purple
+          : "#ffffff"};
   letter-spacing: -0.04em;
 `;

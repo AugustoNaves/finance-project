@@ -72,7 +72,7 @@ export const CardValue = styled.strong`
   z-index: 1;
   display: block;
   color: #ffffff;
-  font-family: var(--font-syne), sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.05em;
