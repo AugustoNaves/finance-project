@@ -289,7 +289,7 @@ function FormularioDeLogin() {
         </InputWrapper>
       </InputGroup>
 
-      {!isRegisterMode && <ForgotLink href="#">Esqueceu a senha?</ForgotLink>}
+      {!isRegisterMode && <ForgotLink href="/forgot-password">Esqueceu a senha?</ForgotLink>}
 
       {message && <FormMessage $variant={message.type}>{message.text}</FormMessage>}
 

@@ -21,6 +21,7 @@
     "react-google-recaptcha-v3": "^1.11.0",
     "recaptcha": "^1.2.1",
     "recharts": "^3.9.1",
+    "resend": "^6.18.0",
     "styled-components": "^6.3.12",
     "v3": "^0.0.0"
   },

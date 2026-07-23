@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styled, { keyframes, createGlobalStyle } from "styled-components";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -393,7 +394,7 @@ export const StyledInput = styled.input`
 `;
 
 // ─── Forgot Password ─────────────────────────────────────────────────────────
-export const ForgotLink = styled.a`
+export const ForgotLink = styled(Link)`
   font-size: 0.78rem;
   color: ${colors.green};
   text-decoration: none;
