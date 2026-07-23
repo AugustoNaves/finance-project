@@ -68,7 +68,7 @@ async function validateRecaptcha(token: string, request: NextRequest) {
 
   if (
     !googleData.success ||
-    (googleData.score ?? 0) < 0.5 ||
+    // (googleData.score ?? 0) < 0.5 ||
     googleData.action !== "login" ||
     (googleData.hostname && googleData.hostname !== requestHost)
   ) {
