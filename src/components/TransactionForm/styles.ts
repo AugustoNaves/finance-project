@@ -214,6 +214,40 @@ export const Select = styled.select`
   }
 `;
 
+export const CategoryRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const AddCategoryButton = styled.button`
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+    ${colors.navyLight};
+  border: 1px solid ${colors.border};
+  border-radius: 12px;
+  color: ${colors.green};
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+
+  &:hover {
+    border-color: ${colors.green};
+    box-shadow: 0 0 0 3px ${colors.greenGlow};
+    background: linear-gradient(180deg, rgba(0, 196, 140, 0.12), rgba(0, 196, 140, 0.04)),
+      ${colors.navyLight};
+  }
+`;
+
 export const SubmitButton = styled.button`
   margin-top: 8px;
   padding: 14px;

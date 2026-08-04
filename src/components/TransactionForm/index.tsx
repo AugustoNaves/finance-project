@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { fetchCategories } from "@/services/categories";
-import { Category } from "@/types/category";
+import { fetchCategories, createCategory } from "@/services/categories";
+import { Category, CategoryPayload } from "@/types/category";
 import { TransactionPayload, TransactionType } from "@/types/transaction";
+import { Modal as CustomModal } from "@/components/CustomModal";
+import { CategoryForm } from "@/components/CategoryForm";
 import {
   Form,
   FormGroup,
@@ -14,6 +16,8 @@ import {
   Textarea,
   TypeButton,
   TypeSelector,
+  CategoryRow,
+  AddCategoryButton,
 } from "./styles";
 
 export type TransactionFormData = TransactionPayload;
@@ -43,6 +47,7 @@ export function TransactionForm({
     initialValues?.paymentMethod ?? "Pix",
   );
   const [notes, setNotes] = useState(initialValues?.notes ?? "");
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -98,6 +103,16 @@ export function TransactionForm({
     );
   }
 
+  async function handleCreateCategory(payload: CategoryPayload) {
+    const created = await createCategory(payload);
+    if (created) {
+      const data = await fetchCategories();
+      setCategories(data);
+      setCategory(created.name);
+    }
+    setShowCategoryModal(false);
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
@@ -122,114 +137,140 @@ export function TransactionForm({
   }
 
   return (
-    <Form onSubmit={handleSubmit}>
-      <FormGroup>
-        <Label htmlFor="transaction-description">Descrição</Label>
-        <Input
-          id="transaction-description"
-          type="text"
-          placeholder="Ex: Salário, Aluguel..."
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          required
-        />
-      </FormGroup>
+    <>
+      <Form onSubmit={handleSubmit}>
+        <FormGroup>
+          <Label htmlFor="transaction-description">Descrição</Label>
+          <Input
+            id="transaction-description"
+            type="text"
+            placeholder="Ex: Salário, Aluguel..."
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            required
+          />
+        </FormGroup>
 
-      <FormGroup>
-        <Label htmlFor="transaction-amount">Valor</Label>
-        <Input
-          id="transaction-amount"
-          type="number"
-          placeholder="R$ 0,00"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          required
-        />
-      </FormGroup>
+        <FormGroup>
+          <Label htmlFor="transaction-amount">Valor</Label>
+          <Input
+            id="transaction-amount"
+            type="number"
+            placeholder="R$ 0,00"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            required
+          />
+        </FormGroup>
 
-      <FormGroup>
-        <Label>Tipo</Label>
-        <TypeSelector>
-          <TypeButton
-            $active={type === "income"}
-            $variant="income"
-            onClick={() => handleTypeChange("income")}
-            type="button"
+        <FormGroup>
+          <Label>Tipo</Label>
+          <TypeSelector>
+            <TypeButton
+              $active={type === "income"}
+              $variant="income"
+              onClick={() => handleTypeChange("income")}
+              type="button"
+            >
+              Entrada
+            </TypeButton>
+            <TypeButton
+              $active={type === "outcome"}
+              $variant="outcome"
+              onClick={() => handleTypeChange("outcome")}
+              type="button"
+            >
+              Saída
+            </TypeButton>
+            <TypeButton
+              $active={type === "investment"}
+              $variant="investment"
+              onClick={() => handleTypeChange("investment")}
+              type="button"
+            >
+              Investimento
+            </TypeButton>
+          </TypeSelector>
+        </FormGroup>
+
+        <FormGroup>
+          <Label htmlFor="transaction-category">Categoria</Label>
+          <CategoryRow>
+            <Select
+              id="transaction-category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              required
+              style={{ flex: 1 }}
+            >
+              {loadingCategories ? (
+                <option value="">Carregando categorias...</option>
+              ) : (
+                <option value="">Selecione uma categoria</option>
+              )}
+              {shouldPreserveInitialCategory && (
+                <option value={category}>{category}</option>
+              )}
+              {categoryOptions.map((currentCategory) => (
+                <option key={currentCategory.id} value={currentCategory.name}>
+                  {currentCategory.name}
+                </option>
+              ))}
+            </Select>
+            <AddCategoryButton
+              type="button"
+              onClick={() => setShowCategoryModal(true)}
+              title="Nova categoria"
+              aria-label="Nova categoria"
+            >
+              +
+            </AddCategoryButton>
+          </CategoryRow>
+        </FormGroup>
+
+        <FormGroup>
+          <Label htmlFor="transaction-payment-method">Forma de pagamento</Label>
+          <Select
+            id="transaction-payment-method"
+            value={paymentMethod}
+            onChange={(event) => setPaymentMethod(event.target.value)}
           >
-            Entrada
-          </TypeButton>
-          <TypeButton
-            $active={type === "outcome"}
-            $variant="outcome"
-            onClick={() => handleTypeChange("outcome")}
-            type="button"
-          >
-            Saída
-          </TypeButton>
-          <TypeButton
-            $active={type === "investment"}
-            $variant="investment"
-            onClick={() => handleTypeChange("investment")}
-            type="button"
-          >
-            Investimento
-          </TypeButton>
-        </TypeSelector>
-      </FormGroup>
+            <option value="Pix">Pix</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Cartão de débito">Cartão de débito</option>
+            <option value="Cartão de crédito">Cartão de crédito</option>
+            <option value="Transferência">Transferência</option>
+            <option value="Boleto">Boleto</option>
+            <option value="Outro">Outro</option>
+          </Select>
+        </FormGroup>
 
-      <FormGroup>
-        <Label htmlFor="transaction-category">Categoria</Label>
-        <Select
-          id="transaction-category"
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          required
-        >
-          {loadingCategories ? (
-            <option value="">Carregando categorias...</option>
-          ) : (
-            <option value="">Selecione uma categoria</option>
-          )}
-          {shouldPreserveInitialCategory && (
-            <option value={category}>{category}</option>
-          )}
-          {categoryOptions.map((currentCategory) => (
-            <option key={currentCategory.id} value={currentCategory.name}>
-              {currentCategory.name}
-            </option>
-          ))}
-        </Select>
-      </FormGroup>
+        <FormGroup>
+          <Label htmlFor="transaction-notes">Observação</Label>
+          <Textarea
+            id="transaction-notes"
+            placeholder="Detalhes opcionais sobre esta transação..."
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={3}
+          />
+        </FormGroup>
 
-      <FormGroup>
-        <Label htmlFor="transaction-payment-method">Forma de pagamento</Label>
-        <Select
-          id="transaction-payment-method"
-          value={paymentMethod}
-          onChange={(event) => setPaymentMethod(event.target.value)}
-        >
-          <option value="Pix">Pix</option>
-          <option value="Dinheiro">Dinheiro</option>
-          <option value="Cartão de débito">Cartão de débito</option>
-          <option value="Cartão de crédito">Cartão de crédito</option>
-          <option value="Transferência">Transferência</option>
-          <option value="Boleto">Boleto</option>
-          <option value="Outro">Outro</option>
-        </Select>
-      </FormGroup>
+        <SubmitButton type="submit">{submitLabel}</SubmitButton>
+      </Form>
 
-      <FormGroup>
-        <Label htmlFor="transaction-notes">Observação</Label>
-        <Textarea
-          id="transaction-notes"
-          placeholder="Detalhes opcionais sobre esta transação..."
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          rows={3}
+      <CustomModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        title="Nova categoria"
+        maxWidth="420px"
+      >
+        <CategoryForm
+          submitLabel="Criar categoria"
+          initialValues={{ name: "", type, color: "#00c48c", icon: "" }}
+          onSubmit={handleCreateCategory}
         />
-      </FormGroup>
-
-      <SubmitButton type="submit">{submitLabel}</SubmitButton>
-    </Form>
+      </CustomModal>
+    </>
   );
 }
