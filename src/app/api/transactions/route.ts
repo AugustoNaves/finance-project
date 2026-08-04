@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { description, amount, category, type, paymentMethod, notes } = body;
+    const { description, amount, category, type, paymentMethod, notes, date } = body;
 
     const newTransaction = await prisma.transaction.create({
       data: {
@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         type,
         paymentMethod,
         notes,
+        date: date ? new Date(date) : undefined,
         userId: user.id,
       },
     });

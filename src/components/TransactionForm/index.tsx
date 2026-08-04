@@ -48,6 +48,11 @@ export function TransactionForm({
   );
   const [notes, setNotes] = useState(initialValues?.notes ?? "");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [date, setDate] = useState(
+    initialValues?.date
+      ? new Date(initialValues.date).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
+  );
 
   useEffect(() => {
     let active = true;
@@ -125,6 +130,7 @@ export function TransactionForm({
       category,
       type,
       paymentMethod,
+      date,
       notes: notes.trim() || null,
     });
 
@@ -134,6 +140,7 @@ export function TransactionForm({
     setType("outcome");
     setPaymentMethod("Pix");
     setNotes("");
+    setDate(new Date().toISOString().slice(0, 10));
   }
 
   return (
@@ -159,6 +166,17 @@ export function TransactionForm({
             placeholder="R$ 0,00"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
+            required
+          />
+        </FormGroup>
+
+        <FormGroup>
+          <Label htmlFor="transaction-date">Data</Label>
+          <Input
+            id="transaction-date"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
             required
           />
         </FormGroup>

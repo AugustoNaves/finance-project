@@ -11,4 +11,4 @@ export interface Transaction {
   notes?: string | null;
 }
 
-export type TransactionPayload = Omit<Transaction, "id" | "date">;
+export type TransactionPayload = Omit<Transaction, "id" | "date"> & { date?: string };
