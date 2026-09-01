@@ -63,7 +63,6 @@ async function validateRecaptcha(token: string, request: NextRequest) {
     action?: string;
     hostname?: string;
   };
-  console.log("API recaptcha", JSON.stringify(googleData));
   const requestHost = request.nextUrl.hostname;
 
   if (
