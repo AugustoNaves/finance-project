@@ -1,3 +1,4 @@
+import { toApiError } from "@/services/http";
 import { Transaction, TransactionPayload } from "@/types/transaction";
 
 export async function fetchTransactions() {
@@ -20,7 +21,9 @@ export async function createTransaction(payload: TransactionPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível salvar a transação.");
+  }
 
   return (await response.json()) as Transaction;
 }
@@ -34,7 +37,9 @@ export async function patchTransaction(id: string, payload: TransactionPayload) 
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível atualizar a transação.");
+  }
 
   return (await response.json()) as Transaction;
 }
@@ -44,5 +49,9 @@ export async function removeTransaction(id: string) {
     method: "DELETE",
   });
 
-  return response.ok;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível excluir a transação.");
+  }
+
+  return true;
 }

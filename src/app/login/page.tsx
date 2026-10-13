@@ -291,7 +291,14 @@ function FormularioDeLogin() {
 
       {!isRegisterMode && <ForgotLink href="/forgot-password">Esqueceu a senha?</ForgotLink>}
 
-      {message && <FormMessage $variant={message.type}>{message.text}</FormMessage>}
+      {message && (
+        <FormMessage
+          role={message.type === "error" ? "alert" : "status"}
+          $variant={message.type}
+        >
+          {message.text}
+        </FormMessage>
+      )}
 
       <SubmitButton type="submit" disabled={isSubmitting}>
         {isSubmitting

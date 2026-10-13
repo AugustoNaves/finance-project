@@ -16,7 +16,7 @@ import {
   removeCategory,
 } from "@/services/categories";
 import { Category } from "@/types/category";
-import { isSameMonth } from "@/utils/finance";
+import { getTransactionType, isSameMonth } from "@/utils/finance";
 import { formatCurrency } from "@/utils/formatters";
 import {
   PageContent,
@@ -58,10 +58,10 @@ export default function CategoriesPage() {
 
   function getCategoryMetrics(category: Category): CategoryViewModel {
     const monthlyTransactions = transactions.filter((transaction) => {
-      const transactionDate = new Date(transaction.date);
       return (
         transaction.category === category.name &&
-        isSameMonth(transactionDate, now)
+        getTransactionType(transaction) === category.type &&
+        isSameMonth(transaction.date, now)
       );
     });
 
@@ -80,10 +80,8 @@ export default function CategoriesPage() {
   async function handleCreateCategory(data: CategoryFormData) {
     const category = await createCategory(data);
 
-    if (category) {
-      setCategories((currentCategories) => [...currentCategories, category]);
-      setModalOpen(false);
-    }
+    setCategories((currentCategories) => [...currentCategories, category]);
+    setModalOpen(false);
   }
 
   async function handleUpdateCategory(data: CategoryFormData) {
@@ -91,27 +89,23 @@ export default function CategoriesPage() {
 
     const category = await patchCategory(editingCategory.id, data);
 
-    if (category) {
-      setCategories((currentCategories) =>
-        currentCategories.map((currentCategory) =>
-          currentCategory.id === category.id ? category : currentCategory,
-        ),
-      );
-      setEditingCategory(null);
-    }
+    setCategories((currentCategories) =>
+      currentCategories.map((currentCategory) =>
+        currentCategory.id === category.id ? category : currentCategory,
+      ),
+    );
+    setEditingCategory(null);
   }
 
   async function handleDeleteCategory() {
     if (!deleteCategory) return;
 
-    const removed = await removeCategory(deleteCategory.id);
+    await removeCategory(deleteCategory.id);
 
-    if (removed) {
-      setCategories((currentCategories) =>
-        currentCategories.filter((category) => category.id !== deleteCategory.id),
-      );
-      setDeleteCategory(null);
-    }
+    setCategories((currentCategories) =>
+      currentCategories.filter((category) => category.id !== deleteCategory.id),
+    );
+    setDeleteCategory(null);
   }
 
   const incomeCategories = categories

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { invalidBodyResponse, isUniqueConstraintError, readJsonBody } from "@/lib/http";
+import { validateBudgetInput } from "@/lib/validators";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,28 +35,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { category, amount, month } = body;
-    const budgetAmount = Number(amount);
+    const body = await readJsonBody(request);
 
-    if (!category || !month || !Number.isFinite(budgetAmount) || budgetAmount <= 0) {
-      return NextResponse.json(
-        { error: "Categoria, valor válido e mês são obrigatórios." },
-        { status: 400 },
-      );
+    if (!body) {
+      return invalidBodyResponse();
+    }
+
+    const { data, error } = validateBudgetInput(body);
+
+    if (error !== undefined) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const budget = await prisma.budget.create({
       data: {
-        category,
-        amount: budgetAmount,
-        month,
+        ...data,
         userId: user.id,
       },
     });
 
     return NextResponse.json(budget, { status: 201 });
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return NextResponse.json(
+        { error: "Já existe um orçamento para esta categoria neste mês." },
+        { status: 409 },
+      );
+    }
+
     console.error("Erro no POST /api/budgets:", error);
     return NextResponse.json(
       { error: "Erro ao salvar orçamento." },

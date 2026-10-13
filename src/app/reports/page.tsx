@@ -14,6 +14,7 @@ import { PeriodFilter } from "@/components/PeriodFilter";
 import { ReportMetricCard } from "@/components/ReportMetricCard";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
 import { Transaction } from "@/types/transaction";
+import { getLocalMonthKey, getMonthKey } from "@/utils/dates";
 import { calculateSavingsRate, calculateSummary, getTransactionType } from "@/utils/finance";
 import { formatCurrency } from "@/utils/formatters";
 import {
@@ -34,11 +35,11 @@ import {
 } from "./styles";
 
 function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return getLocalMonthKey();
 }
 
 function getTransactionMonth(transaction: Transaction) {
-  return new Date(transaction.date).toISOString().slice(0, 7);
+  return getMonthKey(transaction.date);
 }
 
 function formatMonthLabel(month: string) {
@@ -58,7 +59,7 @@ function getPreviousMonths(referenceMonth: string, quantity: number) {
     const date = new Date(referenceDate);
     date.setMonth(referenceDate.getMonth() - (quantity - 1 - index));
 
-    return date.toISOString().slice(0, 7);
+    return getLocalMonthKey(date);
   });
 }
 
@@ -101,7 +102,9 @@ export default function ReportsPage() {
     Number(selectedMonth.slice(5, 7)),
     0,
   ).getDate();
-  const dailyAverage = totalExpenses / daysInSelectedMonth;
+  const elapsedDays =
+    selectedMonth === getCurrentMonth() ? new Date().getDate() : daysInSelectedMonth;
+  const dailyAverage = totalExpenses / elapsedDays;
   const evolution = getPreviousMonths(selectedMonth, 6).map((month) => {
     const monthTransactions = transactions.filter(
       (transaction) => getTransactionMonth(transaction) === month,

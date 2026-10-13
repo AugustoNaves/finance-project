@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { invalidBodyResponse, readJsonBody } from "@/lib/http";
+import { validateGoalInput } from "@/lib/validators";
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,23 +32,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { name, targetAmount, currentAmount, deadline, color } = body;
+    const body = await readJsonBody(request);
 
-    if (!name || typeof targetAmount !== "number" || targetAmount <= 0) {
-      return NextResponse.json(
-        { error: "Nome e valor alvo são obrigatórios." },
-        { status: 400 },
-      );
+    if (!body) {
+      return invalidBodyResponse();
+    }
+
+    const { data, error } = validateGoalInput(body);
+
+    if (error !== undefined) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const newGoal = await prisma.goal.create({
       data: {
-        name,
-        targetAmount,
-        currentAmount: typeof currentAmount === "number" ? currentAmount : 0,
-        deadline: deadline ? new Date(deadline) : null,
-        color,
+        ...data,
+        deadline: data.deadline ?? null,
         userId: user.id,
       },
     });

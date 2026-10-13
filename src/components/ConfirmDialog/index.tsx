@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Modal } from "@/components/CustomModal";
-import { Actions, CancelButton, ConfirmButton, Message } from "./styles";
+import { FormError } from "@/components/FormError";
+import { getErrorMessage } from "@/services/http";
+import { Actions, CancelButton, ConfirmButton, ErrorSlot, Message } from "./styles";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -20,14 +23,38 @@ export function ConfirmDialog({
   onClose,
   onConfirm,
 }: ConfirmDialogProps) {
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  function handleClose() {
+    setError("");
+    onClose();
+  }
+
+  async function handleConfirm() {
+    setError("");
+    setPending(true);
+
+    try {
+      await onConfirm();
+    } catch (confirmError) {
+      setError(getErrorMessage(confirmError, "Não foi possível concluir a ação."));
+    }
+
+    setPending(false);
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <Modal isOpen={isOpen} onClose={handleClose} title={title}>
       <Message>{message}</Message>
+      <ErrorSlot>
+        <FormError message={error} />
+      </ErrorSlot>
       <Actions>
-        <CancelButton type="button" onClick={onClose}>
+        <CancelButton type="button" onClick={handleClose}>
           Cancelar
         </CancelButton>
-        <ConfirmButton type="button" onClick={onConfirm}>
+        <ConfirmButton type="button" onClick={handleConfirm} disabled={pending}>
           {confirmLabel}
         </ConfirmButton>
       </Actions>

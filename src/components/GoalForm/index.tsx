@@ -1,7 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { FormError } from "@/components/FormError";
+import { getErrorMessage } from "@/services/http";
 import { GoalPayload } from "@/types/goal";
+import { dateKeyToISOString } from "@/utils/dates";
 import {
   ColorInput,
   Field,
@@ -35,17 +38,30 @@ export function GoalForm({
     initialValues?.deadline ? initialValues.deadline.slice(0, 10) : "",
   );
   const [color, setColor] = useState(initialValues?.color ?? "#00c48c");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    await onSubmit({
-      name: name.trim(),
-      targetAmount: Number(targetAmount),
-      currentAmount: Number(currentAmount) || 0,
-      deadline: deadline ? new Date(deadline).toISOString() : null,
-      color,
-    });
+    setError("");
+    setSubmitting(true);
+
+    try {
+      await onSubmit({
+        name: name.trim(),
+        targetAmount: Number(targetAmount),
+        currentAmount: Number(currentAmount) || 0,
+        deadline: deadline ? dateKeyToISOString(deadline) : null,
+        color,
+      });
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, "Não foi possível salvar a meta."));
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
 
     if (!initialValues) {
       setName("");
@@ -117,7 +133,11 @@ export function GoalForm({
         />
       </Field>
 
-      <SubmitButton type="submit">{submitLabel}</SubmitButton>
+      <FormError message={error} />
+
+      <SubmitButton type="submit" disabled={submitting}>
+        {submitLabel}
+      </SubmitButton>
     </Form>
   );
 }

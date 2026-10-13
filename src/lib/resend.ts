@@ -7,7 +7,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     throw new Error("EMAIL_FROM não configurado.");
   }
 
-  return resend.emails.send({
+  const result = await resend.emails.send({
     from: process.env.EMAIL_FROM,
     to,
     subject: "Redefinição de senha — Finanças Pessoais",
@@ -29,4 +29,10 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     `,
     text: `Recebemos uma solicitação para redefinir sua senha. Acesse o link para continuar: ${resetUrl}. O link é válido por 1 hora. Se você não solicitou, ignore este email.`,
   });
+
+  if (result.error) {
+    throw new Error(`Falha ao enviar email: ${result.error.message}`);
+  }
+
+  return result;
 }

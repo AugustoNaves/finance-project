@@ -249,6 +249,11 @@ export const AddCategoryButton = styled.button`
 `;
 
 export const SubmitButton = styled.button`
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   margin-top: 8px;
   padding: 14px;
   background: linear-gradient(90deg, ${colors.green} 0%, #00b8d9 100%);

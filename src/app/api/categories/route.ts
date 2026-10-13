@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { invalidBodyResponse, isUniqueConstraintError, readJsonBody } from "@/lib/http";
+import { validateCategoryInput } from "@/lib/validators";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,28 +35,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { name, type, color, icon } = body;
+    const body = await readJsonBody(request);
 
-    if (!name || !type) {
-      return NextResponse.json(
-        { error: "Nome e tipo são obrigatórios." },
-        { status: 400 },
-      );
+    if (!body) {
+      return invalidBodyResponse();
+    }
+
+    const { data, error } = validateCategoryInput(body);
+
+    if (error !== undefined) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const category = await prisma.category.create({
       data: {
-        name,
-        type,
-        color,
-        icon,
+        ...data,
         userId: user.id,
       },
     });
 
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return NextResponse.json(
+        { error: "Já existe uma categoria com este nome e tipo." },
+        { status: 409 },
+      );
+    }
+
     console.error("Erro no POST /api/categories:", error);
     return NextResponse.json(
       { error: "Erro ao salvar categoria." },

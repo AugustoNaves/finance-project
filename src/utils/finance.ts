@@ -1,12 +1,8 @@
 import { Transaction } from "@/types/transaction";
+import { getLocalMonthKey, getMonthKey } from "@/utils/dates";
 
 export function isSameMonth(date: string | Date, referenceDate: Date) {
-  const targetDate = new Date(date);
-
-  return (
-    targetDate.getMonth() === referenceDate.getMonth() &&
-    targetDate.getFullYear() === referenceDate.getFullYear()
-  );
+  return getMonthKey(date) === getLocalMonthKey(referenceDate);
 }
 
 export function getMonthlyTransactions(

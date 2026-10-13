@@ -62,7 +62,7 @@ export default function Home() {
   const savingsRate = calculateSavingsRate(monthSummary.income, monthSummary.total);
 
   const closestGoal = goals
-    .filter((goal) => goal.targetAmount > 0)
+    .filter((goal) => goal.targetAmount > 0 && goal.currentAmount < goal.targetAmount)
     .sort((goalA, goalB) => {
       const progressA = goalA.currentAmount / goalA.targetAmount;
       const progressB = goalB.currentAmount / goalB.targetAmount;

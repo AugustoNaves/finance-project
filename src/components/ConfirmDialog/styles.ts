@@ -14,6 +14,14 @@ export const Message = styled.p`
   line-height: 1.6;
 `;
 
+export const ErrorSlot = styled.div`
+  margin-top: 16px;
+
+  &:empty {
+    display: none;
+  }
+`;
+
 export const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
@@ -37,6 +45,11 @@ export const CancelButton = styled.button`
 `;
 
 export const ConfirmButton = styled.button`
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   min-height: 42px;
   padding: 0 16px;
   border-radius: 10px;

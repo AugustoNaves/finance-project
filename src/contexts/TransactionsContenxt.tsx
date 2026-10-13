@@ -40,48 +40,30 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function addTransaction(newTx: TransactionPayload) {
-    try {
-      const transactionCreated = await createTransaction(newTx);
+    const transactionCreated = await createTransaction(newTx);
 
-      if (transactionCreated) {
-        setTransactions((currentTransactions) => [
-          transactionCreated,
-          ...currentTransactions,
-        ]);
-      }
-    } catch (error) {
-      console.error("Erro ao salvar a transação:", error);
-    }
+    setTransactions((currentTransactions) => [
+      transactionCreated,
+      ...currentTransactions,
+    ]);
   }
 
   async function updateTransaction(id: string, updatedTx: TransactionPayload) {
-    try {
-      const transactionUpdated = await patchTransaction(id, updatedTx);
+    const transactionUpdated = await patchTransaction(id, updatedTx);
 
-      if (transactionUpdated) {
-        setTransactions((currentTransactions) =>
-          currentTransactions.map((transaction) =>
-            transaction.id === id ? transactionUpdated : transaction,
-          ),
-        );
-      }
-    } catch (error) {
-      console.error("Erro ao atualizar a transação:", error);
-    }
+    setTransactions((currentTransactions) =>
+      currentTransactions.map((transaction) =>
+        transaction.id === id ? transactionUpdated : transaction,
+      ),
+    );
   }
 
   async function deleteTransaction(id: string) {
-    try {
-      const removed = await removeTransaction(id);
+    await removeTransaction(id);
 
-      if (removed) {
-        setTransactions((currentTransactions) =>
-          currentTransactions.filter((transaction) => transaction.id !== id),
-        );
-      }
-    } catch (error) {
-      console.error("Erro ao deletar a transação:", error);
-    }
+    setTransactions((currentTransactions) =>
+      currentTransactions.filter((transaction) => transaction.id !== id),
+    );
   }
 
   return (

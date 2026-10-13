@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { FormError } from "@/components/FormError";
+import { getErrorMessage } from "@/services/http";
 import { CategoryPayload, CategoryType } from "@/types/category";
 import { Field, Form, Input, Label, Select, SubmitButton } from "./styles";
 
@@ -21,16 +23,29 @@ export function CategoryForm({
   const [type, setType] = useState<CategoryType>(initialValues?.type ?? "outcome");
   const [color, setColor] = useState(initialValues?.color ?? "#00c48c");
   const [icon, setIcon] = useState(initialValues?.icon ?? "");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    await onSubmit({
-      name: name.trim(),
-      type,
-      color,
-      icon: icon.trim() || undefined,
-    });
+    setError("");
+    setSubmitting(true);
+
+    try {
+      await onSubmit({
+        name: name.trim(),
+        type,
+        color,
+        icon: icon.trim() || null,
+      });
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, "Não foi possível salvar a categoria."));
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
 
     if (!initialValues) {
       setName("");
@@ -86,7 +101,11 @@ export function CategoryForm({
         />
       </Field>
 
-      <SubmitButton type="submit">{submitLabel}</SubmitButton>
+      <FormError message={error} />
+
+      <SubmitButton type="submit" disabled={submitting}>
+        {submitLabel}
+      </SubmitButton>
     </Form>
   );
 }

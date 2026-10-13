@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Overlay,
@@ -8,6 +8,8 @@ import {
   ModalTitle,
   CloseButton,
 } from "./style";
+
+const openModals: object[] = [];
 
 interface ModalProps {
   isOpen: boolean;
@@ -43,14 +45,48 @@ export const Modal = ({
     };
   }, [isOpen]);
 
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const token = {};
+    openModals.push(token);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && openModals[openModals.length - 1] === token) {
+        onCloseRef.current();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      openModals.splice(openModals.indexOf(token), 1);
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const modalContent = (
     <Overlay onClick={onClose}>
-      <ModalContainer $maxWidth={maxWidth} onClick={(e) => e.stopPropagation()}>
+      <ModalContainer
+        $maxWidth={maxWidth}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
         <ModalHeader>
           <ModalTitle>{title}</ModalTitle>
-          <CloseButton onClick={onClose}>✕</CloseButton>
+          <CloseButton type="button" aria-label="Fechar" onClick={onClose}>
+            ✕
+          </CloseButton>
         </ModalHeader>
         {children}
       </ModalContainer>

@@ -11,59 +11,88 @@ Este projeto foi construído utilizando as ferramentas mais modernas do mercado:
 - **Banco de Dados:** PostgreSQL (via [Supabase](https://supabase.com/))
 - **ORM:** [Prisma](https://www.prisma.io/)
 - **Estilização:** [styled-components](https://styled-components.com/)
+- **Gráficos:** [recharts](https://recharts.org/)
+- **Testes:** [Vitest](https://vitest.dev/), Testing Library e [Playwright](https://playwright.dev/)
 - **Autenticação e Segurança:** Gerenciamento de sessões com proteção de rotas privadas
 - **Envio de E-mails:** [Resend](https://resend.com/)
 
 ## ✨ Principais Funcionalidades
 
-- **Dashboard Interativo:** Visão geral rápida sobre receitas, despesas e saldo atual do mês.
-- **Gestão de Transações:** CRUD completo (Criar, Ler, Atualizar, Deletar) de receitas e despesas.
-- **Categorização Personalizada:** Os usuários podem organizar seus gastos criando categorias personalizadas com ícones e cores, permitindo uma análise clara de onde o dinheiro está sendo gasto.
-- **Isolamento de Dados (Multi-tenancy):** Arquitetura segura onde cada usuário autenticado só tem acesso aos seus próprios dados financeiros no banco de dados relacional.
-- **UI/UX Moderna:** Interface 100% responsiva (Mobile-First) com suporte nativo a transições fluidas e Tema Escuro (Dark Mode).
+- **Contas e sessão:** cadastro, login com reCAPTCHA v3, recuperação de senha por e-mail e logout.
+- **Dashboard:** receitas, despesas, investimentos e saldo acumulados, resumo do mês e indicadores.
+- **Transações:** criar, editar, excluir, buscar, filtrar (tipo, categoria, período) e ordenar.
+- **Categorias:** por tipo (receita, despesa, investimento), com cor e sigla; 18 categorias padrão no cadastro.
+- **Planejamento:** orçamentos mensais por categoria com progresso de gasto, e metas financeiras.
+- **Investimentos:** total aportado, aportes do mês e evolução em 6 meses.
+- **Relatórios:** indicadores e gráficos por mês selecionado.
+- **Configurações:** dados da conta e exportação das transações em JSON/CSV.
+- **Isolamento de dados:** cada usuário só acessa os próprios registros.
+- **Interface responsiva** em tema escuro.
+
+## 📚 Documentação
+
+| Documento | Conteúdo |
+|---|---|
+| [docs/FUNCIONALIDADES.md](docs/FUNCIONALIDADES.md) | Mapa funcional de todas as telas, regras de negócio e matriz de funcionalidades |
+| [docs/API.md](docs/API.md) | Arquitetura, modelo de dados, autenticação e referência da API |
+| [docs/TESTES.md](docs/TESTES.md) | Como rodar os testes e o que cada suíte cobre |
+| [docs/MELHORIAS.md](docs/MELHORIAS.md) | Melhorias aplicadas e pendentes, com prioridade |
+| [docs/specs/SPEC-importacao-fatura-pdf.md](docs/specs/SPEC-importacao-fatura-pdf.md) | Especificação da importação de fatura por PDF |
 
 ## 💻 Como rodar o projeto localmente
 
-Siga os passos abaixo para testar o projeto na sua própria máquina:
-
 ### 1. Clone o repositório
-\\\ash
-git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
-cd finance-project-with-next-no-ia
-\\\
 
-### 2. Instale as dependências
-\\\ash
+```bash
+git clone https://github.com/AugustoNaves/finance-project.git
+cd finance-project
+```
+
+### 2. Configure as variáveis de ambiente
+
+Faça isso **antes** do `npm install`: o `postinstall` roda `prisma generate`, que falha sem `DIRECT_URL`.
+
+```bash
+cp .env.example .env
+```
+
+Preencha os valores conforme os comentários do arquivo (detalhes em [docs/API.md](docs/API.md#2-variáveis-de-ambiente)).
+
+### 3. Instale as dependências
+
+```bash
 npm install
-# ou
-yarn install
-\\\
+```
 
-### 3. Configure as Variáveis de Ambiente
-Crie um arquivo chamado \.env\ na raiz do projeto e configure suas chaves (use o arquivo \.env.example\ como base, se houver):
-\\\nv
-DATABASE_URL="sua_string_de_conexao_do_postgresql"
-# (Adicione outras chaves como as do Resend, se necessário)
-\\\
+### 4. Aplique as migrations
 
-### 4. Execute as Migrations do Banco de Dados
-Isso criará as tabelas (Users, Transactions, Categories, etc.) no seu PostgreSQL:
-\\\ash
-npx prisma generate
-npx prisma db push
-\\\
+```bash
+npx prisma migrate deploy
+```
 
-### 5. Inicie o Servidor de Desenvolvimento
-\\\ash
+### 5. Inicie o servidor de desenvolvimento
+
+```bash
 npm run dev
-\\\
+```
+
 O projeto estará rodando em [http://localhost:3000](http://localhost:3000).
+
+## 🧪 Testes
+
+```bash
+npm test            # Vitest: unitário, API e UI
+npm run test:e2e    # Playwright: fluxo completo com Postgres local
+```
+
+Veja [docs/TESTES.md](docs/TESTES.md).
 
 ## 🧠 Arquitetura e Decisões Técnicas
 
-- **Next.js App Router:** Escolhido por permitir SSR (Server-Side Rendering) e Server Actions, removendo a necessidade de construir uma API REST separada para operações triviais do banco.
-- **Prisma:** Garante a segurança de tipos de ponta a ponta (Type-Safety) entre o banco de dados PostgreSQL e os componentes React.
-- **Estilização por Componentes:** O uso do \styled-components\ evitou vazamento de CSS global e facilitou a estruturação do Dark Mode utilizando um Theme Provider nativo.
+- **Next.js App Router:** páginas como Client Components consumindo Route Handlers (`/api/*`). O projeto não usa Server Actions.
+- **Prisma:** tipagem ponta a ponta entre o PostgreSQL e a API.
+- **Sessão própria:** cookie httpOnly assinado com HMAC-SHA256, validado no `src/proxy.ts` e em cada rota de API.
+- **styled-components:** estilos por componente com SSR.
 
 ---
 

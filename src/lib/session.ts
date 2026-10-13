@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 export const SESSION_COOKIE_NAME = "session_token";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 export type SessionPayload = {
   userId: string;
@@ -60,6 +61,21 @@ async function sign(value: string) {
   return toBase64Url(new Uint8Array(signature));
 }
 
+async function verifySignature(value: string, signature: string) {
+  if (!BASE64URL_PATTERN.test(signature)) {
+    return false;
+  }
+
+  const key = await getSigningKey();
+
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    fromBase64Url(signature),
+    new TextEncoder().encode(value),
+  );
+}
+
 export function getSessionCookieOptions() {
   return {
     httpOnly: true,
@@ -97,15 +113,13 @@ export async function verifySessionToken(token: string | undefined) {
     return null;
   }
 
-  const [payloadValue, signature] = token.split(".");
+  const [payloadValue, signature, ...extraParts] = token.split(".");
 
-  if (!payloadValue || !signature) {
+  if (!payloadValue || !signature || extraParts.length > 0) {
     return null;
   }
 
-  const expectedSignature = await sign(payloadValue);
-
-  if (signature !== expectedSignature) {
+  if (!(await verifySignature(payloadValue, signature))) {
     return null;
   }
 
@@ -114,7 +128,12 @@ export async function verifySessionToken(token: string | undefined) {
       new TextDecoder().decode(fromBase64Url(payloadValue)),
     ) as SessionPayload;
 
-    if (!payload.userId || !payload.email || payload.exp < Math.floor(Date.now() / 1000)) {
+    if (
+      !payload.userId ||
+      !payload.email ||
+      typeof payload.exp !== "number" ||
+      payload.exp < Math.floor(Date.now() / 1000)
+    ) {
       return null;
     }
 

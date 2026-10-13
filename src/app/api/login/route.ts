@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { invalidBodyResponse, readJsonBody } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { comparePassword } from "@/lib/password";
 import {
@@ -10,6 +11,8 @@ import {
 const attempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
+const DUMMY_PASSWORD_HASH =
+  "$2b$12$91D2ZaKRsYYr.i423HBWyOEogDpIDIj/qUIoqTnn2WM4FFutfb85C";
 
 function getAttemptKey(request: NextRequest, email: string) {
   const forwardedFor = request.headers
@@ -18,7 +21,7 @@ function getAttemptKey(request: NextRequest, email: string) {
     ?.trim();
   const ip = forwardedFor || request.headers.get("x-real-ip") || "unknown";
 
-  return `${email.toLowerCase()}:${ip}`;
+  return `${email}:${ip}`;
 }
 
 function isRateLimited(key: string) {
@@ -36,7 +39,12 @@ function isRateLimited(key: string) {
   return attempt.count > MAX_ATTEMPTS;
 }
 
-async function validateRecaptcha(token: string, request: NextRequest) {
+type RecaptchaResult = { valid: boolean; error?: string; status?: number };
+
+async function validateRecaptcha(
+  token: string,
+  request: NextRequest,
+): Promise<RecaptchaResult> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
   if (!secretKey) {
@@ -48,21 +56,33 @@ async function validateRecaptcha(token: string, request: NextRequest) {
     response: token,
   });
 
-  const googleResponse = await fetch(
-    "https://www.google.com/recaptcha/api/siteverify",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formData.toString(),
-    },
-  );
-
-  const googleData = (await googleResponse.json()) as {
+  let googleData: {
     success?: boolean;
     score?: number;
     action?: string;
     hostname?: string;
   };
+
+  try {
+    const googleResponse = await fetch(
+      "https://www.google.com/recaptcha/api/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
+      },
+    );
+
+    googleData = await googleResponse.json();
+  } catch (error) {
+    console.error("Erro ao validar o reCAPTCHA:", error);
+    return {
+      valid: false,
+      error: "Não foi possível validar o reCAPTCHA. Tente novamente.",
+      status: 503,
+    };
+  }
+
   const requestHost = request.nextUrl.hostname;
 
   if (
@@ -82,8 +102,14 @@ async function validateRecaptcha(token: string, request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, senha, recaptchaToken } = body;
+    const body = await readJsonBody(request);
+
+    if (!body) {
+      return invalidBodyResponse();
+    }
+
+    const { senha, recaptchaToken } = body;
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
 
     if (!email || !senha) {
       return NextResponse.json(
@@ -92,7 +118,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!recaptchaToken) {
+    if (!recaptchaToken || typeof recaptchaToken !== "string") {
       return NextResponse.json(
         { error: "Token do reCAPTCHA ausente" },
         { status: 400 },
@@ -111,15 +137,19 @@ export async function POST(request: NextRequest) {
     const recaptcha = await validateRecaptcha(recaptchaToken, request);
 
     if (!recaptcha.valid) {
-      return NextResponse.json({ error: recaptcha.error }, { status: 403 });
+      return NextResponse.json(
+        { error: recaptcha.error },
+        { status: recaptcha.status ?? 403 },
+      );
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: String(email).toLowerCase() },
+      where: { email },
     });
-    const passwordMatches = user
-      ? await comparePassword(String(senha), user.passwordHash)
-      : false;
+    const passwordMatches = await comparePassword(
+      String(senha),
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+    );
 
     if (!user || !passwordMatches) {
       return NextResponse.json(
