@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { invalidBodyResponse, readJsonBody } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/resend";
 import { createPasswordResetToken } from "@/lib/tokens";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
+
+    if (!body) {
+      return invalidBodyResponse();
+    }
+
     const { email } = body;
 
     if (!email || typeof email !== "string") {
@@ -31,7 +37,11 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
 
-    await sendPasswordResetEmail(user.email, resetUrl);
+    try {
+      await sendPasswordResetEmail(user.email, resetUrl);
+    } catch (error) {
+      console.error("Erro ao enviar email de recuperação de senha:", error);
+    }
 
     return NextResponse.json(
       { message: "Se este email estiver cadastrado, enviaremos um link de recuperação." },

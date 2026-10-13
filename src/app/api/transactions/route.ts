@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { invalidBodyResponse, readJsonBody } from "@/lib/http";
+import { validateTransactionInput } from "@/lib/validators";
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,18 +37,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { description, amount, category, type, paymentMethod, notes, date } = body;
+    const body = await readJsonBody(request);
+
+    if (!body) {
+      return invalidBodyResponse();
+    }
+
+    const { data, error } = validateTransactionInput(body);
+
+    if (error !== undefined) {
+      return NextResponse.json({ error }, { status: 400 });
+    }
 
     const newTransaction = await prisma.transaction.create({
       data: {
-        description,
-        amount,
-        category,
-        type,
-        paymentMethod,
-        notes,
-        date: date ? new Date(date) : undefined,
+        ...data,
         userId: user.id,
       },
     });

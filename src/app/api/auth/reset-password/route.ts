@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { invalidBodyResponse, readJsonBody } from "@/lib/http";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import {
@@ -8,7 +9,12 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
+
+    if (!body) {
+      return invalidBodyResponse();
+    }
+
     const { token, password } = body;
 
     if (!token || typeof token !== "string") {
@@ -36,12 +42,13 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    await prisma.user.update({
-      where: { id: resetToken.userId },
-      data: { passwordHash },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash },
+      });
+      await markPasswordResetTokenAsUsed(token, tx);
     });
-
-    await markPasswordResetTokenAsUsed(token);
 
     return NextResponse.json(
       { message: "Senha redefinida com sucesso." },

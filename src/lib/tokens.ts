@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const TOKEN_EXPIRATION_HOURS = 1;
@@ -8,14 +9,20 @@ export async function createPasswordResetToken(userId: string, email: string) {
 
   expiresAt.setHours(expiresAt.getHours() + TOKEN_EXPIRATION_HOURS);
 
-  await prisma.passwordResetToken.create({
-    data: {
-      email,
-      token,
-      expiresAt,
-      userId,
-    },
-  });
+  await prisma.$transaction([
+    prisma.passwordResetToken.updateMany({
+      where: { userId, usedAt: null },
+      data: { usedAt: new Date() },
+    }),
+    prisma.passwordResetToken.create({
+      data: {
+        email,
+        token,
+        expiresAt,
+        userId,
+      },
+    }),
+  ]);
 
   return token;
 }
@@ -32,8 +39,11 @@ export async function validatePasswordResetToken(token: string) {
   return resetToken;
 }
 
-export async function markPasswordResetTokenAsUsed(token: string) {
-  await prisma.passwordResetToken.update({
+export async function markPasswordResetTokenAsUsed(
+  token: string,
+  client: Prisma.TransactionClient = prisma,
+) {
+  await client.passwordResetToken.update({
     where: { token },
     data: { usedAt: new Date() },
   });
