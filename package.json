@@ -13,7 +13,8 @@
     "test:unit": "vitest run --project node",
     "test:ui": "vitest run --project ui",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

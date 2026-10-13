@@ -22,9 +22,10 @@ Esta versão (Next.js 16) tem breaking changes — APIs, convenções e estrutur
 - `npm run build`
 - `npm run lint`
 - `npm run start` (produção)
+- A Vercel instala com **yarn** (existe `yarn.lock`) e roda `next build`; o `tsconfig.json` exclui `tests/` para o build não depender das ferramentas de teste.
 - `npm test` (Vitest: unitário + API + UI), `npm run test:e2e` (Playwright, sobe Postgres local e o app). Detalhes em `docs/TESTES.md`.
   _Nota: `prisma generate` roda automaticamente no postinstall._
-  **Regra de Ouro:** Antes de commitar, SEMPRE rode `npm run lint` e `npm test`. Se quebrar, conserte antes de seguir.
+  **Regra de Ouro:** Antes de commitar, SEMPRE rode `npm run lint`, `npm run typecheck` e `npm test`. Se quebrar, conserte antes de seguir.
   _Nota: `npm install` falha sem `DIRECT_URL` no `.env` (o `prisma generate` do postinstall exige). Use `.env.example` como base._
 
 ## 3. Banco de Dados (Atenção Máxima)

@@ -38,6 +38,7 @@ Outros comandos:
 | `npm run test:ui` | Só UI |
 | `npm run test:watch` | Vitest em modo watch |
 | `npm run test:coverage` | Cobertura (relatório HTML em `coverage/`) |
+| `npm run typecheck` | Typecheck de `src/` **e** dos testes (`tsconfig.test.json`). O `tsconfig.json` do app exclui os testes para que o `next build` não dependa das ferramentas de teste |
 | `npx playwright test tests/e2e/02-transactions.spec.ts` | Uma spec E2E |
 | `npx playwright show-report` | Relatório HTML da última execução E2E |
 | `E2E_SHOW_BUGS=1 npx playwright test` | Mostra as falhas reais dos testes de bug conhecido |
@@ -166,7 +167,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
       - run: npm test
 ```
 
