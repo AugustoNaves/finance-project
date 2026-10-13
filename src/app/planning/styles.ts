@@ -45,7 +45,6 @@ export const SectionHeader = styled.header`
     font-size: 1.3rem;
     font-weight: 700;
     letter-spacing: -0.04em;
-    text-transform: capitalize;
   }
 
   span {

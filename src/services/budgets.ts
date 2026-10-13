@@ -1,3 +1,4 @@
+import { toApiError } from "@/services/http";
 import { Budget, BudgetPayload } from "@/types/budget";
 
 export async function fetchBudgets() {
@@ -18,7 +19,9 @@ export async function createBudget(payload: BudgetPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível salvar o orçamento.");
+  }
 
   return (await response.json()) as Budget;
 }
@@ -30,7 +33,9 @@ export async function patchBudget(id: string, payload: BudgetPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível atualizar o orçamento.");
+  }
 
   return (await response.json()) as Budget;
 }
@@ -40,5 +45,9 @@ export async function removeBudget(id: string) {
     method: "DELETE",
   });
 
-  return response.ok;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível excluir o orçamento.");
+  }
+
+  return true;
 }

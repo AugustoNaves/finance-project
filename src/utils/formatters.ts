@@ -6,7 +6,7 @@ export function formatCurrency(value: number) {
 }
 
 export function formatDate(value: string | Date) {
-  return new Date(value).toLocaleDateString("pt-BR");
+  return new Date(value).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 export function formatMonthYear(value: Date) {

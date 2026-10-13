@@ -46,9 +46,9 @@ export function TransactionFilters({
     <FiltersPanel>
       <FiltersGrid>
         <Field $wide>
-          <Label htmlFor="transaction-search">Buscar</Label>
+          <Label htmlFor="transaction-filter-search">Buscar</Label>
           <Input
-            id="transaction-search"
+            id="transaction-filter-search"
             type="search"
             placeholder="Buscar por descrição..."
             value={filters.search}
@@ -57,9 +57,9 @@ export function TransactionFilters({
         </Field>
 
         <Field>
-          <Label htmlFor="transaction-type">Tipo</Label>
+          <Label htmlFor="transaction-filter-type">Tipo</Label>
           <Select
-            id="transaction-type"
+            id="transaction-filter-type"
             value={filters.type}
             onChange={(event) =>
               updateFilter("type", event.target.value as TransactionTypeFilter)
@@ -73,9 +73,9 @@ export function TransactionFilters({
         </Field>
 
         <Field>
-          <Label htmlFor="transaction-category">Categoria</Label>
+          <Label htmlFor="transaction-filter-category">Categoria</Label>
           <Select
-            id="transaction-category"
+            id="transaction-filter-category"
             value={filters.category}
             onChange={(event) => updateFilter("category", event.target.value)}
           >
@@ -89,9 +89,9 @@ export function TransactionFilters({
         </Field>
 
         <Field>
-          <Label htmlFor="transaction-start-date">De</Label>
+          <Label htmlFor="transaction-filter-start-date">De</Label>
           <Input
-            id="transaction-start-date"
+            id="transaction-filter-start-date"
             type="date"
             value={filters.startDate}
             onChange={(event) => updateFilter("startDate", event.target.value)}
@@ -99,9 +99,9 @@ export function TransactionFilters({
         </Field>
 
         <Field>
-          <Label htmlFor="transaction-end-date">Até</Label>
+          <Label htmlFor="transaction-filter-end-date">Até</Label>
           <Input
-            id="transaction-end-date"
+            id="transaction-filter-end-date"
             type="date"
             value={filters.endDate}
             onChange={(event) => updateFilter("endDate", event.target.value)}
@@ -109,9 +109,9 @@ export function TransactionFilters({
         </Field>
 
         <Field>
-          <Label htmlFor="transaction-sort">Ordenar</Label>
+          <Label htmlFor="transaction-filter-sort">Ordenar</Label>
           <Select
-            id="transaction-sort"
+            id="transaction-filter-sort"
             value={filters.sort}
             onChange={(event) =>
               updateFilter("sort", event.target.value as TransactionSortOption)

@@ -10,6 +10,7 @@ import {
 } from "@/components/TransactionFilters";
 import { TransactionList } from "@/components/TransactionList";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
+import { getDateKey } from "@/utils/dates";
 import { getTransactionType } from "@/utils/finance";
 import { PageContent } from "./styles";
 
@@ -34,7 +35,7 @@ export default function TransactionsPage() {
 
   const filteredTransactions = transactions
     .filter((transaction) => {
-      const transactionDate = new Date(transaction.date);
+      const transactionDateKey = getDateKey(transaction.date);
       const search = filters.search.trim().toLowerCase();
       const matchesSearch = search
         ? transaction.description.toLowerCase().includes(search)
@@ -45,10 +46,10 @@ export default function TransactionsPage() {
       const matchesCategory =
         filters.category === "all" || transaction.category === filters.category;
       const matchesStartDate = filters.startDate
-        ? transactionDate >= new Date(`${filters.startDate}T00:00:00`)
+        ? transactionDateKey >= filters.startDate
         : true;
       const matchesEndDate = filters.endDate
-        ? transactionDate <= new Date(`${filters.endDate}T23:59:59`)
+        ? transactionDateKey <= filters.endDate
         : true;
 
       return (

@@ -97,7 +97,14 @@ export default function ForgotPasswordPage() {
             </InputWrapper>
           </InputGroup>
 
-          {message && <FormMessage $variant={message.type}>{message.text}</FormMessage>}
+          {message && (
+            <FormMessage
+              role={message.type === "error" ? "alert" : "status"}
+              $variant={message.type}
+            >
+              {message.text}
+            </FormMessage>
+          )}
 
           <SubmitButton type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Enviando..." : "Enviar link"}

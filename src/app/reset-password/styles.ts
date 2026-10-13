@@ -223,4 +223,10 @@ export const FormMessage = styled.p<{ $variant: "error" | "success" }>`
   line-height: 1.4;
   padding: 10px 12px;
   margin-bottom: 16px;
+
+  a {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+  }
 `;

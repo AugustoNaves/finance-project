@@ -40,6 +40,7 @@ function getTransactionFormValues(transaction: Transaction): TransactionFormData
     type: transaction.type ?? (transaction.amount > 0 ? "income" : "outcome"),
     paymentMethod: transaction.paymentMethod ?? "Pix",
     notes: transaction.notes ?? "",
+    date: transaction.date,
   };
 }
 
@@ -50,6 +51,10 @@ export function TransactionList({
 }: TransactionListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
+  const deletingTransaction = transactions.find(
+    (transaction) => transaction.id === deleteId,
+  );
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -176,7 +181,11 @@ export function TransactionList({
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         title="Confirmar exclusão"
-        message="Tem certeza que deseja excluir esta transação?"
+        message={
+          deletingTransaction
+            ? `Tem certeza que deseja excluir a transação "${deletingTransaction.description}"?`
+            : "Tem certeza que deseja excluir esta transação?"
+        }
         confirmLabel="Confirmar exclusão"
         onConfirm={handleDelete}
       />

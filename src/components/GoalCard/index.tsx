@@ -2,7 +2,7 @@
 
 import { ProgressBar } from "@/components/ProgressBar";
 import { Goal } from "@/types/goal";
-import { formatCurrency } from "@/utils/formatters";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 import {
   Actions,
   Card,
@@ -54,7 +54,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
 
       {goal.deadline && (
         <Deadline>
-          Prazo: {new Date(goal.deadline).toLocaleDateString("pt-BR")}
+          Prazo: {formatDate(goal.deadline)}
         </Deadline>
       )}
 

@@ -9,12 +9,13 @@ import { SummaryCard } from "@/components/SummaryCard";
 import { TransactionList } from "@/components/TransactionList";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
 import { Transaction } from "@/types/transaction";
+import { getLocalMonthKey, getMonthKey } from "@/utils/dates";
 import { getTransactionType } from "@/utils/finance";
 import { formatCurrency } from "@/utils/formatters";
 import { ChartSection, InvestmentGrid, PageContent, Section } from "./styles";
 
 function getTransactionMonth(transaction: Transaction) {
-  return new Date(transaction.date).toISOString().slice(0, 7);
+  return getMonthKey(transaction.date);
 }
 
 function formatMonthLabel(month: string) {
@@ -34,7 +35,7 @@ function getPreviousMonths(referenceMonth: string, quantity: number) {
     const date = new Date(referenceDate);
     date.setMonth(referenceDate.getMonth() - (quantity - 1 - index));
 
-    return date.toISOString().slice(0, 7);
+    return getLocalMonthKey(date);
   });
 }
 
@@ -53,7 +54,7 @@ export default function InvestmentsPage() {
     0,
   );
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = getLocalMonthKey();
   const evolution = getPreviousMonths(currentMonth, 6).map((month) => {
     const monthInvestments = investments.filter(
       (transaction) => getTransactionMonth(transaction) === month,
@@ -118,6 +119,8 @@ export default function InvestmentsPage() {
       <NewTransactionModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
+        title="Novo Aporte"
+        defaultType="investment"
       />
     </AppShell>
   );

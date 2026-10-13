@@ -1,3 +1,4 @@
+import { toApiError } from "@/services/http";
 import { Category, CategoryPayload } from "@/types/category";
 
 export async function fetchCategories() {
@@ -18,7 +19,9 @@ export async function createCategory(payload: CategoryPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível salvar a categoria.");
+  }
 
   return (await response.json()) as Category;
 }
@@ -30,7 +33,9 @@ export async function patchCategory(id: string, payload: CategoryPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível atualizar a categoria.");
+  }
 
   return (await response.json()) as Category;
 }
@@ -40,5 +45,9 @@ export async function removeCategory(id: string) {
     method: "DELETE",
   });
 
-  return response.ok;
+  if (!response.ok) {
+    throw await toApiError(response, "Não foi possível excluir a categoria.");
+  }
+
+  return true;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import {
@@ -138,7 +139,21 @@ function ResetPasswordForm() {
             </InputWrapper>
           </InputGroup>
 
-          {message && <FormMessage $variant={message.type}>{message.text}</FormMessage>}
+          {!token && !message && (
+            <FormMessage role="alert" $variant="error">
+              Link inválido ou incompleto.{" "}
+              <Link href="/forgot-password">Solicite um novo link de redefinição</Link>.
+            </FormMessage>
+          )}
+
+          {message && (
+            <FormMessage
+              role={message.type === "error" ? "alert" : "status"}
+              $variant={message.type}
+            >
+              {message.text}
+            </FormMessage>
+          )}
 
           <SubmitButton type="submit" disabled={isSubmitting || !token}>
             {isSubmitting ? "Redefinindo..." : "Redefinir senha"}

@@ -15,6 +15,7 @@ import {
   DeleteButton,
 } from "./styles";
 import { Modal } from "../CustomModal";
+import { formatDate } from "@/utils/formatters";
 
 export const TransactionTable = () => {
   const { transactions, deleteTransaction } = useContext(TransactionsContext);
@@ -52,7 +53,7 @@ export const TransactionTable = () => {
                 <Td>
                   <CategoryTag>{tx.category}</CategoryTag>
                 </Td>
-                <Td>{new Date(tx.date).toLocaleDateString("pt-BR")}</Td>
+                <Td>{formatDate(tx.date)}</Td>
                 <td>
                   <TrashButton
                     onClick={() => HandleDeleteModal(tx.id)}

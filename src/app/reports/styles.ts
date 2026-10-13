@@ -134,7 +134,11 @@ export const EvolutionMonth = styled.span`
   color: ${colors.textLight};
   font-size: 0.84rem;
   font-weight: 700;
-  text-transform: capitalize;
+  display: inline-block;
+
+  &::first-letter {
+    text-transform: uppercase;
+  }
 `;
 
 export const EvolutionBar = styled.div`

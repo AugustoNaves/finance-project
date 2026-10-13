@@ -27,6 +27,7 @@ import {
 import { Budget } from "@/types/budget";
 import { Category } from "@/types/category";
 import { Goal } from "@/types/goal";
+import { getLocalMonthKey, getMonthKey } from "@/utils/dates";
 import { getTransactionType } from "@/utils/finance";
 import { formatCurrency } from "@/utils/formatters";
 import {
@@ -37,7 +38,7 @@ import {
 } from "./styles";
 
 function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return getLocalMonthKey();
 }
 
 function formatMonth(month: string) {
@@ -110,9 +111,7 @@ export default function PlanningPage() {
   function getBudgetMetrics(budget: Budget): BudgetViewModel {
     const spent = transactions
       .filter((transaction) => {
-        const transactionMonth = new Date(transaction.date)
-          .toISOString()
-          .slice(0, 7);
+        const transactionMonth = getMonthKey(transaction.date);
 
         return (
           transaction.category === budget.category &&
@@ -140,11 +139,9 @@ export default function PlanningPage() {
   async function handleCreateBudget(data: BudgetFormData) {
     const budget = await createBudget(data);
 
-    if (budget) {
-      setBudgets((currentBudgets) => [budget, ...currentBudgets]);
-      setSelectedMonth(budget.month);
-      setBudgetModalOpen(false);
-    }
+    setBudgets((currentBudgets) => [budget, ...currentBudgets]);
+    setSelectedMonth(budget.month);
+    setBudgetModalOpen(false);
   }
 
   async function handleUpdateBudget(data: BudgetFormData) {
@@ -152,37 +149,31 @@ export default function PlanningPage() {
 
     const budget = await patchBudget(editingBudget.id, data);
 
-    if (budget) {
-      setBudgets((currentBudgets) =>
-        currentBudgets.map((currentBudget) =>
-          currentBudget.id === budget.id ? budget : currentBudget,
-        ),
-      );
-      setSelectedMonth(budget.month);
-      setEditingBudget(null);
-    }
+    setBudgets((currentBudgets) =>
+      currentBudgets.map((currentBudget) =>
+        currentBudget.id === budget.id ? budget : currentBudget,
+      ),
+    );
+    setSelectedMonth(budget.month);
+    setEditingBudget(null);
   }
 
   async function handleDeleteBudget() {
     if (!deleteBudget) return;
 
-    const removed = await removeBudget(deleteBudget.id);
+    await removeBudget(deleteBudget.id);
 
-    if (removed) {
-      setBudgets((currentBudgets) =>
-        currentBudgets.filter((budget) => budget.id !== deleteBudget.id),
-      );
-      setDeleteBudget(null);
-    }
+    setBudgets((currentBudgets) =>
+      currentBudgets.filter((budget) => budget.id !== deleteBudget.id),
+    );
+    setDeleteBudget(null);
   }
 
   async function handleCreateGoal(data: GoalFormData) {
     const goal = await createGoal(data);
 
-    if (goal) {
-      setGoals((currentGoals) => [goal, ...currentGoals]);
-      setGoalModalOpen(false);
-    }
+    setGoals((currentGoals) => [goal, ...currentGoals]);
+    setGoalModalOpen(false);
   }
 
   async function handleUpdateGoal(data: GoalFormData) {
@@ -190,27 +181,23 @@ export default function PlanningPage() {
 
     const goal = await patchGoal(editingGoal.id, data);
 
-    if (goal) {
-      setGoals((currentGoals) =>
-        currentGoals.map((currentGoal) =>
-          currentGoal.id === goal.id ? goal : currentGoal,
-        ),
-      );
-      setEditingGoal(null);
-    }
+    setGoals((currentGoals) =>
+      currentGoals.map((currentGoal) =>
+        currentGoal.id === goal.id ? goal : currentGoal,
+      ),
+    );
+    setEditingGoal(null);
   }
 
   async function handleDeleteGoal() {
     if (!deleteGoal) return;
 
-    const removed = await removeGoal(deleteGoal.id);
+    await removeGoal(deleteGoal.id);
 
-    if (removed) {
-      setGoals((currentGoals) =>
-        currentGoals.filter((goal) => goal.id !== deleteGoal.id),
-      );
-      setDeleteGoal(null);
-    }
+    setGoals((currentGoals) =>
+      currentGoals.filter((goal) => goal.id !== deleteGoal.id),
+    );
+    setDeleteGoal(null);
   }
 
   const monthlyBudgets = budgets
@@ -312,7 +299,12 @@ export default function PlanningPage() {
         onClose={() => setBudgetModalOpen(false)}
         title="Novo orçamento"
       >
-        <BudgetForm categories={categories} onSubmit={handleCreateBudget} />
+        <BudgetForm
+          key={selectedMonth}
+          categories={categories}
+          defaultMonth={selectedMonth}
+          onSubmit={handleCreateBudget}
+        />
       </Modal>
 
       <Modal

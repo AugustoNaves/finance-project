@@ -6,6 +6,9 @@ import { Category, CategoryPayload } from "@/types/category";
 import { TransactionPayload, TransactionType } from "@/types/transaction";
 import { Modal as CustomModal } from "@/components/CustomModal";
 import { CategoryForm } from "@/components/CategoryForm";
+import { FormError } from "@/components/FormError";
+import { getErrorMessage } from "@/services/http";
+import { getDateKey, getLocalDateKey } from "@/utils/dates";
 import {
   Form,
   FormGroup,
@@ -24,19 +27,21 @@ export type TransactionFormData = TransactionPayload;
 
 interface TransactionFormProps {
   initialValues?: TransactionFormData;
+  defaultType?: TransactionType;
   submitLabel?: string;
   onSubmit: (data: TransactionFormData) => Promise<void> | void;
 }
 
 export function TransactionForm({
   initialValues,
+  defaultType = "outcome",
   submitLabel = "Salvar Transação",
   onSubmit,
 }: TransactionFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [type, setType] = useState<TransactionType>(
-    initialValues?.type ?? "outcome",
+    initialValues?.type ?? defaultType,
   );
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [amount, setAmount] = useState(
@@ -48,10 +53,10 @@ export function TransactionForm({
   );
   const [notes, setNotes] = useState(initialValues?.notes ?? "");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [date, setDate] = useState(
-    initialValues?.date
-      ? new Date(initialValues.date).toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10),
+    initialValues?.date ? getDateKey(initialValues.date) : getLocalDateKey(),
   );
 
   useEffect(() => {
@@ -110,11 +115,10 @@ export function TransactionForm({
 
   async function handleCreateCategory(payload: CategoryPayload) {
     const created = await createCategory(payload);
-    if (created) {
-      const data = await fetchCategories();
-      setCategories(data);
-      setCategory(created.name);
-    }
+    const data = await fetchCategories();
+
+    setCategories(data);
+    setCategory(created.name);
     setShowCategoryModal(false);
   }
 
@@ -124,23 +128,33 @@ export function TransactionForm({
     const rawAmount = Number(amount);
     const amountAsNumber = type === "income" ? rawAmount : -rawAmount;
 
-    await onSubmit({
-      description,
-      amount: amountAsNumber,
-      category,
-      type,
-      paymentMethod,
-      date,
-      notes: notes.trim() || null,
-    });
+    setError("");
+    setSubmitting(true);
 
+    try {
+      await onSubmit({
+        description,
+        amount: amountAsNumber,
+        category,
+        type,
+        paymentMethod,
+        date,
+        notes: notes.trim() || null,
+      });
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, "Não foi possível salvar a transação."));
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
     setDescription("");
     setAmount("");
     setCategory("");
-    setType("outcome");
+    setType(defaultType);
     setPaymentMethod("Pix");
     setNotes("");
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(getLocalDateKey());
   }
 
   return (
@@ -163,6 +177,8 @@ export function TransactionForm({
           <Input
             id="transaction-amount"
             type="number"
+            min="0.01"
+            step="0.01"
             placeholder="R$ 0,00"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
@@ -187,6 +203,7 @@ export function TransactionForm({
             <TypeButton
               $active={type === "income"}
               $variant="income"
+              aria-pressed={type === "income"}
               onClick={() => handleTypeChange("income")}
               type="button"
             >
@@ -195,6 +212,7 @@ export function TransactionForm({
             <TypeButton
               $active={type === "outcome"}
               $variant="outcome"
+              aria-pressed={type === "outcome"}
               onClick={() => handleTypeChange("outcome")}
               type="button"
             >
@@ -203,6 +221,7 @@ export function TransactionForm({
             <TypeButton
               $active={type === "investment"}
               $variant="investment"
+              aria-pressed={type === "investment"}
               onClick={() => handleTypeChange("investment")}
               type="button"
             >
@@ -274,7 +293,11 @@ export function TransactionForm({
           />
         </FormGroup>
 
-        <SubmitButton type="submit">{submitLabel}</SubmitButton>
+        <FormError message={error} />
+
+        <SubmitButton type="submit" disabled={submitting}>
+          {submitLabel}
+        </SubmitButton>
       </Form>
 
       <CustomModal

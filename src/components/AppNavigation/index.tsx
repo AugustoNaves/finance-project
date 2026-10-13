@@ -56,7 +56,9 @@ export function AppNavigation() {
 
             return (
               <NavItem key={item.href} $active={active}>
-                <Link href={item.href}>{item.label}</Link>
+                <Link href={item.href} aria-current={active ? "page" : undefined}>
+                  {item.label}
+                </Link>
               </NavItem>
             );
           })}
@@ -102,7 +104,11 @@ export function AppNavigation() {
 
               return (
                 <MobileNavItem key={item.href} $active={active}>
-                  <Link href={item.href} onClick={closeMenu}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    onClick={closeMenu}
+                  >
                     {item.label}
                   </Link>
                 </MobileNavItem>

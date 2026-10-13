@@ -1,8 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { FormError } from "@/components/FormError";
+import { getErrorMessage } from "@/services/http";
 import { BudgetPayload } from "@/types/budget";
 import { Category } from "@/types/category";
+import { getLocalMonthKey } from "@/utils/dates";
 import { Field, Form, Input, Label, Select, SubmitButton } from "./styles";
 
 export type BudgetFormData = BudgetPayload;
@@ -10,17 +13,19 @@ export type BudgetFormData = BudgetPayload;
 interface BudgetFormProps {
   categories: Category[];
   initialValues?: BudgetFormData;
+  defaultMonth?: string;
   submitLabel?: string;
   onSubmit: (data: BudgetFormData) => Promise<void> | void;
 }
 
 function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return getLocalMonthKey();
 }
 
 export function BudgetForm({
   categories,
   initialValues,
+  defaultMonth,
   submitLabel = "Salvar orçamento",
   onSubmit,
 }: BudgetFormProps) {
@@ -28,7 +33,11 @@ export function BudgetForm({
   const initialCategory = initialValues?.category ?? outcomeCategories[0]?.name ?? "";
   const [category, setCategory] = useState(initialCategory);
   const [amount, setAmount] = useState(initialValues ? String(initialValues.amount) : "");
-  const [month, setMonth] = useState(initialValues?.month ?? getCurrentMonth());
+  const [month, setMonth] = useState(
+    initialValues?.month ?? defaultMonth ?? getCurrentMonth(),
+  );
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const selectedCategory = category || outcomeCategories[0]?.name || "";
   const hasSelectedCategory = outcomeCategories.some(
     (currentCategory) => currentCategory.name === selectedCategory,
@@ -37,16 +46,27 @@ export function BudgetForm({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    await onSubmit({
-      category: selectedCategory,
-      amount: Number(amount),
-      month,
-    });
+    setError("");
+    setSubmitting(true);
+
+    try {
+      await onSubmit({
+        category: selectedCategory,
+        amount: Number(amount),
+        month,
+      });
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, "Não foi possível salvar o orçamento."));
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
 
     if (!initialValues) {
       setCategory(outcomeCategories[0]?.name ?? "");
       setAmount("");
-      setMonth(getCurrentMonth());
+      setMonth(defaultMonth ?? getCurrentMonth());
     }
   }
 
@@ -97,7 +117,11 @@ export function BudgetForm({
         />
       </Field>
 
-      <SubmitButton type="submit">{submitLabel}</SubmitButton>
+      <FormError message={error} />
+
+      <SubmitButton type="submit" disabled={submitting}>
+        {submitLabel}
+      </SubmitButton>
     </Form>
   );
 }
