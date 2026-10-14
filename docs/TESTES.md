@@ -4,13 +4,13 @@ O projeto não tinha testes. Esta suíte foi criada no mapeamento de 12/10/2026 
 
 | Camada | Ferramenta | Onde | Arquivos | Testes | Precisa de banco? |
 |---|---|---|---|---|---|
-| Unitário | Vitest (node) | `tests/unit/` | 11 | 246 | Não |
-| API | Vitest (node) | `tests/api/` | 10 | 280 | Não (Prisma simulado) |
-| UI | Vitest + Testing Library (jsdom) | `tests/ui/` | 14 | 352 | Não (`fetch` simulado) |
-| E2E | Playwright (Chromium) | `tests/e2e/` | 10 | 121 | Sim — Postgres local embutido |
-| **Total** | | | **45** | **999** | |
+| Unitário | Vitest (node) | `tests/unit/` | 16 | 442 | Não |
+| API | Vitest (node) | `tests/api/` | 12 | 352 | Não (Prisma simulado) |
+| UI | Vitest + Testing Library (jsdom) | `tests/ui/` | 15 | 366 | Não (`fetch` simulado) |
+| E2E | Playwright (Chromium) | `tests/e2e/` | 11 | 128 | Sim — Postgres local embutido |
+| **Total** | | | **54** | **1.288** | |
 
-Cobertura das suítes Vitest (unitário + API + UI) sobre `src/`, sem contar arquivos de estilo: **98,4% das linhas, 97,7% dos ramos, 91,9% das funções**. Última execução completa em 12/10/2026: 878 testes Vitest e 121 testes Playwright aprovados; `npm run lint` e `npm run build` sem erros.
+Cobertura das suítes Vitest (unitário + API + UI) sobre `src/`, sem contar arquivos de estilo: **97,1% das linhas, 96,7% dos ramos, 90,8% das funções**. Última execução completa em 12/10/2026: 1.160 testes Vitest e 128 testes Playwright aprovados; `npm run lint` e `npm run build` sem erros.
 
 ## Como rodar
 
@@ -99,16 +99,20 @@ Nos testes Vitest, títulos com `[comportamento atual]`, `[bug]` ou `[UX]` fixam
 | `lib/validators.test.ts` | Regras de transação, meta, categoria e orçamento |
 | `lib/tokens.test.ts`, `lib/password.test.ts`, `lib/auth.test.ts`, `lib/http.test.ts`, `lib/resend.test.ts` | Token de redefinição, bcrypt, usuário autenticado, leitura de JSON, envio de e-mail |
 | `proxy.test.ts` | Redirecionamento de cada rota protegida e de `/login` com sessão |
+| `invoice-import/parseInvoice.test.ts` | Parser de fatura: formatos de data e valor, parcelas, estornos, encargos, pagamento, linhas ignoradas, virada de ano, cabeçalho |
+| `invoice-import/normalize.test.ts` | Normalização de estabelecimento, impressão digital, regra de data das parcelas |
+| `invoice-import/categorize.test.ts`, `lib/importValidators.test.ts` | Prioridade das sugestões de categoria; validação dos corpos de preview e confirmação |
+| `invoice-import/pdf.test.ts` | Gerador de PDF sintético (`tests/support/pdf.ts`) e leitura de volta com pdf.js |
 
 ### API — `tests/api/`
 
-Um arquivo por recurso: `register`, `login`, `logout`, `me`, `forgot-password`, `reset-password`, `transactions`, `categories`, `budgets`, `goals`. Cobrem todos os métodos de todas as rotas.
+Um arquivo por recurso: `register`, `login`, `logout`, `me`, `forgot-password`, `reset-password`, `transactions`, `categories`, `budgets`, `goals`, `imports`, `category-rules`. Cobrem todos os métodos de todas as rotas.
 
 ### UI — `tests/ui/`
 
 | Pasta | Cobre |
 |---|---|
-| `pages/` | Dashboard, Transações, Categorias, Planejamento (+ redirect de `/budgets`), Relatórios, Investimentos, Configurações (perfil, exportação JSON/CSV, logout), Login/Cadastro, Esqueci a senha, Redefinir senha |
+| `pages/` | Dashboard, Transações, Importar fatura (com extração do PDF simulada), Categorias, Planejamento (+ redirect de `/budgets`), Relatórios, Investimentos, Configurações (perfil, exportação JSON/CSV, logout), Login/Cadastro, Esqueci a senha, Redefinir senha |
 | `components/` | Formulários (transação, categoria, orçamento, meta), filtros, lista, modal, diálogo de confirmação, navegação, cards e gráficos (nível fumaça) |
 | `context/` | `TransactionsContext`: carga inicial, criar, editar, excluir, falhas |
 | `services/` | Os quatro serviços: método, URL, corpo e `ApiError` com mensagem da API ou padrão |
@@ -119,7 +123,7 @@ Helpers em `tests/ui/helpers/`: `mockApi` (roteia "MÉTODO /rota" para respostas
 
 | Spec | Testes | Cobre |
 |---|---|---|
-| `01-auth` | 29 | Proteção de rotas, cadastro, login (API interceptada), logout, esqueci/redefinir senha |
+| `01-auth` | 30 | Proteção de rotas, cadastro, login (API interceptada), logout, esqueci/redefinir senha |
 | `02-transactions` | 18 | Criar receita/despesa/investimento, editar, excluir, filtros, ordenação, validação, alertas de erro, Esc |
 | `03-dashboard` | 6 | Cards, resumo do mês, indicadores, últimas transações |
 | `04-categories` | 12 | 18 categorias padrão, CRUD, duplicidade, uso no formulário de transação, métricas por nome+tipo |
@@ -127,8 +131,9 @@ Helpers em `tests/ui/helpers/`: `mockApi` (roteia "MÉTODO /rota" para respostas
 | `06-goals` | 8 | CRUD, progresso, validação |
 | `07-investments-reports-settings` | 10 | Totais, "Novo Aporte", gráficos, período, média diária, perfil, exportação |
 | `08-multi-tenancy` | 7 | Isolamento na interface e na API, cookie forjado, índice de orçamentos |
-| `09-responsive` | 12 | 390x844: menu lateral, CRUD em cartões, sem rolagem horizontal nas 7 telas |
+| `09-responsive` | 13 | 390x844: menu lateral, CRUD em cartões, sem rolagem horizontal nas 7 telas |
 | `10-dates-timezone` | 11 | Regressões de data: dia 1º, último dia do mês, após 21h, edição mantém a data |
+| `11-invoice-import` | 5 | PDF sintético enviado pelo navegador: leitura real com pdf.js, preview, registro, regra lembrada, reenvio detectado, desfazer, substituição da fatura lançada como total |
 
 ## O que não está coberto
 

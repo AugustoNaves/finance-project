@@ -4,7 +4,7 @@ import { fillTransactionForm, gotoAndWaitForTransactions, metric, modal, money, 
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-const PAGES = ["/", "/transactions", "/categories", "/investments", "/planning", "/reports", "/settings"];
+const PAGES = ["/", "/transactions", "/import", "/categories", "/investments", "/planning", "/reports", "/settings"];
 
 test.describe("Responsivo (celular 390×844)", () => {
   test("menu lateral abre, navega por todas as páginas e fecha", async ({ page, account }) => {
@@ -21,6 +21,7 @@ test.describe("Responsivo (celular 390×844)", () => {
 
     const destinations: Array<[string, RegExp, string]> = [
       ["Transações", /\/transactions$/, "Todas as movimentações"],
+      ["Importar", /\/import$/, "Fatura por PDF"],
       ["Categorias", /\/categories$/, "Organize seus grupos"],
       ["Investimentos", /\/investments$/, "Aportes e patrimônio"],
       ["Planejamento", /\/planning$/, "Orçamentos e metas"],

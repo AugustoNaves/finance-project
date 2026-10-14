@@ -17,6 +17,9 @@
 /blob-report/
 /.e2e-pg/
 
+# pdf.js worker (copiado no postinstall)
+/public/pdf.worker.min.mjs
+
 # next.js
 /.next/
 /out/

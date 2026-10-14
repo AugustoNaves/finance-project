@@ -18,6 +18,8 @@ model User {
   budgets             Budget[]
   goals               Goal[]
   passwordResetTokens PasswordResetToken[]
+  importBatches       ImportBatch[]
+  categoryRules       CategoryRule[]
 
   @@map("users")
 }
@@ -35,6 +37,7 @@ model Transaction {
   updatedAt     DateTime @updatedAt
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importItem    ImportBatchItem?
 
   @@index([userId])
   @@map("transactions")
@@ -100,4 +103,49 @@ model PasswordResetToken {
   @@index([userId])
   @@index([token])
   @@map("password_reset_tokens")
+}
+
+model ImportBatch {
+  id             String            @id @default(uuid())
+  fileName       String
+  fileHash       String
+  issuer         String?
+  referenceMonth String
+  dueDate        DateTime?
+  statedTotal    Float?
+  importedTotal  Float
+  itemCount      Int
+  createdAt      DateTime          @default(now())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          ImportBatchItem[]
+
+  @@index([userId])
+  @@index([userId, fileHash])
+  @@map("import_batches")
+}
+
+model ImportBatchItem {
+  id            String      @id @default(uuid())
+  batchId       String
+  batch         ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@map("import_batch_items")
+}
+
+model CategoryRule {
+  id        String   @id @default(uuid())
+  pattern   String
+  category  String
+  type      String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pattern])
+  @@index([userId])
+  @@map("category_rules")
 }

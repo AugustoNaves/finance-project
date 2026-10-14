@@ -21,6 +21,7 @@ Este projeto foi construído utilizando as ferramentas mais modernas do mercado:
 - **Contas e sessão:** cadastro, login com reCAPTCHA v3, recuperação de senha por e-mail e logout.
 - **Dashboard:** receitas, despesas, investimentos e saldo acumulados, resumo do mês e indicadores.
 - **Transações:** criar, editar, excluir, buscar, filtrar (tipo, categoria, período) e ordenar.
+- **Importação de fatura por PDF:** lê a fatura do cartão no navegador, sugere categorias, mostra um preview editável, registra tudo de uma vez e permite desfazer.
 - **Categorias:** por tipo (receita, despesa, investimento), com cor e sigla; 18 categorias padrão no cadastro.
 - **Planejamento:** orçamentos mensais por categoria com progresso de gasto, e metas financeiras.
 - **Investimentos:** total aportado, aportes do mês e evolução em 6 meses.

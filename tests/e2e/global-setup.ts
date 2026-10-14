@@ -14,6 +14,7 @@ const PAGES = [
   "/reset-password",
   "/",
   "/transactions",
+  "/import",
   "/categories",
   "/investments",
   "/planning",
@@ -21,7 +22,14 @@ const PAGES = [
   "/reports",
   "/settings",
 ];
-const API_ROUTES = ["/api/me", "/api/transactions", "/api/categories", "/api/budgets", "/api/goals"];
+const API_ROUTES = [
+  "/api/me",
+  "/api/transactions",
+  "/api/categories",
+  "/api/budgets",
+  "/api/goals",
+  "/api/imports",
+];
 
 /**
  * Compila todas as rotas uma vez (o `next dev` compila sob demanda) para que

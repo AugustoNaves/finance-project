@@ -127,6 +127,7 @@ test.describe("Dashboard", () => {
     const nav = page.getByRole("navigation", { name: "Navegação principal" });
     const destinations: Array<[string, RegExp, string]> = [
       ["Transações", /\/transactions$/, "Todas as movimentações"],
+      ["Importar", /\/import$/, "Fatura por PDF"],
       ["Categorias", /\/categories$/, "Organize seus grupos"],
       ["Investimentos", /\/investments$/, "Aportes e patrimônio"],
       ["Planejamento", /\/planning$/, "Orçamentos e metas"],

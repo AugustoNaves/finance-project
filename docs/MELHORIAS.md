@@ -113,6 +113,20 @@ Tudo abaixo está na branch `docs-testes-melhorias`, **sem commit e sem deploy**
 - "Esqueci a senha" informa que o link será enviado mesmo quando o envio falha (necessário para não revelar contas); monitorar os erros de envio no log.
 - `RECAPTCHA_SECRET_KEY` ausente responde `403`; é erro de configuração (`500`).
 
-## 3. Próxima funcionalidade
+## 3. Importação de fatura por PDF
 
-[SPEC — Importação de fatura por PDF](specs/SPEC-importacao-fatura-pdf.md). Depende de A1–A4 (datas), já aplicadas, e se beneficia de P1 (categoria por id).
+Implementada na branch `feat/importacao-fatura-pdf` conforme a [spec](specs/SPEC-importacao-fatura-pdf.md), que lista o que foi feito e o que ficou de fora (seção 0).
+
+**Antes de publicar:** aplicar a migration `20261013000000_add_invoice_import` em produção (`npx prisma migrate deploy`). O deploy da Vercel não roda migrations. A migration não altera `transactions`; sem ela, o resto do app continua funcionando e só a tela de importação responde erro.
+
+Pendências da funcionalidade:
+
+| # | Item | Sugestão |
+|---|---|---|
+| I1 | **Nenhuma fatura real foi testada** — só PDFs sintéticos. | Testar com a fatura de cada banco usado e criar adaptadores específicos onde o genérico errar. |
+| I2 | Faturas com duas colunas de data e seções de parcelas futuras confundem o parser genérico. | Adaptador por emissor; a conferência de total já acusa o problema. |
+| I3 | Não dá para criar categoria dentro do preview. | Reaproveitar o `CategoryForm` em modal. |
+| I4 | Regras de categorização não têm tela (só API). | Lista com exclusão em Configurações. |
+| I5 | Sem limite de lotes por hora. | Depende do item P2 (armazenamento compartilhado). |
+| I6 | Tabela do preview rola na horizontal no celular. | Layout em cartões, como em `TransactionList`. |
+| I7 | Automatizar `prisma migrate deploy` no build. | `"build": "prisma migrate deploy && next build"`, depois de confirmar que `DIRECT_URL` existe na Vercel. |

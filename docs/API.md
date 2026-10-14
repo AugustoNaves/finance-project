@@ -38,6 +38,8 @@ User 1─N Transaction
      1─N Budget              @@unique(userId, category, month)
      1─N Goal
      1─N PasswordResetToken  token @unique
+     1─N ImportBatch 1─N ImportBatchItem 1─1 Transaction
+     1─N CategoryRule        @@unique(userId, pattern)
 ```
 
 Todas as relações usam `onDelete: Cascade` a partir de `User`.
@@ -50,6 +52,9 @@ Todas as relações usam `onDelete: Cascade` a partir de `User`.
 | `Budget` | `category` (nome), `amount`, `month` (`YYYY-MM`) | Um orçamento por categoria/mês. |
 | `Goal` | `name`, `targetAmount`, `currentAmount`, `deadline?`, `color?` | Progresso é informado manualmente. |
 | `PasswordResetToken` | `token` (UUID), `expiresAt` (1 h), `usedAt?` | |
+| `ImportBatch` | `fileName`, `fileHash` (SHA-256 do PDF), `issuer?`, `referenceMonth`, `dueDate?`, `statedTotal?`, `importedTotal`, `itemCount` | Um lote por fatura importada. O PDF não é armazenado. |
+| `ImportBatchItem` | `batchId`, `transactionId` (único) | Liga a transação ao lote; some junto com qualquer um dos dois. A tabela `transactions` não tem coluna nova. |
+| `CategoryRule` | `pattern` (estabelecimento normalizado), `category`, `type` | Regra "lembrar para as próximas faturas". |
 
 Consequências do desenho atual:
 
@@ -136,6 +141,27 @@ Regras: `category` não vazio; `amount` > 0; `month` no formato `YYYY-MM` (mês 
 
 Regras: `name` não vazio; `targetAmount` > 0; `currentAmount` >= 0; `deadline` data válida, `null` ou `""` (os dois últimos limpam o prazo; campo ausente no `PATCH` mantém o valor). `PATCH` sem nenhum campo -> `400`.
 
+### 5.6 Importação de fatura
+
+Lógica em `src/features/invoice-import/` e `src/lib/importValidators.ts`. A extração do PDF acontece no navegador; a API recebe só os lançamentos.
+
+| Método | Rota | Corpo | Sucesso | Erros |
+|---|---|---|---|---|
+| POST | `/api/imports/preview` | `ImportPreviewRequest` (`fileName`, `fileHash`, `issuer`, `referenceMonth`, `dueDate`, `statedTotal`, `useInvoiceMonth?`, `items[]`) | `200 ImportPreviewResponse` | `400`; `401` |
+| POST | `/api/imports` | `ImportConfirmRequest` (cabeçalho + `items[]`, `rules[]?`, `replaceTransactionId?`) | `201 {batch, created, replaced}` | `400`; `401`; `500` (nada é gravado) |
+| GET | `/api/imports` | — | `200 ImportBatchSummary[]` (mais recentes primeiro) | `401` |
+| DELETE | `/api/imports/[id]` | — | `200 {message, removed}` | `401`; `404` |
+| GET | `/api/category-rules` | — | `200 [{id, pattern, category, type}]` | `401` |
+| DELETE | `/api/category-rules/[id]` | — | `200 {message}` | `401`; `404` |
+
+Os tipos estão em `src/features/invoice-import/types.ts`.
+
+**Preview** devolve, para cada linha: data efetiva (`getEffectiveDate`: parcela 2+ vai para o mês de referência), estabelecimento normalizado, tipo (`credit` vira receita), categoria sugerida e origem (`rule`, `history`, `keyword`), `duplicateOf` (transação existente com a mesma data, estabelecimento e valor) e `include` (falso para pagamento da fatura e para duplicata). Devolve também `alreadyImported` (lote com o mesmo `fileHash`) e `lumpCandidate` (despesa não importada com valor igual ao total da fatura, no mês de referência ou vizinho).
+
+**Confirmação** roda em uma única transação de banco: remove `replaceTransactionId` (se for do usuário), cria o lote, cria cada transação (`paymentMethod = "Cartão de crédito"`, observação "Importado da fatura <emissor> <MM/AAAA>" + parcela, despesa negativa e receita positiva) com seu `ImportBatchItem`, e grava as regras por `upsert`.
+
+Regras: 1 a 500 linhas; descrição não vazia; valor > 0; data `AAAA-MM-DD`; tipo `outcome|income`; categoria obrigatória na confirmação. Linha inválida -> `400 {error, invalidItems:[{index, error}]}`.
+
 ## 6. Migrations
 
-`prisma/migrations` contém 9 migrations (de `init` até `drop_legacy_budget_index`). A última remove um índice único antigo de orçamentos (categoria + mês, sem usuário) que a migration de multiusuário não conseguiu remover; **ela ainda precisa ser aplicada em produção**. Aplicar com `npx prisma migrate deploy` (produção) ou `npx prisma migrate dev` (desenvolvimento). O `README` antigo sugeria `prisma db push`, que ignora o histórico.
+`prisma/migrations` contém 10 migrations (de `init` até `add_invoice_import`). A `add_invoice_import` cria `import_batches`, `import_batch_items` e `category_rules` sem tocar em `transactions`; enquanto não for aplicada, só a tela de importação falha. A `drop_legacy_budget_index` remove um índice único antigo de orçamentos (categoria + mês, sem usuário) que a migration de multiusuário não conseguiu remover; **ela ainda precisa ser aplicada em produção**. Aplicar com `npx prisma migrate deploy` (produção) ou `npx prisma migrate dev` (desenvolvimento). O `README` antigo sugeria `prisma db push`, que ignora o histórico.

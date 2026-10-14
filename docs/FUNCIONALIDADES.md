@@ -34,6 +34,7 @@ Características técnicas relevantes para o comportamento:
 | `/reset-password?token=...` | Redefinir senha | Não (fora do `matcher`) | `src/app/reset-password/page.tsx` |
 | `/` | Dashboard ("Visão geral") | Sim | `src/app/page.tsx` |
 | `/transactions` | Transações | Sim | `src/app/transactions/page.tsx` |
+| `/import` | Importar fatura por PDF (seção 2.12) | Sim | `src/app/import/page.tsx` |
 | `/categories` | Categorias | Sim | `src/app/categories/page.tsx` |
 | `/investments` | Investimentos | Sim | `src/app/investments/page.tsx` |
 | `/planning` | Planejamento (orçamentos + metas) | Sim | `src/app/planning/page.tsx` |
@@ -523,6 +524,41 @@ Não há edição de perfil, troca de senha, preferências ou exclusão de conta
 
 ---
 
+### 2.12 Importar fatura por PDF — `/import`
+
+Adicionada depois do mapeamento original; fica entre Transações e Categorias na navegação. Especificação e situação em `docs/specs/SPEC-importacao-fatura-pdf.md`; contratos da API em `docs/API.md` (seção 5.6).
+
+**Propósito.** Ler a fatura do cartão em PDF, mostrar os lançamentos com categoria sugerida, deixar o usuário corrigir e registrar tudo de uma vez como transações.
+
+**Fluxo e elementos** (`src/app/import/page.tsx`):
+
+1. **Enviar fatura.** Campo de arquivo "Arquivo PDF da fatura" (aceita `application/pdf`). Recusa arquivo que não é PDF ("Envie um arquivo PDF.") ou maior que 10 MB ("O arquivo é maior que 10 MB."). O PDF é lido no navegador com `pdfjs-dist` (`src/features/invoice-import/pdfText.ts`) e não é enviado ao servidor; calcula-se o SHA-256 do arquivo. PDF com senha: aparece o campo "Senha do PDF" e o botão "Abrir PDF".
+2. **Extração.** `parseInvoice` (`src/features/invoice-import/parseInvoice.ts`) reconhece emissor, vencimento, total impresso, mês de referência e as linhas (data, descrição, valor, parcela, tipo de linha). Sem linhas reconhecidas: "Nenhum lançamento reconhecido. O PDF pode ser digitalizado (imagem) ou de um layout não suportado."
+3. **Conferir lançamentos.** Cabeçalho com arquivo, emissor, vencimento, total impresso e quantidade de linhas; campo "Mês de referência" e a opção "Lançar tudo no mês da fatura" (ambos refazem o preview). Tabela com uma linha por lançamento: Incluir, Data, Descrição, Parcela, Valor, Tipo (Despesa/Receita) e Categoria (categorias do usuário do tipo da linha).
+4. **Registrar.** Botão "Registrar N transação(ões)"; mensagem de sucesso com link para Transações. O contexto de transações é recarregado.
+5. **Importações anteriores.** Lista dos lotes com "Desfazer importação" (diálogo de confirmação), que exclui todas as transações do lote.
+
+**Regras.**
+
+- Linha de pagamento da fatura ("pagamento da fatura") e linha igual a uma transação existente ("possível duplicata de dd/mm/aaaa") vêm desmarcadas.
+- Estorno/crédito entra como Receita; encargos (IOF, juros, anuidade) como Despesa.
+- Data: compra à vista ou parcela 1 mantém a data da compra; parcela 2 em diante vai para o mês de referência, no mesmo dia (limitado ao último dia do mês).
+- Categoria sugerida, nesta ordem: regra do usuário ("regra sua"), histórico de transações com o mesmo estabelecimento ("histórico"), palavras-chave ("palavra-chave"). Só é sugerida categoria que exista para o usuário.
+- Ao trocar a categoria aparecem "Aplicar às outras N de <estabelecimento>" e "Lembrar para as próximas faturas" (grava a regra na confirmação).
+- Conferência de total: soma das linhas incluídas (despesas menos receitas) contra o total impresso. Igual: "A soma das linhas incluídas confere com o total da fatura." Diferente: aviso com o valor e a caixa "Registrar mesmo com a diferença", obrigatória para liberar o botão.
+- O botão fica desabilitado enquanto houver linha incluída sem categoria, sem descrição, com valor inválido ou data inválida ("N pendência(s) para resolver").
+- Mesmo arquivo já importado: "Esta fatura já foi importada em dd/mm/aaaa."
+- Fatura já lançada como valor único: aviso com a caixa "Substituir esse lançamento pelo detalhamento"; marcada, a transação antiga é excluída na mesma operação.
+- Transações criadas: forma de pagamento "Cartão de crédito" e observação "Importado da fatura <emissor> <MM/AAAA>" (+ parcela).
+
+**Chamadas.** `GET /api/categories`, `GET /api/imports`, `POST /api/imports/preview`, `POST /api/imports`, `DELETE /api/imports/[id]`, `GET /api/transactions` (recarga).
+
+**Responsivo.** A tabela rola na horizontal em telas estreitas; o cabeçalho passa de 5 para 2 colunas (≤980px).
+
+**Não implementado.** Criar categoria dentro do preview; tela de gestão das regras; adaptadores por emissor (ver a spec).
+
+---
+
 ## 3. Componentes e módulos compartilhados
 
 | Componente / módulo | Responsabilidade | Usado por |
@@ -608,7 +644,7 @@ Os IDs F-01 a F-131 são os da primeira versão (regras atualizadas onde o compo
 | F-25 | Redefinir com sucesso | Redefinir senha | `POST /api/auth/reset-password` `{token, password}`; mensagem de sucesso e ida a `/login` após 2s |
 | F-26 | Erro ao redefinir | Redefinir senha | `data.error` ou "Erro ao redefinir senha."; exceção → "Erro inesperado. Tente novamente." |
 | F-27 | Estado de envio | Redefinir senha | Botão "Redefinindo..." e campos desabilitados |
-| F-28 | Itens e ordem da navegação | Navegação | Início, Transações, Categorias, Investimentos, Planejamento, Relatórios, Configurações |
+| F-28 | Itens e ordem da navegação | Navegação | Início, Transações, Importar, Categorias, Investimentos, Planejamento, Relatórios, Configurações |
 | F-29 | Destaque do item ativo | Navegação | `/` por igualdade; demais por prefixo do pathname |
 | F-30 | Marca como link | Navegação | "Finanças" leva a `/` |
 | F-31 | Menu mobile | Navegação | ≤768px: botão "Menu" abre drawer; fecha por "Fechar", overlay ou clique em link |
@@ -732,8 +768,28 @@ Os IDs F-01 a F-131 são os da primeira versão (regras atualizadas onde o compo
 | F-149 | Série de 6 meses independente de fuso | Relatórios / Investimentos | Os 6 meses terminam sempre no mês selecionado/atual, calculados no fuso local |
 | F-150 | Meta concluída fora do insight | Dashboard | Metas com `atual >= alvo` não entram em "Meta mais próxima" |
 | F-151 | Prazo da meta como data civil | Metas | Prazo enviado como meia-noite UTC do dia e exibido igual ao digitado |
+| F-152 | Envio de PDF: tipo e tamanho | Importar | Só PDF, até 10 MB; erro específico para cada caso |
+| F-153 | Leitura do PDF no navegador | Importar | Texto extraído com pdf.js; o arquivo não é enviado |
+| F-154 | PDF com senha | Importar | Pede a senha e tenta de novo; senha errada avisa |
+| F-155 | Reconhecimento de lançamentos | Importar | Data, descrição, valor, parcela; emissor, vencimento e total |
+| F-156 | PDF sem lançamentos | Importar | Mensagem de PDF digitalizado ou layout não suportado |
+| F-157 | Preview editável | Importar | Incluir, data, descrição, valor, tipo e categoria por linha |
+| F-158 | Sugestão de categoria | Importar | Regra do usuário, depois histórico, depois palavra-chave |
+| F-159 | Pagamento da fatura desmarcado | Importar | Linha de pagamento não é incluída por padrão |
+| F-160 | Estorno como receita | Importar | Linha de crédito entra como Receita |
+| F-161 | Data das parcelas | Importar | Parcela 2+ no mês de referência; opção de lançar tudo no mês da fatura |
+| F-162 | Possível duplicata | Importar | Linha igual a transação existente vem desmarcada e sinalizada |
+| F-163 | Fatura já importada | Importar | Aviso pelo hash do arquivo |
+| F-164 | Substituir lançamento único | Importar | Oferece trocar a "fatura" lançada como total pelo detalhamento |
+| F-165 | Conferência de total | Importar | Diferença exige aceite explícito |
+| F-166 | Bloqueio por pendência | Importar | Linha incluída sem categoria/valor/data bloqueia o registro |
+| F-167 | Aplicar categoria ao estabelecimento | Importar | Copia a categoria para as outras linhas iguais |
+| F-168 | Lembrar categoria | Importar | Grava regra usada nas próximas faturas |
+| F-169 | Registro atômico | Importar | Todas as transações ou nenhuma; cartão de crédito e observação padrão |
+| F-170 | Histórico e desfazer | Importar | Lista lotes e exclui todas as transações do lote |
+| F-171 | Isolamento da importação | Importar | Lotes e regras filtrados por usuário; 404 para lote alheio |
 
-Total: 151 linhas (131 originais + 20 novas).
+Total: 171 linhas (131 originais + 20 das correções + 20 da importação de fatura).
 
 ---
 

@@ -12,7 +12,7 @@ Esta versão (Next.js 16) tem breaking changes — APIs, convenções e estrutur
 - **Prisma 7** + PostgreSQL (Supabase) — adaptador `@prisma/adapter-pg` + `pg.Pool`.
 - **styled-components** com SSR via `src/lib/registry.tsx`.
 - **Google reCAPTCHA v3** apenas no login.
-- **Resend** para o e-mail de redefinição de senha, **recharts** para gráficos.
+- **Resend** para o e-mail de redefinição de senha, **recharts** para gráficos, **pdfjs-dist** para ler faturas em PDF no navegador (o worker é copiado para `public/` no postinstall).
 - TypeScript estrito (`tsconfig.json:7`).
 - Testes: **Vitest** + Testing Library (unitário, API, UI) e **Playwright** (E2E) — apenas devDependencies.
 
@@ -58,6 +58,7 @@ O guarda de autenticação está em `src/proxy.ts` (convenção do Next 16). Se 
 - Mutações vão por API routes (`/api/*`), não por server actions. O acesso passa por `src/services/*.ts`, que **lançam `ApiError`** quando a API falha; formulários exibem a mensagem com `FormError`.
 - Estado global: `TransactionsContenxt` centraliza fetch, add, update e delete de transações. Categorias, orçamentos e metas são carregados por página.
 - **Datas:** transações e prazos são datas sem horário, gravadas como meia-noite UTC. Use sempre `src/utils/dates.ts` e `formatDate`; nunca `new Date().toISOString().slice(...)` para "hoje" nem `toLocaleDateString` direto.
+- Regras de domínio que não são componente nem rota ficam em `src/features/<nome>/` (hoje: `invoice-import`).
 - Idioma: Textos de UI e documentação em português.
 
 ## 6. Armadilhas (Leia antes de modificar)

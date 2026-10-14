@@ -6,6 +6,7 @@ import { metric } from "./support/ui";
 const PROTECTED_ROUTES = [
   "/",
   "/transactions",
+  "/import",
   "/categories",
   "/investments",
   "/planning",

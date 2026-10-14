@@ -6,6 +6,7 @@ import { config, proxy } from "@/proxy";
 const protectedRoutes = [
   "/",
   "/transactions",
+  "/import",
   "/investments",
   "/planning",
   "/categories",
