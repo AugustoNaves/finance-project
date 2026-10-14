@@ -151,7 +151,7 @@ Lógica em `src/features/invoice-import/` e `src/lib/importValidators.ts`. A ext
 | POST | `/api/imports` | `ImportConfirmRequest` (cabeçalho + `items[]`, `rules[]?`, `replaceTransactionId?`) | `201 {batch, created, replaced}` | `400`; `401`; `500` (nada é gravado) |
 | GET | `/api/imports` | — | `200 ImportBatchSummary[]` (mais recentes primeiro) | `401` |
 | DELETE | `/api/imports/[id]` | — | `200 {message, removed}` | `401`; `404` |
-| GET | `/api/category-rules` | — | `200 [{id, pattern, category, type}]` | `401` |
+| GET | `/api/category-rules` | — | `200 [{id, pattern, category, type, createdAt}]` | `401` |
 | DELETE | `/api/category-rules/[id]` | — | `200 {message}` | `401`; `404` |
 
 Os tipos estão em `src/features/invoice-import/types.ts`.

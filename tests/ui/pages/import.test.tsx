@@ -399,4 +399,145 @@ describe("Página de importação de fatura", () => {
     expect(api.callsTo("DELETE", "/api/imports/batch-1")).toHaveLength(1);
     expect(screen.getByText("Nenhuma fatura importada ainda.")).toBeInTheDocument();
   });
+
+  describe("Criação de Categoria Inline no Preview", () => {
+    it("abre o modal de criação pré-preenchido com o tipo da linha ao selecionar '+ Nova categoria...'", async () => {
+      const { user } = await renderPage();
+
+      await upload(user);
+      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+
+      const selectRow3 = screen.getByLabelText("Categoria da linha 3");
+      expect(within(selectRow3).getByRole("option", { name: "+ Nova categoria..." })).toHaveValue("__new__");
+
+      await user.selectOptions(selectRow3, "+ Nova categoria...");
+
+      const dialog = screen.getByRole("dialog", { name: "Nova categoria" });
+      expect(dialog).toBeInTheDocument();
+      expect(within(dialog).getByLabelText("Tipo")).toHaveValue("outcome");
+
+      // Fecha o modal
+      await user.click(within(dialog).getByRole("button", { name: "Fechar" }));
+      expect(screen.queryByRole("dialog", { name: "Nova categoria" })).toBeNull();
+
+      // Muda o tipo da linha 3 para Receita e confere se pré-preenche com income
+      await user.selectOptions(screen.getByLabelText("Tipo da linha 3"), "Receita");
+      await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "+ Nova categoria...");
+
+      const dialogIncome = screen.getByRole("dialog", { name: "Nova categoria" });
+      expect(within(dialogIncome).getByLabelText("Tipo")).toHaveValue("income");
+    });
+
+    it("reverte o valor do select da linha para o anterior ao cancelar ou fechar o modal", async () => {
+      const { user } = await renderPage();
+
+      await upload(user);
+      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+
+      // Linha 1 tem categoria "Alimentação"
+      const selectRow1 = screen.getByLabelText("Categoria da linha 1");
+      expect(selectRow1).toHaveValue("Alimentação");
+
+      await user.selectOptions(selectRow1, "+ Nova categoria...");
+      const dialog1 = screen.getByRole("dialog", { name: "Nova categoria" });
+      expect(dialog1).toBeInTheDocument();
+
+      // Cancela pelo botão Fechar
+      await user.click(within(dialog1).getByRole("button", { name: "Fechar" }));
+      expect(screen.queryByRole("dialog", { name: "Nova categoria" })).toBeNull();
+      expect(screen.getByLabelText("Categoria da linha 1")).toHaveValue("Alimentação");
+
+      // Linha 3 não tem categoria (valor "")
+      const selectRow3 = screen.getByLabelText("Categoria da linha 3");
+      expect(selectRow3).toHaveValue("");
+
+      await user.selectOptions(selectRow3, "+ Nova categoria...");
+      const dialog3 = screen.getByRole("dialog", { name: "Nova categoria" });
+      expect(dialog3).toBeInTheDocument();
+
+      // Cancela pela tecla Escape
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog", { name: "Nova categoria" })).toBeNull();
+      expect(screen.getByLabelText("Categoria da linha 3")).toHaveValue("");
+    });
+
+    it("cria a categoria com sucesso, atualiza a linha que disparou e mantém as edições de outras linhas", async () => {
+      const { user, api } = await renderPage({
+        "POST /api/categories": (call) =>
+          reply(201, {
+            id: "cat-nova",
+            name: (call.body as { name: string }).name,
+            type: (call.body as { type: string }).type,
+            color: "#00c48c",
+            icon: null,
+          }),
+      });
+
+      await upload(user);
+      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+
+      // Edita descrição da linha 2 para conferir que não será perdida
+      const descRow2 = screen.getByLabelText("Descrição da linha 2");
+      await user.clear(descRow2);
+      await user.type(descRow2, "UBER EDITADO");
+
+      // Linha 3 estava sem categoria
+      expect(screen.getByLabelText("Categoria da linha 3")).toHaveValue("");
+      expect(screen.getByRole("button", { name: /Registrar .* transação\(ões\)/ })).toBeDisabled();
+
+      // Seleciona + Nova categoria... na linha 3
+      await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "+ Nova categoria...");
+
+      const dialog = screen.getByRole("dialog", { name: "Nova categoria" });
+      await user.type(within(dialog).getByLabelText("Nome"), "Vestuário");
+      await user.click(within(dialog).getByRole("button", { name: "Criar categoria" }));
+
+      // Modal fecha
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog", { name: "Nova categoria" })).toBeNull();
+      });
+
+      // Linha 3 agora tem "Vestuário" selecionada
+      expect(screen.getByLabelText("Categoria da linha 3")).toHaveValue("Vestuário");
+
+      // A linha 2 manteve a descrição editada
+      expect(screen.getByLabelText("Descrição da linha 2")).toHaveValue("UBER EDITADO");
+
+      // A nova categoria "Vestuário" foi adicionada à lista e está disponível nas outras linhas
+      const selectRow1 = screen.getByLabelText("Categoria da linha 1");
+      expect(within(selectRow1).getByRole("option", { name: "Vestuário" })).toBeInTheDocument();
+
+      // Como a pendência foi resolvida, o botão de registrar é habilitado
+      expect(screen.getByRole("button", { name: "Registrar 3 transação(ões)" })).toBeEnabled();
+
+      const [categoryCall] = api.callsTo("POST", "/api/categories");
+      expect(categoryCall.body).toMatchObject({
+        name: "Vestuário",
+        type: "outcome",
+      });
+    });
+
+    it("mostra erro dentro do modal quando a API de categorias rejeita, mantendo o modal aberto", async () => {
+      const { user } = await renderPage({
+        "POST /api/categories": reply(400, { error: "Categoria já cadastrada." }),
+      });
+
+      await upload(user);
+      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+
+      await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "+ Nova categoria...");
+
+      const dialog = screen.getByRole("dialog", { name: "Nova categoria" });
+      await user.type(within(dialog).getByLabelText("Nome"), "Alimentação");
+      await user.click(within(dialog).getByRole("button", { name: "Criar categoria" }));
+
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("Categoria já cadastrada.");
+      expect(screen.getByRole("dialog", { name: "Nova categoria" })).toBeInTheDocument();
+
+      // Ao fechar, reverte a linha para o valor original
+      await user.click(within(dialog).getByRole("button", { name: "Fechar" }));
+      expect(screen.queryByRole("dialog", { name: "Nova categoria" })).toBeNull();
+      expect(screen.getByLabelText("Categoria da linha 3")).toHaveValue("");
+    });
+  });
 });

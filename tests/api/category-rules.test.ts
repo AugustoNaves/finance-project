@@ -25,6 +25,7 @@ const storedRule = {
   pattern: "NETFLIX",
   category: "Lazer",
   type: "outcome",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
 let cookie: string;
@@ -72,11 +73,13 @@ describe("GET /api/category-rules", () => {
     const response = await GET(buildRequest("/api/category-rules", { cookie }));
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual([storedRule]);
+    await expect(response.json()).resolves.toEqual([
+      { ...storedRule, createdAt: "2026-01-01T00:00:00.000Z" },
+    ]);
     expect(prismaMock.categoryRule.findMany).toHaveBeenCalledWith({
       where: { userId: authUser.id },
       orderBy: { pattern: "asc" },
-      select: { id: true, pattern: true, category: true, type: true },
+      select: { id: true, pattern: true, category: true, type: true, createdAt: true },
     });
   });
 

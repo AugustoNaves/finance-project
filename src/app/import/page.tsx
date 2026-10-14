@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { ChangeEvent, useContext, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { CategoryForm } from "@/components/CategoryForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Modal } from "@/components/CustomModal";
 import { PageHeader } from "@/components/PageHeader";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
 import { formatInstallment } from "@/features/invoice-import/normalize";
@@ -21,7 +23,7 @@ import {
   ImportPreviewResponse,
   ParsedInvoice,
 } from "@/features/invoice-import/types";
-import { fetchCategories } from "@/services/categories";
+import { createCategory, fetchCategories } from "@/services/categories";
 import { getErrorMessage } from "@/services/http";
 import {
   confirmImport,
@@ -29,7 +31,7 @@ import {
   previewImport,
   undoImport,
 } from "@/services/imports";
-import { Category } from "@/types/category";
+import { Category, CategoryPayload } from "@/types/category";
 import { getLocalMonthKey } from "@/utils/dates";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import {
@@ -116,6 +118,11 @@ export default function ImportPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [batchToUndo, setBatchToUndo] = useState<ImportBatchSummary | null>(null);
+  const [categoryModal, setCategoryModal] = useState<{
+    rowIndex: number;
+    type: ImportEntryType;
+    previousCategory: string | null;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -149,6 +156,7 @@ export default function ImportPage() {
     setReplaceLump(false);
     setAcceptDifference(false);
     setUseInvoiceMonth(false);
+    setCategoryModal(null);
   }
 
   async function loadPreview(file: LoadedFile, month: string, invoiceMonth: boolean) {
@@ -269,6 +277,52 @@ export default function ImportPage() {
 
   function handleTypeChange(row: PreviewRow, type: ImportEntryType) {
     updateRow(row.index, { type, category: null, remember: false });
+  }
+
+  function handleCategoryChange(row: PreviewRow, value: string) {
+    if (value === "__new__") {
+      setCategoryModal({
+        rowIndex: row.index,
+        type: row.type,
+        previousCategory: row.category,
+      });
+      return;
+    }
+
+    updateRow(row.index, {
+      category: value || null,
+      suggestionSource: null,
+    });
+  }
+
+  function handleCloseCategoryModal() {
+    if (categoryModal) {
+      updateRow(categoryModal.rowIndex, {
+        category: categoryModal.previousCategory,
+      });
+      setCategoryModal(null);
+    }
+  }
+
+  async function handleCreateInlineCategory(payload: CategoryPayload) {
+    if (!categoryModal) return;
+
+    const created = await createCategory(payload);
+
+    setCategories((prev) => {
+      const exists = prev.some(
+        (category) => category.id === created.id || category.name === created.name,
+      );
+      return exists ? prev : [...prev, created];
+    });
+
+    updateRow(categoryModal.rowIndex, {
+      category: created.name,
+      suggestionSource: null,
+      ...(created.type === "outcome" || created.type === "income" ? { type: created.type } : {}),
+    });
+
+    setCategoryModal(null);
   }
 
   function applyCategoryToMerchant(row: PreviewRow) {
@@ -613,20 +667,28 @@ export default function ImportPage() {
                         <td>
                           <Select
                             aria-label={`Categoria da ${label}`}
-                            value={row.category ?? ""}
+                            value={
+                              categoryModal?.rowIndex === row.index
+                                ? "__new__"
+                                : (row.category ?? "")
+                            }
                             onChange={(event) =>
-                              updateRow(row.index, {
-                                category: event.target.value || null,
-                                suggestionSource: null,
-                              })
+                              handleCategoryChange(row, event.target.value)
                             }
                           >
                             <option value="">Selecione uma categoria</option>
+                            {row.category &&
+                              !options.some(
+                                (category) => category.name === row.category,
+                              ) && (
+                                <option value={row.category}>{row.category}</option>
+                              )}
                             {options.map((category) => (
                               <option key={category.id} value={category.name}>
                                 {category.name}
                               </option>
                             ))}
+                            <option value="__new__">+ Nova categoria...</option>
                           </Select>
                           {row.suggestionSource && (
                             <Badge $tone="green">{SOURCE_LABELS[row.suggestionSource]}</Badge>
@@ -750,6 +812,27 @@ export default function ImportPage() {
         confirmLabel="Desfazer importação"
         onConfirm={handleUndo}
       />
+
+      <Modal
+        isOpen={!!categoryModal}
+        onClose={handleCloseCategoryModal}
+        title="Nova categoria"
+        maxWidth="420px"
+      >
+        {categoryModal && (
+          <CategoryForm
+            key={`inline-category-${categoryModal.rowIndex}`}
+            submitLabel="Criar categoria"
+            initialValues={{
+              name: "",
+              type: categoryModal.type,
+              color: "#00c48c",
+              icon: "",
+            }}
+            onSubmit={handleCreateInlineCategory}
+          />
+        )}
+      </Modal>
     </AppShell>
   );
 }
