@@ -7,12 +7,12 @@ datasource db {
 }
 
 model User {
-  id                  String                @id @default(uuid())
+  id                  String               @id @default(uuid())
   name                String
-  email               String                @unique
+  email               String               @unique
   passwordHash        String
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   transactions        Transaction[]
   categories          Category[]
   budgets             Budget[]
@@ -20,26 +20,30 @@ model User {
   passwordResetTokens PasswordResetToken[]
   importBatches       ImportBatch[]
   categoryRules       CategoryRule[]
+  creditCards         CreditCard[]
 
   @@map("users")
 }
 
 model Transaction {
-  id            String   @id @default(uuid())
+  id            String           @id @default(uuid())
   description   String
   amount        Float
   category      String
-  date          DateTime @default(now())
+  date          DateTime         @default(now())
   type          String?
   paymentMethod String?
   notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   importItem    ImportBatchItem?
+  cardId        String?
+  card          CreditCard?      @relation(fields: [cardId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([cardId])
   @@map("transactions")
 }
 
@@ -148,4 +152,22 @@ model CategoryRule {
   @@unique([userId, pattern])
   @@index([userId])
   @@map("category_rules")
+}
+
+model CreditCard {
+  id           String        @id @default(uuid())
+  name         String
+  limit        Float
+  closingDay   Int
+  dueDay       Int
+  color        String?
+  brand        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("credit_cards")
 }
