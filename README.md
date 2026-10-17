@@ -1,4 +1,4 @@
-# Finance-app — Finanças Pessoais
+# Finance App — Finanças Pessoais
 
 App de finanças pessoais para uso frequente no celular: registrar um gasto em segundos, conferir como está o mês e importar a fatura do cartão. Interface "Caderneta" (livro-razão: linhas pautadas, valores em serifa, tinta verde e vermelha), com tema claro e escuro conforme o sistema, e instalável como PWA.
 
@@ -16,7 +16,7 @@ Este projeto foi construído utilizando as ferramentas mais modernas do mercado:
 - **Autenticação e Segurança:** Gerenciamento de sessões com proteção de rotas privadas
 - **Envio de E-mails:** [Resend](https://resend.com/)
 
-**Como usar o app:** o guia passo a passo fica no próprio app, em `/ajuda` (link "Como funciona o Finance-app?" na tela de entrada e "Como usar" no menu Mais).
+**Como usar o app:** o guia passo a passo fica no próprio app, em `/ajuda` (link "Como funciona o Finance App?" na tela de entrada e "Como usar" no menu Mais).
 
 ## ✨ Principais Funcionalidades
 

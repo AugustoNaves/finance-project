@@ -398,25 +398,35 @@ test.describe("Recuperação de senha", () => {
 });
 
 test.describe("Guia de uso", () => {
-  test("é público e abre pela tela de entrada", async ({ page }) => {
+  test("é público e abre em nova aba pela tela de entrada", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("link", { name: "Como funciona o Finance-app?" }).click();
 
-    await expect(page).toHaveURL(/\/ajuda$/);
-    await expect(page.getByRole("heading", { name: "Como usar o Finance-app", level: 1 })).toBeVisible();
+    const [guide] = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByRole("link", { name: "Como funciona o Finance App? (abre em nova aba)" }).click(),
+    ]);
 
-    await page.getByRole("navigation", { name: "Nesta página" }).getByRole("link", { name: "Importe a fatura do cartão" }).click();
-    await expect(page).toHaveURL(/#importar$/);
-    await expect(page.getByRole("heading", { name: "Importe a fatura do cartão", level: 2 })).toBeInViewport();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(guide).toHaveURL(/\/ajuda$/);
+    await expect(guide.getByRole("heading", { name: "Como usar o Finance App", level: 1 })).toBeVisible();
+
+    await guide.getByRole("navigation", { name: "Nesta página" }).getByRole("link", { name: "Importe a fatura do cartão" }).click();
+    await expect(guide).toHaveURL(/#importar$/);
+    await expect(guide.getByRole("heading", { name: "Importe a fatura do cartão", level: 2 })).toBeInViewport();
   });
 
-  test("usuário logado chega pelo menu", async ({ page, account }) => {
+  test("usuário logado abre o guia em nova aba pelo menu, sem sair da tela", async ({ page, account }) => {
     void account;
     await page.goto("/settings");
-    await page.getByRole("link", { name: "Como usar o app" }).click();
 
-    await expect(page).toHaveURL(/\/ajuda$/);
-    await expect(page.getByRole("img", { name: /Folha Registrar/ })).toBeVisible();
+    const [guide] = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByRole("link", { name: "Como usar o app (abre em nova aba)" }).click(),
+    ]);
+
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(guide).toHaveURL(/\/ajuda$/);
+    await expect(guide.getByRole("img", { name: /Folha Registrar/ })).toBeVisible();
   });
 });
 

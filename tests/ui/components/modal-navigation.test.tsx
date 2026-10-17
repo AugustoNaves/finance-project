@@ -275,7 +275,10 @@ describe("AppNavigation", () => {
   function linksOf(element: HTMLElement) {
     return within(element)
       .getAllByRole("link", desktop)
-      .map((link) => [link.textContent?.replace("›", ""), link.getAttribute("href")]);
+      .map((link) => [
+        link.textContent?.replace(/[›↗]/, "").replace(" (abre em nova aba)", ""),
+        link.getAttribute("href"),
+      ]);
   }
 
   function tabBar() {
@@ -285,7 +288,7 @@ describe("AppNavigation", () => {
   it("a coluna do desktop tem a marca, Registrar e os grupos Dia a dia e Organizar", () => {
     renderNav();
 
-    expect(screen.getByRole("link", { name: "Finance-app, ir para o mês", ...desktop })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Finance App, ir para o mês", ...desktop })).toHaveAttribute("href", "/");
     expect(screen.getByRole("button", { name: "+ Registrar", ...desktop })).toBeInTheDocument();
     expect(linksOf(screen.getByRole("navigation", { name: "Dia a dia", ...desktop }))).toEqual(dailyLinks);
     expect(linksOf(screen.getByRole("navigation", { name: "Organizar", ...desktop }))).toEqual(organizeLinks);
@@ -304,6 +307,26 @@ describe("AppNavigation", () => {
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label") ?? button.textContent),
     ).toEqual(["Registrar", "Mais"]);
+  });
+
+  it("'Como usar' abre o guia em nova aba, com aviso para leitor de tela, na coluna e na folha 'Mais'", async () => {
+    const { user } = renderNav();
+    const sideLink = within(screen.getByRole("navigation", { name: "Organizar", ...desktop })).getByRole("link", {
+      name: "Como usar (abre em nova aba)",
+      ...desktop,
+    });
+
+    expect(sideLink).toHaveAttribute("target", "_blank");
+    expect(sideLink).toHaveAttribute("rel", "noopener noreferrer");
+
+    await user.click(within(tabBar()).getByRole("button", { name: "Mais" }));
+    const sheetLink = within(screen.getByRole("dialog", { name: "Mais" })).getByRole("link", {
+      name: "Como usar (abre em nova aba)",
+    });
+
+    expect(sheetLink).toHaveAttribute("href", "/ajuda");
+    expect(sheetLink).toHaveAttribute("target", "_blank");
+    expect(within(screen.getByRole("dialog", { name: "Mais" })).getByRole("link", { name: /^Relatórios/ })).not.toHaveAttribute("target");
   });
 
   it("Registrar (barra e coluna) abre a folha de novo lançamento", async () => {

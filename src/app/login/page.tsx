@@ -214,7 +214,11 @@ function FormularioDeLogin() {
       </Footer>
 
       <Fineprint>Login protegido por reCAPTCHA.</Fineprint>
-      <HelpLink href="/ajuda">Como funciona o Finance-app?</HelpLink>
+      <HelpLink href="/ajuda" target="_blank" rel="noopener noreferrer">
+        Como funciona o Finance App?
+        {" "}
+        <span className="sr-only">(abre em nova aba)</span>
+      </HelpLink>
     </>
   );
 }
@@ -228,7 +232,7 @@ export default function LoginPage() {
         <Column>
           <Brand>
             <BrandMark aria-hidden="true">F</BrandMark>
-            Finance-app
+            Finance App
           </Brand>
           <Tagline>Suas contas do mês, num caderno que cabe no bolso.</Tagline>
 

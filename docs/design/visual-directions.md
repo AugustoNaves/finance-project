@@ -40,4 +40,4 @@ Todas respeitam o que foi aprovado: personalidade calma e discreta, tema do sist
 
 ## Decisão (Ponto B)
 
-Aprovada em 17/10/2026: **Caderneta**. Nomes propostos rejeitados; nome de trabalho "Finance-app" até nova proposta.
+Aprovada em 17/10/2026: **Caderneta**. Nomes propostos rejeitados; nome de trabalho "Finance-app" até nova proposta. Em 17/10/2026 o nome passou a ser **"Finance App"**.
