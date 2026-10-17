@@ -128,8 +128,6 @@ async function capture(token: string) {
   await page.keyboard.press("Escape");
 
   await page.goto(`${BASE}/transactions`, { waitUntil: "networkidle" });
-  await shot(page, "lancamentos");
-
   await page.getByRole("main").getByRole("button", { name: /^Cinema,/ }).click();
   await page.getByRole("dialog", { name: "Editar lançamento" }).waitFor();
   await shot(page, "editar");
