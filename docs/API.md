@@ -40,9 +40,10 @@ User 1─N Transaction
      1─N PasswordResetToken  token @unique
      1─N ImportBatch 1─N ImportBatchItem 1─1 Transaction
      1─N CategoryRule        @@unique(userId, pattern)
+     1─N CreditCard 1─N Transaction (cardId?)
 ```
 
-Todas as relações usam `onDelete: Cascade` a partir de `User`.
+Todas as relações usam `onDelete: Cascade` a partir de `User`. Excluir um cartão deixa `Transaction.cardId` nulo (`SetNull`).
 
 | Modelo | Campos relevantes | Observações |
 |---|---|---|
@@ -53,8 +54,11 @@ Todas as relações usam `onDelete: Cascade` a partir de `User`.
 | `Goal` | `name`, `targetAmount`, `currentAmount`, `deadline?`, `color?` | Progresso é informado manualmente. |
 | `PasswordResetToken` | `token` (UUID), `expiresAt` (1 h), `usedAt?` | |
 | `ImportBatch` | `fileName`, `fileHash` (SHA-256 do PDF), `issuer?`, `referenceMonth`, `dueDate?`, `statedTotal?`, `importedTotal`, `itemCount` | Um lote por fatura importada. O PDF não é armazenado. |
-| `ImportBatchItem` | `batchId`, `transactionId` (único) | Liga a transação ao lote; some junto com qualquer um dos dois. A tabela `transactions` não tem coluna nova. |
+| `ImportBatchItem` | `batchId`, `transactionId` (único) | Liga a transação ao lote; some junto com qualquer um dos dois. |
 | `CategoryRule` | `pattern` (estabelecimento normalizado), `category`, `type` | Regra "lembrar para as próximas faturas". |
+| `CreditCard` | `name`, `limit`, `closingDay`, `dueDay`, `color?`, `brand?` | Tabela `credit_cards`, criada pela migration `20260812192858_add_credit_cards` (aplicada antes só na produção; versionada em 17/10/2026). `Transaction.cardId?` aponta para ela. **Ainda não há rota de API nem tela** usando cartões. |
+
+**Segurança no Supabase (RLS):** desde a migration `20261017000000_enable_rls`, todas as tabelas do schema `public` têm Row Level Security ligado, sem políticas, e os papéis públicos `anon`/`authenticated` não têm permissão nas tabelas (nem nas futuras). Isso fecha a API REST automática do Supabase; o app não é afetado porque o Prisma conecta como `postgres` (dono das tabelas, com `BYPASSRLS`). **Toda tabela nova** precisa de `ALTER TABLE "<tabela>" ENABLE ROW LEVEL SECURITY;` na própria migration.
 
 Consequências do desenho atual:
 

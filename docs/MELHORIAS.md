@@ -140,3 +140,9 @@ Pendentes:
 - **Média:** `fetchImportBatches` (`src/services/imports.ts`) devolve `[]` quando a API responde com erro; o estado de erro do histórico em Importar só aparece em falha de rede, e o lembrete de fatura do Mês pode aparecer indevidamente. Fazer o serviço lançar `ApiError`.
 - **Baixa:** Relatórios e Planejar usam `<input type="month">` invisível sob o rótulo do mês; no Safari de desktop e Firefox antigo ele vira texto. As setas funcionam; um seletor próprio resolveria.
 - **Baixa:** ícones próprios por categoria (hoje só o ponto de cor).
+
+## 5. Banco de produção sincronizado (17/10/2026)
+
+- A migration `20260812192858_add_credit_cards`, que existia só na produção, foi versionada (arquivo SQL equivalente + model `CreditCard` em `schema.prisma`). O checksum no histórico da produção foi atualizado para o do arquivo versionado; `prisma migrate status` está em dia. Pendente: a funcionalidade de cartões (API e telas) ainda não existe no código.
+- RLS ligado em todas as tabelas e permissões de `anon`/`authenticated` removidas (migration `20261017000000_enable_rls`), aplicado na produção.
+

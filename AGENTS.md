@@ -33,7 +33,8 @@ Esta versão (Next.js 16) tem breaking changes — APIs, convenções e estrutur
 - `prisma.config.ts` usa `DIRECT_URL` (conexão direta ao PostgreSQL, porta 5432).
 - `src/lib/prisma.ts` usa `DATABASE_URL` via `pg.Pool` (conexão pooler, porta 6543).
 - São URLs diferentes no mesmo banco Supabase. **Não troque uma pela outra.**
-- Models: `User`, `Transaction`, `Category`, `Budget`, `Goal`, `PasswordResetToken` (ver `docs/API.md`). Todo dado pertence a um `userId`.
+- Models: `User`, `Transaction`, `Category`, `Budget`, `Goal`, `PasswordResetToken`, `ImportBatch`, `ImportBatchItem`, `CategoryRule`, `CreditCard` (ver `docs/API.md`). Todo dado pertence a um `userId`.
+- **RLS ligado em todas as tabelas** (migration `20261017000000_enable_rls`). Toda migration que criar tabela deve incluir `ALTER TABLE "<tabela>" ENABLE ROW LEVEL SECURITY;`.
 - `Transaction.category` e `Budget.category` guardam o **nome** da categoria (texto), não uma FK.
 - Sinal de `amount`: receita positiva; despesa e investimento negativos.
 - Para aplicar migrations: `npx prisma migrate dev`.
