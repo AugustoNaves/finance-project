@@ -66,6 +66,7 @@ describe("proxy", () => {
       "/reset-password",
       "/api/transactions",
       "/offline",
+      "/ajuda",
       "/manifest.webmanifest",
       "/sw.js",
       "/icons/icon-192.png",

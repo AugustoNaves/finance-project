@@ -396,3 +396,27 @@ test.describe("Recuperação de senha", () => {
     await expect(page.getByText(/token inválido|link inválido/i)).toBeVisible({ timeout: 3000 });
   });
 });
+
+test.describe("Guia de uso", () => {
+  test("é público e abre pela tela de entrada", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("link", { name: "Como funciona o Finance-app?" }).click();
+
+    await expect(page).toHaveURL(/\/ajuda$/);
+    await expect(page.getByRole("heading", { name: "Como usar o Finance-app", level: 1 })).toBeVisible();
+
+    await page.getByRole("navigation", { name: "Nesta página" }).getByRole("link", { name: "Importe a fatura do cartão" }).click();
+    await expect(page).toHaveURL(/#importar$/);
+    await expect(page.getByRole("heading", { name: "Importe a fatura do cartão", level: 2 })).toBeInViewport();
+  });
+
+  test("usuário logado chega pelo menu", async ({ page, account }) => {
+    void account;
+    await page.goto("/settings");
+    await page.getByRole("link", { name: "Como usar o app" }).click();
+
+    await expect(page).toHaveURL(/\/ajuda$/);
+    await expect(page.getByRole("img", { name: /Folha Registrar/ })).toBeVisible();
+  });
+});
+

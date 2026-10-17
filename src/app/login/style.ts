@@ -301,3 +301,13 @@ export const NotebookTotal = styled.div`
     color: var(--ink);
   }
 `;
+
+export const HelpLink = styled(Link)`
+  align-self: center;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--green);
+`;

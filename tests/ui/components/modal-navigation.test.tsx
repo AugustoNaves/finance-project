@@ -255,6 +255,7 @@ describe("AppNavigation", () => {
     ["Investimentos", "/investments"],
     ["Relatórios", "/reports"],
     ["Configurações", "/settings"],
+    ["Como usar", "/ajuda"],
   ];
 
   function renderNav() {

@@ -15,7 +15,7 @@ import {
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-const PAGES = ["/", "/transactions", "/import", "/categories", "/investments", "/planning", "/reports", "/settings"];
+const PAGES = ["/", "/ajuda", "/transactions", "/import", "/categories", "/investments", "/planning", "/reports", "/settings"];
 
 test.describe("Responsivo (celular 390×844)", () => {
   test("barra inferior navega pelas áreas do dia a dia e 'Mais' pelas demais", async ({ page, account }) => {

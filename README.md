@@ -16,6 +16,8 @@ Este projeto foi construído utilizando as ferramentas mais modernas do mercado:
 - **Autenticação e Segurança:** Gerenciamento de sessões com proteção de rotas privadas
 - **Envio de E-mails:** [Resend](https://resend.com/)
 
+**Como usar o app:** o guia passo a passo fica no próprio app, em `/ajuda` (link "Como funciona o Finance-app?" na tela de entrada e "Como usar" no menu Mais).
+
 ## ✨ Principais Funcionalidades
 
 - **Contas e sessão:** cadastro, login com reCAPTCHA v3, recuperação de senha por e-mail e logout.

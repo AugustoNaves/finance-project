@@ -113,7 +113,7 @@ Um arquivo por recurso: `register`, `login`, `logout`, `me`, `forgot-password`, 
 
 | Pasta | Cobre |
 |---|---|
-| `pages/` | Mês (início), Lançamentos, Importar fatura (com extração do PDF simulada), Categorias, Planejamento (+ redirect de `/budgets`), Relatórios, Investimentos, Configurações (perfil, exportação JSON/CSV, logout), Login/Cadastro, Esqueci a senha, Redefinir senha |
+| `pages/` | Guia `/ajuda`, Mês (início), Lançamentos, Importar fatura (com extração do PDF simulada), Categorias, Planejamento (+ redirect de `/budgets`), Relatórios, Investimentos, Configurações (perfil, exportação JSON/CSV, logout), Login/Cadastro, Esqueci a senha, Redefinir senha |
 | `components/` | Formulários (lançamento, categoria, orçamento, meta), filtros, lista agrupada por dia e edição pela folha, modal/folha, diálogo de confirmação, navegação (barra inferior, coluna, folha "Mais", Sair), linhas de categoria/orçamento/meta, resumo do mês e gráficos (nível fumaça) |
 | `context/` | `TransactionsContext`: carga inicial, criar, editar, excluir, falhas |
 | `services/` | Os quatro serviços: método, URL, corpo e `ApiError` com mensagem da API ou padrão |

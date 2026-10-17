@@ -33,6 +33,7 @@ const organizeItems = [
   { label: "Investimentos", href: "/investments" },
   { label: "Relatórios", href: "/reports" },
   { label: "Configurações", href: "/settings" },
+  { label: "Como usar", href: "/ajuda" },
 ];
 
 const iconPaths = {
