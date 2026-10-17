@@ -20,7 +20,7 @@ describe("Guia /ajuda", () => {
   it("tem título, índice com âncoras para cada parte e um h2 por parte", () => {
     render(<HelpPage />);
 
-    expect(screen.getByRole("heading", { name: "Como usar o Finance-app", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Como usar o Finance App", level: 1 })).toBeInTheDocument();
 
     const index = screen.getByRole("navigation", { name: "Nesta página" });
     const links = within(index).getAllByRole("link");
@@ -75,6 +75,6 @@ describe("Guia /ajuda", () => {
     render(<HelpPage />);
 
     expect(screen.getByRole("link", { name: "Abrir o app" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Abrir o Finance-app" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Abrir o Finance App" })).toHaveAttribute("href", "/");
   });
 });

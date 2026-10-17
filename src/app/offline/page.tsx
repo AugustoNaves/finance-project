@@ -8,7 +8,7 @@ export default function OfflinePage() {
       <Sheet>
         <Brand>
           <BrandMark aria-hidden="true">F</BrandMark>
-          <span>Finance-app</span>
+          <span>Finance App</span>
         </Brand>
         <Title>Sem conexão</Title>
         <Text>

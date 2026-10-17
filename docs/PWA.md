@@ -1,4 +1,4 @@
-# PWA — Finance-app instalável
+# PWA — Finance App instalável
 
 O app pode ser instalado na tela inicial (Android/Chrome, desktop Chrome/Edge e iPhone via Safari) e abre em tela cheia, como app. Tudo usa as convenções nativas do Next.js 16 (ver `node_modules/next/dist/docs/01-app/02-guides/progressive-web-apps.md`); nenhuma biblioteca foi adicionada.
 
@@ -6,7 +6,7 @@ O app pode ser instalado na tela inicial (Android/Chrome, desktop Chrome/Edge e 
 
 | Arquivo | Papel |
 |---|---|
-| `src/app/manifest.ts` | Gera `/manifest.webmanifest`: nome "Finance-app", `display: standalone`, `start_url: "/"`, `theme_color`/`background_color` = papel claro `#eef2ea`, ícones `any` e `maskable` (192 e 512), atalhos para Lançamentos e Importar fatura. |
+| `src/app/manifest.ts` | Gera `/manifest.webmanifest`: nome "Finance App", `display: standalone`, `start_url: "/"`, `theme_color`/`background_color` = papel claro `#eef2ea`, ícones `any` e `maskable` (192 e 512), atalhos para Lançamentos e Importar fatura. |
 | `public/icons/*.png` | Ícones do manifest. `icon-*` com cantos arredondados; `maskable-*` com fundo inteiro e o "F" dentro da zona segura. |
 | `src/app/icon.png`, `src/app/apple-icon.png` | Favicon e ícone do iOS (convenções de arquivo do Next, geram as tags `<link>`). |
 | `public/splash/*.png` | Telas de abertura do iOS (5 tamanhos de iPhone × claro/escuro), ligadas em `metadata.appleWebApp.startupImage` no `src/app/layout.tsx`. No Android a abertura é gerada pelo navegador a partir de `background_color`, ícone e nome — fica coerente com a do iOS. |
@@ -37,6 +37,6 @@ O proxy (`src/proxy.ts`) só atua nas rotas listadas no `matcher`. Manifest, íc
 3. Em viewport de celular, o ícone de instalar aparece na barra de endereço; no Android real, menu ⋮ → Instalar app; no iPhone, Compartilhar → Adicionar à Tela de Início.
 4. Offline: DevTools → Network → Offline e recarregue — aparece "Sem conexão".
 
-## Atualizar ícones
+## Atualizar ícones e telas de abertura
 
-Os PNGs foram gerados a partir do próprio app (fonte Literata carregada pelo `next/font`) com um script Playwright descartável. Para mudar: ajuste a arte, gere novamente os mesmos nomes de arquivo e incremente `VERSION` em `public/sw.js`.
+Ícones e telas de abertura são gerados com a fonte Literata do próprio app por `npx vite-node tests/pwa/gerar-imagens.ts`, que sobe o app em modo dev na porta 3201 e grava `public/icons/*`, `public/splash/*`, `src/app/icon.png` e `src/app/apple-icon.png`. Para mudar a arte ou o nome, ajuste o script, gere de novo e incremente `VERSION` em `public/sw.js`.

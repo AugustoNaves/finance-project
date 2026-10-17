@@ -1,6 +1,6 @@
-# Design spec — Finance-app, direção "Caderneta"
+# Design spec — Finance App, direção "Caderneta"
 
-Aprovações: estrutura (A), direção Caderneta (B) e protótipo (C) em 17/10/2026. Nome: **Finance-app**.
+Aprovações: estrutura (A), direção Caderneta (B) e protótipo (C) em 17/10/2026. Nome: **Finance App**.
 
 ## Princípios
 
@@ -84,7 +84,7 @@ Tema: segue `prefers-color-scheme`. `color-scheme` acompanha (campos nativos e b
 
 ## PWA
 
-- `src/app/manifest.ts`: nome "Finance-app", `display: standalone`, `start_url: "/"`, `theme_color`/`background_color` = `--paper` claro; ícones gerados (F em Literata, tinta verde sobre papel), incluindo maskable.
+- `src/app/manifest.ts`: nome "Finance App", `display: standalone`, `start_url: "/"`, `theme_color`/`background_color` = `--paper` claro; ícones gerados (F em Literata, tinta verde sobre papel), incluindo maskable.
 - `viewport.themeColor` com variantes claro/escuro.
 - Service worker (`public/sw.js`): cacheia só assets estáticos e `/offline`; nunca `/api/*` nem páginas com dados.
 

@@ -23,7 +23,7 @@ function loadWorker() {
       const url = typeof request === "string" ? request : new URL(request.url).pathname;
       return cached.get(url);
     }),
-    keys: vi.fn(async () => ["finance-app-v2-static", "finance-app-v3-static"]),
+    keys: vi.fn(async () => ["finance-app-v3-static", "finance-app-v4-static"]),
     delete: vi.fn(async () => true),
   };
 
@@ -143,7 +143,7 @@ describe("service worker (public/sw.js)", () => {
     worker.listeners.activate({ waitUntil: (value: Promise<unknown>) => (activating = value) });
     await activating;
 
-    expect(worker.caches.delete).toHaveBeenCalledWith("finance-app-v2-static");
-    expect(worker.caches.delete).not.toHaveBeenCalledWith("finance-app-v3-static");
+    expect(worker.caches.delete).toHaveBeenCalledWith("finance-app-v3-static");
+    expect(worker.caches.delete).not.toHaveBeenCalledWith("finance-app-v4-static");
   });
 });

@@ -142,6 +142,38 @@ test.describe("Mês (página inicial)", () => {
     await expect(page.getByRole("dialog", { name: "Editar lançamento" }).getByLabel("Descrição")).toHaveValue("Padaria");
   });
 
+  for (const [label, viewport] of [
+    ["desktop", { width: 1366, height: 900 }],
+    ["celular", { width: 390, height: 844 }],
+  ] as const) {
+    test(`setas de mês ficam no mesmo lugar qualquer que seja o nome do mês (${label})`, async ({ page, account }) => {
+      void account;
+      await page.setViewportSize(viewport);
+
+      for (const path of ["/", "/planning"]) {
+        await page.goto(path);
+
+        const previous = page.getByRole("main").getByRole("button", { name: "Mês anterior" });
+        const next = page.getByRole("main").getByRole("button", { name: "Próximo mês" });
+        const positions = async () => [(await previous.boundingBox())?.x, (await next.boundingBox())?.x];
+
+        await expect(page.getByRole("main").getByText(/outubro de 2026/i).first()).toBeVisible();
+        const october = await positions();
+
+        await next.click();
+        await expect(page.getByRole("main").getByText(/novembro de 2026/i).first()).toBeVisible();
+        expect(await positions(), `${path}: novembro`).toEqual(october);
+
+        await previous.click();
+        await previous.click();
+        await previous.click();
+        await previous.click();
+        await expect(page.getByRole("main").getByText(/julho de 2026/i).first()).toBeVisible();
+        expect(await positions(), `${path}: julho`).toEqual(october);
+      }
+    });
+  }
+
   test("navegação principal leva a todas as áreas do app", async ({ page, account }) => {
     void account;
     await page.goto("/");
