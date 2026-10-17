@@ -1,289 +1,179 @@
 "use client";
 
 import Link from "next/link";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
-const colors = {
-  navy: "#0d1117",
-  navyMid: "#161b27",
-  navyLight: "#1e2535",
-  green: "#00c48c",
-  blue: "#0ea5e9",
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  border: "rgba(255, 255, 255, 0.07)",
-};
+export const Side = styled.aside`
+  display: none;
 
-export const Nav = styled.header`
-  position: relative;
-  z-index: 2;
-  padding: 28px 32px 0;
-
-  @media (max-width: 768px) {
-    padding: 20px 16px 0;
-  }
-`;
-
-export const NavContainer = styled.div`
-  max-width: 1120px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 12px;
-  background: rgba(22, 27, 39, 0.72);
-  border: 1px solid ${colors.border};
-  border-radius: 20px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
-
-  @media (max-width: 768px) {
-    padding: 10px 12px;
-    border-radius: 18px;
+  @media (min-width: 960px) {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 20px 24px;
+    border-right: 1px solid var(--rule);
   }
 `;
 
 export const Brand = styled(Link)`
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 12px;
-  color: #ffffff;
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  gap: 10px;
+  font-family: var(--font-figures);
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--ink);
 `;
 
 export const BrandMark = styled.span`
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, ${colors.green}, ${colors.blue});
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 800;
-  box-shadow: 0 0 26px rgba(0, 196, 140, 0.28);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--green);
+  color: var(--on-green);
+  font-family: var(--font-figures);
+  font-size: 17px;
 `;
 
-export const DesktopNavList = styled.nav`
+export const RegisterButton = styled.button`
+  min-height: 44px;
+  border-radius: 10px;
+  background: var(--green);
+  color: var(--on-green);
+  font-weight: 600;
+`;
+
+export const SideGroup = styled.nav`
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 2px;
 
-  &::-webkit-scrollbar {
-    display: none;
-  }
-
-  @media (max-width: 768px) {
-    display: none;
+  p {
+    margin: 0 0 6px 10px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
   }
 `;
 
-export const NavItem = styled.span<{ $active: boolean }>`
-  flex: 0 0 auto;
-
-  a {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
-    padding: 0 13px;
-    border-radius: 999px;
-    color: ${({ $active }) => ($active ? "#ffffff" : colors.textMuted)};
-    background: ${({ $active }) =>
-      $active
-        ? "linear-gradient(135deg, rgba(0, 196, 140, 0.18), rgba(14, 165, 233, 0.12))"
-        : "transparent"};
-    border: 1px solid transparent;
-    font-size: 0.84rem;
-    font-weight: 700;
-    isolation: isolate;
-    overflow: hidden;
-    transition:
-      background 0.2s,
-      color 0.2s,
-      border-color 0.2s,
-      transform 0.15s,
-      box-shadow 0.2s;
-  }
-
-  a::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    background:
-      radial-gradient(circle at 30% 0%, rgba(0, 196, 140, 0.2), transparent 52%),
-      rgba(255, 255, 255, 0.055);
-    opacity: ${({ $active }) => ($active ? 1 : 0)};
-    transition: opacity 0.2s;
-  }
-
-  a::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: 5px;
-    width: ${({ $active }) => ($active ? "18px" : "0")};
-    height: 2px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, ${colors.green}, ${colors.blue});
-    box-shadow: 0 0 14px rgba(0, 196, 140, 0.45);
-    transform: translateX(-50%);
-    transition: width 0.2s;
-  }
-
-  a:hover {
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
-    transform: translateY(-1px);
-  }
-
-  a:hover::before {
-    opacity: 1;
-  }
-
-  a:hover::after {
-    width: 18px;
-  }
-`;
-
-export const MenuButton = styled.button`
-  display: none;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 0 13px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid ${colors.border};
-  color: #ffffff;
-  font-size: 0.86rem;
-  font-weight: 700;
-  transition:
-    background 0.2s,
-    border-color 0.2s,
-    transform 0.15s;
+export const SideItem = styled(Link)<{ $active?: boolean }>`
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: ${({ $active }) => ($active ? "var(--ink)" : "var(--ink-soft)")};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  background: ${({ $active }) => ($active ? "var(--green-wash)" : "transparent")};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.14);
-    transform: translateY(-1px);
-  }
-
-  @media (max-width: 768px) {
-    display: inline-flex;
+    color: var(--ink);
   }
 `;
 
-export const MenuIcon = styled.span`
-  display: grid;
-  gap: 4px;
-  width: 18px;
+export const SideLogout = styled.button`
+  margin-top: auto;
+  align-self: flex-start;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--ink-soft);
 
-  span {
-    display: block;
-    height: 2px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, ${colors.green}, ${colors.blue});
+  &:hover {
+    color: var(--red);
   }
 `;
 
-export const DrawerOverlay = styled.div<{ $open: boolean }>`
+export const TabBar = styled.nav`
   position: fixed;
-  inset: 0;
-  z-index: 10;
-  display: none;
-  background: rgba(4, 8, 14, 0.68);
-  backdrop-filter: blur(8px);
-  opacity: ${({ $open }) => ($open ? 1 : 0)};
-  pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
-  transition: opacity 0.2s ease;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
 
-  @media (max-width: 768px) {
-    display: block;
+  @media (min-width: 960px) {
+    display: none;
   }
 `;
 
-export const DrawerPanel = styled.aside<{ $open: boolean }>`
-  position: absolute;
-  inset: 0 0 0 auto;
-  width: min(86vw, 340px);
-  min-height: 100%;
-  padding: 18px;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(0, 196, 140, 0.12), transparent 34%),
-    linear-gradient(180deg, ${colors.navyMid}, ${colors.navy});
-  border-left: 1px solid ${colors.border};
-  box-shadow: -24px 0 70px rgba(0, 0, 0, 0.42);
-  transform: translateX(${({ $open }) => ($open ? "0" : "100%")});
-  transition: transform 0.24s ease;
-`;
-
-export const DrawerHeader = styled.header`
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 16px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid ${colors.border};
-`;
-
-export const CloseButton = styled.button`
-  display: inline-flex;
+const tabStyle = css<{ $active?: boolean }>`
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: rgba(247, 90, 104, 0.1);
-  border: 1px solid rgba(247, 90, 104, 0.22);
-  color: #f75a68;
-  font-size: 0.78rem;
-  font-weight: 700;
+  gap: 3px;
+  min-height: 50px;
+  font-size: 11px;
+  color: ${({ $active }) => ($active ? "var(--ink)" : "var(--ink-soft)")};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
 `;
 
-export const MobileNavList = styled.nav`
+export const Tab = styled(Link)<{ $active?: boolean }>`
+  ${tabStyle}
+`;
+
+export const TabButton = styled.button<{ $active?: boolean }>`
+  ${tabStyle}
+`;
+
+export const PlusTab = styled.button`
+  justify-self: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   display: grid;
-  gap: 10px;
-  margin-top: 20px;
+  place-items: center;
+  background: var(--green);
+  color: var(--on-green);
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `;
 
-export const MobileNavItem = styled.span<{ $active: boolean }>`
-  a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 48px;
-    padding: 0 14px;
-    border-radius: 14px;
-    background: ${({ $active }) =>
-      $active ? "rgba(0, 196, 140, 0.12)" : "rgba(255, 255, 255, 0.04)"};
-    border: 1px solid
-      ${({ $active }) =>
-        $active ? "rgba(0, 196, 140, 0.28)" : "rgba(255, 255, 255, 0.07)"};
-    color: ${({ $active }) => ($active ? "#ffffff" : colors.textLight)};
-    font-size: 0.96rem;
-    font-weight: 700;
-  }
+export const MoreList = styled.ul`
+  list-style: none;
+  border-top: 1px solid var(--rule-strong);
+`;
 
-  a::after {
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: ${({ $active }) => ($active ? colors.green : colors.textMuted)};
-    box-shadow: ${({ $active }) =>
-      $active ? `0 0 16px ${colors.green}` : "none"};
-    opacity: ${({ $active }) => ($active ? 1 : 0.36)};
+export const MoreLink = styled(Link)<{ $active?: boolean }>`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 52px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 16px;
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  color: var(--ink);
+
+  span {
+    color: var(--ink-soft);
+    font-size: 20px;
   }
+`;
+
+export const LogoutButton = styled.button`
+  width: 100%;
+  min-height: 52px;
+  text-align: left;
+  font-size: 16px;
+  color: var(--red);
 `;

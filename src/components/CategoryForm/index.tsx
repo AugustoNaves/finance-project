@@ -1,27 +1,50 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useId, useState } from "react";
+import { ColorSwatches, defaultColor } from "@/components/ColorSwatches";
 import { FormError } from "@/components/FormError";
 import { getErrorMessage } from "@/services/http";
 import { CategoryPayload, CategoryType } from "@/types/category";
-import { Field, Form, Input, Label, Select, SubmitButton } from "./styles";
+import {
+  Actions,
+  DeleteButton,
+  Field,
+  Form,
+  Input,
+  Label,
+  Legend,
+  Segment,
+  Segmented,
+  SubmitButton,
+} from "./styles";
 
 export type CategoryFormData = CategoryPayload;
 
+const typeOptions: { value: CategoryType; label: string }[] = [
+  { value: "outcome", label: "Gasto" },
+  { value: "income", label: "Receita" },
+  { value: "investment", label: "Investimento" },
+];
+
 interface CategoryFormProps {
   initialValues?: CategoryFormData;
+  defaultType?: CategoryType;
   submitLabel?: string;
   onSubmit: (data: CategoryFormData) => Promise<void> | void;
+  onDelete?: () => void;
 }
 
 export function CategoryForm({
   initialValues,
+  defaultType = "outcome",
   submitLabel = "Salvar categoria",
   onSubmit,
+  onDelete,
 }: CategoryFormProps) {
+  const id = useId();
   const [name, setName] = useState(initialValues?.name ?? "");
-  const [type, setType] = useState<CategoryType>(initialValues?.type ?? "outcome");
-  const [color, setColor] = useState(initialValues?.color ?? "#00c48c");
+  const [type, setType] = useState<CategoryType>(initialValues?.type ?? defaultType);
+  const [color, setColor] = useState(initialValues?.color ?? defaultColor);
   const [icon, setIcon] = useState(initialValues?.icon ?? "");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -49,8 +72,8 @@ export function CategoryForm({
 
     if (!initialValues) {
       setName("");
-      setType("outcome");
-      setColor("#00c48c");
+      setType(defaultType);
+      setColor(defaultColor);
       setIcon("");
     }
   }
@@ -61,7 +84,8 @@ export function CategoryForm({
         <Label htmlFor="category-name">Nome</Label>
         <Input
           id="category-name"
-          placeholder="Ex: Alimentação"
+          placeholder="Ex.: Mercado"
+          autoComplete="off"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
@@ -69,33 +93,31 @@ export function CategoryForm({
       </Field>
 
       <Field>
-        <Label htmlFor="category-type">Tipo</Label>
-        <Select
-          id="category-type"
-          value={type}
-          onChange={(event) => setType(event.target.value as CategoryType)}
-        >
-          <option value="income">Receita</option>
-          <option value="outcome">Despesa</option>
-          <option value="investment">Investimento</option>
-        </Select>
+        <Legend id={`${id}-type`}>Tipo</Legend>
+        <Segmented role="radiogroup" aria-labelledby={`${id}-type`}>
+          {typeOptions.map((option) => (
+            <Segment key={option.value}>
+              <input
+                type="radio"
+                name={`${id}-type`}
+                value={option.value}
+                checked={type === option.value}
+                onChange={() => setType(option.value)}
+              />
+              {option.label}
+            </Segment>
+          ))}
+        </Segmented>
       </Field>
 
-      <Field>
-        <Label htmlFor="category-color">Cor</Label>
-        <Input
-          id="category-color"
-          type="color"
-          value={color}
-          onChange={(event) => setColor(event.target.value)}
-        />
-      </Field>
+      <ColorSwatches value={color} onChange={setColor} />
 
       <Field>
         <Label htmlFor="category-icon">Ícone simples</Label>
         <Input
           id="category-icon"
-          placeholder="Ex: food, car, home"
+          placeholder="Opcional. Ex.: food, car, home"
+          autoComplete="off"
           value={icon}
           onChange={(event) => setIcon(event.target.value)}
         />
@@ -103,9 +125,16 @@ export function CategoryForm({
 
       <FormError message={error} />
 
-      <SubmitButton type="submit" disabled={submitting}>
-        {submitLabel}
-      </SubmitButton>
+      <Actions>
+        {onDelete && (
+          <DeleteButton type="button" onClick={onDelete}>
+            Excluir
+          </DeleteButton>
+        )}
+        <SubmitButton type="submit" disabled={submitting}>
+          {submitLabel}
+        </SubmitButton>
+      </Actions>
     </Form>
   );
 }

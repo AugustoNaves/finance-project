@@ -98,7 +98,8 @@ Nos testes Vitest, títulos com `[comportamento atual]`, `[bug]` ou `[UX]` fixam
 | `lib/session.test.ts` | Criação e verificação do token, adulteração, expiração, segredo ausente ou curto, opções do cookie |
 | `lib/validators.test.ts` | Regras de transação, meta, categoria e orçamento |
 | `lib/tokens.test.ts`, `lib/password.test.ts`, `lib/auth.test.ts`, `lib/http.test.ts`, `lib/resend.test.ts` | Token de redefinição, bcrypt, usuário autenticado, leitura de JSON, envio de e-mail |
-| `proxy.test.ts` | Redirecionamento de cada rota protegida e de `/login` com sessão |
+| `proxy.test.ts` | Redirecionamento de cada rota protegida e de `/login` com sessão; arquivos do PWA e `/offline` ficam públicos |
+| `sw.test.ts` | Service worker: não intercepta `/api/*` nem outras origens, não guarda páginas, cai na página offline, guarda só estáticos de build, limpa caches antigos |
 | `invoice-import/parseInvoice.test.ts` | Parser de fatura: formatos de data e valor, parcelas, estornos, encargos, pagamento, linhas ignoradas, virada de ano, cabeçalho |
 | `invoice-import/normalize.test.ts` | Normalização de estabelecimento, impressão digital, regra de data das parcelas |
 | `invoice-import/categorize.test.ts`, `lib/importValidators.test.ts` | Prioridade das sugestões de categoria; validação dos corpos de preview e confirmação |
@@ -112,26 +113,28 @@ Um arquivo por recurso: `register`, `login`, `logout`, `me`, `forgot-password`, 
 
 | Pasta | Cobre |
 |---|---|
-| `pages/` | Dashboard, Transações, Importar fatura (com extração do PDF simulada), Categorias, Planejamento (+ redirect de `/budgets`), Relatórios, Investimentos, Configurações (perfil, exportação JSON/CSV, logout), Login/Cadastro, Esqueci a senha, Redefinir senha |
-| `components/` | Formulários (transação, categoria, orçamento, meta), filtros, lista, modal, diálogo de confirmação, navegação, cards e gráficos (nível fumaça) |
+| `pages/` | Mês (início), Lançamentos, Importar fatura (com extração do PDF simulada), Categorias, Planejamento (+ redirect de `/budgets`), Relatórios, Investimentos, Configurações (perfil, exportação JSON/CSV, logout), Login/Cadastro, Esqueci a senha, Redefinir senha |
+| `components/` | Formulários (lançamento, categoria, orçamento, meta), filtros, lista agrupada por dia e edição pela folha, modal/folha, diálogo de confirmação, navegação (barra inferior, coluna, folha "Mais", Sair), linhas de categoria/orçamento/meta, resumo do mês e gráficos (nível fumaça) |
 | `context/` | `TransactionsContext`: carga inicial, criar, editar, excluir, falhas |
 | `services/` | Os quatro serviços: método, URL, corpo e `ApiError` com mensagem da API ou padrão |
 
-Helpers em `tests/ui/helpers/`: `mockApi` (roteia "MÉTODO /rota" para respostas), navegação simulada, dados fixos e `freezeDate`.
+Helpers em `tests/ui/helpers/`: `mockApi` (roteia "MÉTODO /rota" para respostas), navegação simulada, dados fixos, `freezeDate` e `renderWithProvider` (com `TransactionsProvider` e `EntrySheetProvider`, como no layout).
+
+Helpers E2E em `tests/e2e/support/ui.ts`: `openRegister`, `createTransactionViaUi`, `fillTransactionForm` (rádios de tipo e categoria), `transactionRow`/`transactionRows` (linhas pelo nome acessível "Descrição, … Editar"), `openTransaction`, `entryCount`, `ledger` (valor com sinal como nas listas) e `confirmDeletion`.
 
 ### E2E — `tests/e2e/`
 
 | Spec | Testes | Cobre |
 |---|---|---|
 | `01-auth` | 30 | Proteção de rotas, cadastro, login (API interceptada), logout, esqueci/redefinir senha |
-| `02-transactions` | 18 | Criar receita/despesa/investimento, editar, excluir, filtros, ordenação, validação, alertas de erro, Esc |
-| `03-dashboard` | 6 | Cards, resumo do mês, indicadores, últimas transações |
-| `04-categories` | 12 | 18 categorias padrão, CRUD, duplicidade, uso no formulário de transação, métricas por nome+tipo |
+| `02-transactions` | 19 | Folha Registrar (receita/gasto/investimento, categorias por uso, descrição opcional, vírgula), editar e excluir pela linha, filtros, agrupamento por dia, ordenação, validação, erros, Esc |
+| `03-dashboard` | 7 | Mês: sobra, trio, saldo acumulado, troca de mês, últimos 7, orçamentos, lembrete da fatura, navegação completa |
+| `04-categories` | 14 | 18 categorias padrão, CRUD, duplicidade, uso no formulário de transação, métricas por nome+tipo |
 | `05-budgets` | 8 | CRUD, faixas de progresso, duplicidade, filtro de mês |
-| `06-goals` | 8 | CRUD, progresso, validação |
-| `07-investments-reports-settings` | 10 | Totais, "Novo Aporte", gráficos, período, média diária, perfil, exportação |
+| `06-goals` | 10 | CRUD, progresso, validação |
+| `07-investments-reports-settings` | 11 | Totais, "Novo Aporte", gráficos, período, média diária, perfil, exportação |
 | `08-multi-tenancy` | 7 | Isolamento na interface e na API, cookie forjado, índice de orçamentos |
-| `09-responsive` | 13 | 390x844: menu lateral, CRUD em cartões, sem rolagem horizontal nas 7 telas |
+| `09-responsive` | 13 | 390x844: barra inferior e folha "Mais", CRUD em linhas tocando, sobra visível no topo, login, sem rolagem horizontal nas telas |
 | `10-dates-timezone` | 11 | Regressões de data: dia 1º, último dia do mês, após 21h, edição mantém a data |
 | `11-invoice-import` | 5 | PDF sintético enviado pelo navegador: leitura real com pdf.js, preview, registro, regra lembrada, reenvio detectado, desfazer, substituição da fatura lançada como total |
 

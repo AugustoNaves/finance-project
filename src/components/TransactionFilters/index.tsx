@@ -1,13 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import {
+  Chip,
+  Chips,
   Field,
-  FiltersGrid,
   FiltersPanel,
   Input,
   Label,
+  MoreButton,
+  MoreGrid,
   ResetButton,
+  SearchInput,
   Select,
+  TopRow,
 } from "./styles";
 
 export type TransactionTypeFilter = "all" | "income" | "outcome" | "investment";
@@ -29,12 +35,26 @@ interface TransactionFiltersProps {
   onReset: () => void;
 }
 
+const typeOptions: { value: TransactionTypeFilter; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "outcome", label: "Gastos" },
+  { value: "income", label: "Receitas" },
+  { value: "investment", label: "Investimentos" },
+];
+
 export function TransactionFilters({
   filters,
   categories,
   onChange,
   onReset,
 }: TransactionFiltersProps) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const activeExtra =
+    (filters.category !== "all" ? 1 : 0) +
+    (filters.startDate ? 1 : 0) +
+    (filters.endDate ? 1 : 0) +
+    (filters.sort !== "dateDesc" ? 1 : 0);
+
   function updateFilter<Key extends keyof TransactionFiltersState>(
     key: Key,
     value: TransactionFiltersState[Key],
@@ -44,34 +64,43 @@ export function TransactionFilters({
 
   return (
     <FiltersPanel>
-      <FiltersGrid>
-        <Field $wide>
-          <Label htmlFor="transaction-filter-search">Buscar</Label>
-          <Input
-            id="transaction-filter-search"
-            type="search"
-            placeholder="Buscar por descrição..."
-            value={filters.search}
-            onChange={(event) => updateFilter("search", event.target.value)}
-          />
-        </Field>
+      <Label htmlFor="transaction-filter-search" className="sr-only">
+        Buscar
+      </Label>
+      <SearchInput
+        id="transaction-filter-search"
+        type="search"
+        placeholder="Buscar por descrição"
+        value={filters.search}
+        onChange={(event) => updateFilter("search", event.target.value)}
+      />
 
-        <Field>
-          <Label htmlFor="transaction-filter-type">Tipo</Label>
-          <Select
-            id="transaction-filter-type"
-            value={filters.type}
-            onChange={(event) =>
-              updateFilter("type", event.target.value as TransactionTypeFilter)
-            }
-          >
-            <option value="all">Todos</option>
-            <option value="income">Receitas</option>
-            <option value="outcome">Despesas</option>
-            <option value="investment">Investimentos</option>
-          </Select>
-        </Field>
+      <TopRow>
+        <Chips role="group" aria-label="Tipo">
+          {typeOptions.map((option) => (
+            <Chip
+              key={option.value}
+              type="button"
+              aria-pressed={filters.type === option.value}
+              $active={filters.type === option.value}
+              onClick={() => updateFilter("type", option.value)}
+            >
+              {option.label}
+            </Chip>
+          ))}
+        </Chips>
 
+        <MoreButton
+          type="button"
+          aria-expanded={moreOpen}
+          aria-controls="transaction-more-filters"
+          onClick={() => setMoreOpen(!moreOpen)}
+        >
+          Filtros{activeExtra > 0 ? ` (${activeExtra})` : ""}
+        </MoreButton>
+      </TopRow>
+
+      <MoreGrid id="transaction-more-filters" hidden={!moreOpen}>
         <Field>
           <Label htmlFor="transaction-filter-category">Categoria</Label>
           <Select
@@ -127,7 +156,7 @@ export function TransactionFilters({
         <ResetButton type="button" onClick={onReset}>
           Limpar filtros
         </ResetButton>
-      </FiltersGrid>
+      </MoreGrid>
     </FiltersPanel>
   );
 }

@@ -1,18 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { ColorSwatches, defaultColor } from "@/components/ColorSwatches";
 import { FormError } from "@/components/FormError";
 import { getErrorMessage } from "@/services/http";
 import { GoalPayload } from "@/types/goal";
 import { dateKeyToISOString } from "@/utils/dates";
-import {
-  ColorInput,
-  Field,
-  Form,
-  Input,
-  Label,
-  SubmitButton,
-} from "./styles";
+import { Actions, Field, FieldRow, Form, Input, Label, SubmitButton } from "./styles";
 
 export type GoalFormData = GoalPayload;
 
@@ -37,7 +31,7 @@ export function GoalForm({
   const [deadline, setDeadline] = useState(
     initialValues?.deadline ? initialValues.deadline.slice(0, 10) : "",
   );
-  const [color, setColor] = useState(initialValues?.color ?? "#00c48c");
+  const [color, setColor] = useState(initialValues?.color ?? defaultColor);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -68,7 +62,7 @@ export function GoalForm({
       setTargetAmount("");
       setCurrentAmount("");
       setDeadline("");
-      setColor("#00c48c");
+      setColor(defaultColor);
     }
   }
 
@@ -79,39 +73,43 @@ export function GoalForm({
         <Input
           id="goal-name"
           type="text"
-          placeholder="Ex: Reserva de emergência"
+          placeholder="Ex.: Reserva de emergência"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
         />
       </Field>
 
-      <Field>
-        <Label htmlFor="goal-target">Valor alvo</Label>
-        <Input
-          id="goal-target"
-          type="number"
-          min="0.01"
-          step="0.01"
-          placeholder="R$ 0,00"
-          value={targetAmount}
-          onChange={(event) => setTargetAmount(event.target.value)}
-          required
-        />
-      </Field>
+      <FieldRow>
+        <Field>
+          <Label htmlFor="goal-target">Valor alvo</Label>
+          <Input
+            id="goal-target"
+            type="number"
+            inputMode="decimal"
+            min="0.01"
+            step="0.01"
+            placeholder="0,00"
+            value={targetAmount}
+            onChange={(event) => setTargetAmount(event.target.value)}
+            required
+          />
+        </Field>
 
-      <Field>
-        <Label htmlFor="goal-current">Valor atual</Label>
-        <Input
-          id="goal-current"
-          type="number"
-          min="0"
-          step="0.01"
-          placeholder="R$ 0,00"
-          value={currentAmount}
-          onChange={(event) => setCurrentAmount(event.target.value)}
-        />
-      </Field>
+        <Field>
+          <Label htmlFor="goal-current">Valor atual</Label>
+          <Input
+            id="goal-current"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            placeholder="0,00"
+            value={currentAmount}
+            onChange={(event) => setCurrentAmount(event.target.value)}
+          />
+        </Field>
+      </FieldRow>
 
       <Field>
         <Label htmlFor="goal-deadline">Prazo (opcional)</Label>
@@ -123,21 +121,15 @@ export function GoalForm({
         />
       </Field>
 
-      <Field>
-        <Label htmlFor="goal-color">Cor</Label>
-        <ColorInput
-          id="goal-color"
-          type="color"
-          value={color}
-          onChange={(event) => setColor(event.target.value)}
-        />
-      </Field>
+      <ColorSwatches value={color} onChange={setColor} />
 
       <FormError message={error} />
 
-      <SubmitButton type="submit" disabled={submitting}>
-        {submitLabel}
-      </SubmitButton>
+      <Actions>
+        <SubmitButton type="submit" disabled={submitting}>
+          {submitLabel}
+        </SubmitButton>
+      </Actions>
     </Form>
   );
 }

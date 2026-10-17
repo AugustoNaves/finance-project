@@ -9,12 +9,24 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ChartEmpty, ChartFrame } from "./styles";
+import { formatAxisAmount } from "@/components/BalanceLineChart";
+import { formatCurrency } from "@/utils/formatters";
+import {
+  ChartEmpty,
+  ChartFrame,
+  chartTick,
+  Key,
+  Legend,
+  tooltipContentStyle,
+  tooltipItemStyle,
+  tooltipLabelStyle,
+} from "./styles";
 
 export interface IncomeOutcomeBarChartItem {
   label: string;
   income: number;
   outcome: number;
+  fullLabel?: string;
 }
 
 interface IncomeOutcomeBarChartProps {
@@ -28,30 +40,65 @@ export function IncomeOutcomeBarChart({ data }: IncomeOutcomeBarChartProps) {
 
   return (
     <ChartFrame>
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="rgba(255, 255, 255, 0.07)" vertical={false} />
-          <XAxis dataKey="label" stroke="#8892a4" tickLine={false} axisLine={false} />
+      <Legend>
+        <li>
+          <Key $tone="in" />
+          Receitas
+        </li>
+        <li>
+          <Key $tone="out" />
+          Despesas
+        </li>
+      </Legend>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart
+          data={data}
+          margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+          barGap={2}
+          barCategoryGap="28%"
+        >
+          <CartesianGrid stroke="var(--rule)" vertical={false} />
+          <XAxis
+            dataKey="label"
+            tick={chartTick}
+            tickLine={false}
+            axisLine={{ stroke: "var(--rule-strong)" }}
+            interval={0}
+            tickMargin={8}
+          />
           <YAxis
-            stroke="#8892a4"
+            tick={chartTick}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => `R$ ${Number(value) / 1000}k`}
+            width={56}
+            tickFormatter={(value) => formatAxisAmount(Number(value))}
           />
           <Tooltip
-            formatter={(value) => Number(value).toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-            contentStyle={{
-              background: "#161b27",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: 12,
-              color: "#ffffff",
-            }}
+            cursor={{ fill: "var(--green-wash)", opacity: 0.6 }}
+            contentStyle={tooltipContentStyle}
+            labelStyle={tooltipLabelStyle}
+            itemStyle={tooltipItemStyle}
+            labelFormatter={(label, payload) =>
+              (payload?.[0]?.payload as IncomeOutcomeBarChartItem | undefined)?.fullLabel ?? label
+            }
+            formatter={(value, name) => [formatCurrency(Number(value)), name]}
           />
-          <Bar dataKey="income" name="Receitas" fill="#00c48c" radius={[8, 8, 0, 0]} />
-          <Bar dataKey="outcome" name="Despesas" fill="#f75a68" radius={[8, 8, 0, 0]} />
+          <Bar
+            dataKey="income"
+            name="Receitas"
+            fill="var(--green)"
+            maxBarSize={16}
+            radius={[4, 4, 0, 0]}
+            isAnimationActive={false}
+          />
+          <Bar
+            dataKey="outcome"
+            name="Despesas"
+            fill="var(--red)"
+            maxBarSize={16}
+            radius={[4, 4, 0, 0]}
+            isAnimationActive={false}
+          />
         </BarChart>
       </ResponsiveContainer>
     </ChartFrame>

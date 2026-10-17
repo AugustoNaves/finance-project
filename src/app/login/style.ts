@@ -1,556 +1,303 @@
+"use client";
+
 import Link from "next/link";
-import styled, { keyframes, createGlobalStyle } from "styled-components";
+import styled from "styled-components";
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const colors = {
-  navy: "#0d1117",
-  navyMid: "#161b27",
-  navyLight: "#1e2535",
-  green: "#00c48c",
-  greenDark: "#00a576",
-  greenGlow: "rgba(0, 196, 140, 0.25)",
-  blue: "#0ea5e9",
-  blueGlow: "rgba(14, 165, 233, 0.15)",
-  white: "#ffffff",
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  border: "rgba(255,255,255,0.07)",
-  glass: "rgba(255,255,255,0.04)",
-};
-
-// ─── Animations ───────────────────────────────────────────────────────────────
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-`;
-
-const floatCard = keyframes`
-  0%, 100% { transform: translateY(0px) rotate(-2deg); }
-  50%       { transform: translateY(-10px) rotate(-2deg); }
-`;
-
-const floatCalendar = keyframes`
-  0%, 100% { transform: translateY(0px) rotate(3deg); }
-  50%       { transform: translateY(-8px) rotate(3deg); }
-`;
-
-const pulseGlow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px ${colors.greenGlow}; }
-  50%       { box-shadow: 0 0 40px rgba(0, 196, 140, 0.45); }
-`;
-
-const shimmer = keyframes`
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
-`;
-
-// ─── Global Style (inject Google Font) ───────────────────────────────────────
-export const LoginGlobalStyle = createGlobalStyle`
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-`;
-
-// ─── Page Wrapper ─────────────────────────────────────────────────────────────
-export const WrapperLogin = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
+export const Page = styled.main`
   min-height: 100vh;
-  background-color: ${colors.navy};
-  background-image:
-    radial-gradient(
-      ellipse 80% 60% at 70% 50%,
-      rgba(0, 196, 140, 0.07) 0%,
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse 60% 50% at 10% 80%,
-      rgba(14, 165, 233, 0.06) 0%,
-      transparent 55%
-    );
-  font-family: var(--font-dm-sans), sans-serif;
-  overflow: hidden;
-  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 88px;
+  padding: max(40px, env(safe-area-inset-top)) 20px max(40px, env(safe-area-inset-bottom));
+  background: var(--paper);
+  color: var(--ink);
+
+  @media (max-width: 959px) {
+    align-items: flex-start;
+    padding-top: max(48px, env(safe-area-inset-top));
+  }
 `;
 
-// ─── Layout Split ─────────────────────────────────────────────────────────────
-export const LoginLayout = styled.div`
+export const Column = styled.div`
+  width: 100%;
+  max-width: 400px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+`;
+
+export const Brand = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-figures);
+  font-size: 19px;
+  font-weight: 500;
+`;
+
+export const BrandMark = styled.span`
+  width: 30px;
+  height: 30px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  max-width: 980px;
-  width: 95%;
-  gap: 0;
-  position: relative;
-  z-index: 1;
-  animation: ${fadeUp} 0.7s ease both;
-
-  @media (max-width: 720px) {
-    grid-template-columns: 1fr;
-  }
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: var(--on-green);
+  font-family: var(--font-figures);
+  font-size: 17px;
 `;
 
-// ─── Left: Floating Decorative Panel ─────────────────────────────────────────
-export const DecorativePanel = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 32px;
-  position: relative;
-  gap: 24px;
-
-  @media (max-width: 720px) {
-    display: none;
-  }
-`;
-
-export const BrandMark = styled.div`
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, ${colors.green}, ${colors.blue});
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-dm-sans), sans-serif;
-  font-weight: 800;
-  font-size: 22px;
-  color: #fff;
-  animation: ${pulseGlow} 3s ease-in-out infinite;
-  margin-bottom: 8px;
-`;
-
-export const DecorativeTitle = styled.h2`
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: ${colors.white};
-  text-align: center;
+export const Tagline = styled.p`
+  margin-top: 28px;
+  font-family: var(--font-figures);
+  font-size: 24px;
+  font-weight: 500;
   line-height: 1.3;
-
-  span {
-    background: linear-gradient(90deg, ${colors.green}, ${colors.blue});
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+  color: var(--ink);
+  text-wrap: balance;
 `;
 
-export const DecorativeSubtitle = styled.p`
-  color: ${colors.textMuted};
-  font-size: 0.875rem;
-  text-align: center;
-  line-height: 1.6;
-  max-width: 220px;
+export const Intro = styled.p`
+  margin-top: 14px;
+  font-size: 15px;
+  color: var(--ink-soft);
 `;
 
-// ─── Floating credit card widget ──────────────────────────────────────────────
-export const FloatingCard = styled.div`
-  background: linear-gradient(135deg, ${colors.green}, #00a5c8);
-  border-radius: 16px;
-  padding: 20px 24px;
-  width: 200px;
-  animation: ${floatCard} 5s ease-in-out infinite;
-  box-shadow: 0 20px 60px rgba(0, 196, 140, 0.3);
-  position: relative;
-  overflow: hidden;
-
-  &::after {
-    content: "";
-    position: absolute;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.07);
-    top: -30px;
-    right: -30px;
-  }
-
-  .card-chip {
-    width: 28px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.35);
-    border-radius: 4px;
-    margin-bottom: 20px;
-  }
-
-  .card-number {
-    font-family: var(--font-dm-sans), sans-serif;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.8);
-    letter-spacing: 3px;
-  }
-
-  .card-label {
-    font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.6);
-    margin-top: 8px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
+export const SectionTitle = styled.h1`
+  margin-top: 36px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 `;
 
-// ─── Floating balance widget ──────────────────────────────────────────────────
-export const BalanceWidget = styled.div`
-  background: ${colors.navyLight};
-  border: 1px solid ${colors.border};
-  border-radius: 14px;
-  padding: 16px 20px;
-  width: 180px;
-  align-self: flex-end;
-
-  .balance-label {
-    font-size: 0.7rem;
-    color: ${colors.textMuted};
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-  }
-
-  .balance-value {
-    font-family: var(--font-dm-sans), sans-serif;
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: ${colors.green};
-  }
-
-  .balance-trend {
-    font-size: 0.72rem;
-    color: ${colors.green};
-    margin-top: 4px;
-  }
-`;
-
-export const FloatingCalendar = styled.div`
-  background: ${colors.navyLight};
-  border: 1px solid ${colors.border};
-  border-radius: 14px;
-  padding: 12px 16px;
-  width: 150px;
-  align-self: flex-start;
-  animation: ${floatCalendar} 6s ease-in-out infinite;
-
-  .cal-month {
-    font-size: 0.7rem;
-    color: ${colors.green};
-    font-weight: 600;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
-
-    span {
-      font-size: 0.6rem;
-      color: ${colors.textMuted};
-      text-align: center;
-      line-height: 1.8;
-      border-radius: 50%;
-
-      &.today {
-        background: ${colors.green};
-        color: #fff;
-        font-weight: 700;
-      }
-    }
-  }
-`;
-
-// ─── Right: Form Card ─────────────────────────────────────────────────────────
-export const FormCard = styled.div`
-  background: ${colors.navyMid};
-  border: 1px solid ${colors.border};
-  border-radius: 24px;
-  padding: 48px 40px;
+export const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 0;
-  backdrop-filter: blur(20px);
-  box-shadow:
-    0 0 0 1px ${colors.border},
-    0 40px 80px rgba(0, 0, 0, 0.5);
-  animation: ${fadeUp} 0.7s 0.1s ease both;
-
-  @media (max-width: 480px) {
-    padding: 36px 24px;
-    border-radius: 16px;
-  }
+  gap: 18px;
+  margin-top: 20px;
 `;
 
-// ─── Form Header ──────────────────────────────────────────────────────────────
-export const FormHeader = styled.div`
-  margin-bottom: 32px;
-`;
-
-export const LogoMark = styled.div`
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, ${colors.green}, ${colors.blue});
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-dm-sans), sans-serif;
-  font-weight: 800;
-  font-size: 18px;
-  color: #fff;
-  margin-bottom: 20px;
-`;
-
-export const FormTitle = styled.h1`
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: ${colors.white};
-  margin-bottom: 6px;
-  letter-spacing: -0.02em;
-`;
-
-export const FormSubtitle = styled.p`
-  color: ${colors.textMuted};
-  font-size: 0.875rem;
-  line-height: 1.5;
-`;
-
-// ─── Form Element ─────────────────────────────────────────────────────────────
-export const StyledForm = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 100% !important;
-`;
-
-// ─── Input Group ─────────────────────────────────────────────────────────────
-export const InputGroup = styled.div`
+export const Field = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 `;
 
-export const InputLabel = styled.label`
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: ${colors.textLight};
-  letter-spacing: 0.03em;
+export const Label = styled.label`
+  font-size: 11px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--ink-soft);
 `;
 
-export const InputWrapper = styled.div`
-  position: relative;
-
-  svg.input-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: ${colors.textMuted};
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
-    transition: color 0.2s;
-  }
-`;
-
-export const StyledInput = styled.input`
+export const Input = styled.input`
   width: 100%;
-  padding: 13px 14px 13px 42px;
-  background: ${colors.navyLight};
-  border: 1px solid ${colors.border};
+  min-height: 44px;
+  padding: 0 12px;
   border-radius: 10px;
-  color: ${colors.white};
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 0.9rem;
-  outline: none;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+  border: 1px solid var(--rule-strong);
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: 15px;
 
   &::placeholder {
-    color: ${colors.textMuted};
+    color: var(--ink-soft);
+    opacity: 0.7;
   }
 
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-
-  &:focus {
-    border-color: ${colors.green};
-    box-shadow: 0 0 0 3px ${colors.greenGlow};
-
-    ~ svg.input-icon,
-    & + svg.input-icon {
-      color: ${colors.green};
-    }
-  }
-
-  /* Fix autofill bg */
-  &:-webkit-autofill {
-    -webkit-box-shadow: 0 0 0 40px ${colors.navyLight} inset;
-    -webkit-text-fill-color: ${colors.white};
-  }
-`;
-
-// ─── Forgot Password ─────────────────────────────────────────────────────────
-export const ForgotLink = styled(Link)`
-  font-size: 0.78rem;
-  color: ${colors.green};
-  text-decoration: none;
-  align-self: flex-end;
-  margin-top: -8px;
-  transition: opacity 0.2s;
-
-  &:hover {
-    opacity: 0.75;
-  }
-`;
-
-// ─── Submit Button ────────────────────────────────────────────────────────────
-export const SubmitButton = styled.button`
-  margin-top: 8px;
-  padding: 14px;
-  background: linear-gradient(90deg, ${colors.green} 0%, #00b8d9 100%);
-  background-size: 200% auto;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition:
-    background-position 0.4s,
-    transform 0.15s,
-    box-shadow 0.2s;
-  box-shadow: 0 4px 20px rgba(0, 196, 140, 0.3);
-
-  &:hover {
-    background-position: right center;
-    box-shadow: 0 6px 28px rgba(0, 196, 140, 0.45);
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
+  &:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 0;
+    border-color: var(--green);
   }
 
   &:disabled {
-    cursor: not-allowed;
-    opacity: 0.65;
-    transform: none;
-    box-shadow: none;
-  }
-
-  /* shimmer on hover via pseudo */
-  position: relative;
-  overflow: hidden;
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      100deg,
-      transparent 20%,
-      rgba(255, 255, 255, 0.15) 50%,
-      transparent 80%
-    );
-    background-size: 200% auto;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  &:hover::after {
-    opacity: 1;
-    animation: ${shimmer} 1s linear infinite;
+    opacity: 0.6;
   }
 `;
 
-// ─── Divider ─────────────────────────────────────────────────────────────────
-export const Divider = styled.div`
-  display: flex;
+export const ForgotLink = styled(Link)`
+  align-self: flex-end;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  margin: 8px 0;
-
-  &::before,
-  &::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: ${colors.border};
-  }
-
-  span {
-    font-size: 0.72rem;
-    color: ${colors.textMuted};
-    white-space: nowrap;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-`;
-
-// ─── Footer Note ──────────────────────────────────────────────────────────────
-export const FormFooter = styled.p`
-  text-align: center;
-  font-size: 0.8rem;
-  color: ${colors.textMuted};
-  margin-top: 4px;
-
-  a {
-    color: ${colors.green};
-    text-decoration: none;
-    font-weight: 500;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-`;
-
-export const FooterButton = styled.button`
-  border: 0;
-  background: transparent;
-  color: ${colors.green};
-  cursor: pointer;
-  font: inherit;
+  min-height: 44px;
+  margin: -12px 0 -8px;
+  font-size: 14px;
   font-weight: 500;
-  padding: 0;
+  color: var(--green);
 
   &:hover {
     text-decoration: underline;
   }
 `;
 
-export const FormMessage = styled.p<{ $variant: "error" | "success" }>`
-  border: 1px solid
-    ${({ $variant }) =>
-      $variant === "error" ? "rgba(248, 113, 113, 0.35)" : "rgba(0, 196, 140, 0.35)"};
+export const SubmitButton = styled.button`
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
   border-radius: 10px;
-  background: ${({ $variant }) =>
-    $variant === "error" ? "rgba(248, 113, 113, 0.09)" : "rgba(0, 196, 140, 0.09)"};
-  color: ${({ $variant }) => ($variant === "error" ? "#fecaca" : colors.textLight)};
-  font-size: 0.82rem;
-  line-height: 1.4;
-  padding: 10px 12px;
+  background: var(--green);
+  color: var(--on-green);
+  font-size: 15px;
+  font-weight: 600;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
 `;
 
-// ─── Security Badge ───────────────────────────────────────────────────────────
-export const SecurityBadge = styled.div`
+export const Notice = styled.p<{ $tone: "success" | "error" }>`
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: ${({ $tone }) => ($tone === "error" ? "var(--red-wash)" : "var(--green-wash)")};
+  color: ${({ $tone }) => ($tone === "error" ? "var(--red)" : "var(--ink)")};
+  font-size: 14px;
+  line-height: 1.45;
+
+  a {
+    font-weight: 600;
+    text-decoration: underline;
+  }
+`;
+
+export const Footer = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 16px;
-  font-size: 0.72rem;
-  color: ${colors.textMuted};
+  gap: 2px 6px;
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 14px;
+  color: var(--ink-soft);
+`;
 
-  svg {
-    width: 13px;
-    height: 13px;
-    color: ${colors.green};
+export const TextButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green);
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+`;
+
+export const TextLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green);
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+export const Fineprint = styled.p`
+  margin-top: 12px;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--ink-soft);
+`;
+
+export const Notebook = styled.div`
+  display: none;
+
+  @media (min-width: 960px) {
+    display: block;
+    width: 340px;
+    flex-shrink: 0;
+    padding: 24px 24px 28px;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    background: var(--sheet);
+  }
+`;
+
+export const NotebookHeader = styled.p`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-strong);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+`;
+
+export const NotebookRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--rule);
+`;
+
+export const NotebookItem = styled.span`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+
+  small {
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+`;
+
+export const NotebookAmount = styled.span<{ $out?: boolean }>`
+  font-family: var(--font-figures);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+  color: ${({ $out }) => ($out ? "var(--red)" : "var(--ink)")};
+`;
+
+export const NotebookTotal = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--ink-soft);
+
+  strong {
+    padding-bottom: 2px;
+    border-bottom: 4px double var(--ink);
+    font-family: var(--font-figures);
+    font-variant-numeric: tabular-nums;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--ink);
   }
 `;

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ImportPage from "@/app/import/page";
 import { parseInvoice } from "@/features/invoice-import/parseInvoice";
@@ -9,7 +9,7 @@ import type {
   ImportPreviewResponse,
   ParsedInvoice,
 } from "@/features/invoice-import/types";
-import { mockApi, reply, type ApiRoutes } from "../helpers/api";
+import { mockApi, networkError, reply, type ApiRoutes } from "../helpers/api";
 import { freezeDate, renderWithProvider } from "../helpers/render";
 
 vi.mock("@/features/invoice-import/pdfText", async (importOriginal) => {
@@ -154,12 +154,32 @@ describe("Página de importação de fatura", () => {
   it("mostra o envio de arquivo e o histórico vazio", async () => {
     await renderPage();
 
-    expect(screen.getByRole("heading", { name: "Fatura por PDF", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Importar fatura", level: 1 })).toBeInTheDocument();
     expect(screen.getByLabelText("Arquivo PDF da fatura")).toHaveAttribute(
       "accept",
       "application/pdf,.pdf",
     );
-    expect(screen.getByText("Nenhuma fatura importada ainda.")).toBeInTheDocument();
+    expect(await screen.findByText("Nenhuma fatura importada ainda.")).toBeInTheDocument();
+    expect(screen.getByText(/lido neste aparelho e não é enviado/)).toBeInTheDocument();
+  });
+
+  it("avisa quando as importações anteriores não carregam", async () => {
+    await renderPage({ "GET /api/imports": networkError() });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar as importações anteriores.",
+    );
+    expect(screen.queryByText("Nenhuma fatura importada ainda.")).toBeNull();
+  });
+
+  it("aceita o PDF solto na área de envio", async () => {
+    const { api } = await renderPage();
+    const zone = screen.getByLabelText("Arquivo PDF da fatura").closest("label") as HTMLElement;
+
+    fireEvent.drop(zone, { dataTransfer: { files: [pdfFile()] } });
+
+    expect(await screen.findByRole("heading", { name: "Conferir os lançamentos" })).toBeInTheDocument();
+    expect(api.callsTo("POST", "/api/imports/preview")).toHaveLength(1);
   });
 
   it("recusa arquivo maior que 10 MB sem ler o conteúdo", async () => {
@@ -190,7 +210,7 @@ describe("Página de importação de fatura", () => {
     const { user, api } = await renderPage();
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
     const [call] = api.callsTo("POST", "/api/imports/preview");
 
@@ -211,7 +231,7 @@ describe("Página de importação de fatura", () => {
     const { user } = await renderPage();
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
     expect(screen.getByText("Nubank")).toBeInTheDocument();
     expect(screen.getByText("10/10/2026")).toBeInTheDocument();
@@ -231,32 +251,50 @@ describe("Página de importação de fatura", () => {
     const { user } = await renderPage();
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
     expect(screen.getByText("sem categoria")).toBeInTheDocument();
-    expect(screen.getByText(/1 pendência\(s\) para resolver/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Registrar 3 transação(ões)" })).toBeDisabled();
+    expect(screen.getByText(/1 pendência para resolver/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Importar 3 lançamentos" })).toBeDisabled();
 
     await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "Transporte");
 
     expect(screen.queryByText("sem categoria")).toBeNull();
-    expect(screen.getByRole("button", { name: "Registrar 3 transação(ões)" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Importar 3 lançamentos" })).toBeEnabled();
+  });
+
+  it("edita o valor com vírgula decimal e recalcula a soma selecionada", async () => {
+    const { user } = await renderPage();
+
+    await upload(user);
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
+
+    const amount = screen.getByLabelText("Valor da linha 1");
+
+    expect(amount).toHaveValue("50,00");
+
+    await user.clear(amount);
+    await user.type(amount, "45,90");
+    await user.tab();
+
+    expect(amount).toHaveValue("45,90");
+    expect(screen.getByText(/difere do total impresso na fatura/)).toHaveTextContent("R$ 4,10");
   });
 
   it("exige aceite explícito quando a soma difere do total impresso", async () => {
     const { user } = await renderPage();
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
     await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "Transporte");
     await user.click(screen.getByLabelText("Incluir linha 2"));
 
     expect(screen.getByText(/difere do total impresso na fatura/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Registrar 2 transação(ões)" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Importar 2 lançamentos" })).toBeDisabled();
 
-    await user.click(screen.getByLabelText("Registrar mesmo com a diferença"));
+    await user.click(screen.getByLabelText("Importar mesmo com a diferença"));
 
-    expect(screen.getByRole("button", { name: "Registrar 2 transação(ões)" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Importar 2 lançamentos" })).toBeEnabled();
   });
 
   it("confirma só as linhas incluídas, com a regra marcada em 'lembrar', e atualiza o histórico", async () => {
@@ -271,13 +309,13 @@ describe("Página de importação de fatura", () => {
     });
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
     await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "Transporte");
     await user.click(screen.getByLabelText("Lembrar para as próximas faturas"));
-    await user.click(screen.getByRole("button", { name: "Registrar 3 transação(ões)" }));
+    await user.click(screen.getByRole("button", { name: "Importar 3 lançamentos" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "3 transação(ões) registrada(s) a partir de fatura.pdf.",
+      "3 lançamentos importados de fatura.pdf.",
     );
 
     const [call] = api.callsTo("POST", "/api/imports");
@@ -297,8 +335,8 @@ describe("Página de importação de fatura", () => {
         { date: "2026-10-20", description: "LOJA XPTO", amount: 70, type: "outcome", category: "Transporte", installment: { current: 2, total: 5 } },
       ],
     });
-    expect(screen.queryByRole("heading", { name: "2. Conferir lançamentos" })).toBeNull();
-    expect(await screen.findByText(/fatura\.pdf • 3 lançamento\(s\)/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Conferir os lançamentos" })).toBeNull();
+    expect(await screen.findByText(/fatura\.pdf · 3 lançamentos/)).toBeInTheDocument();
     expect(api.callsTo("GET", "/api/transactions").length).toBeGreaterThanOrEqual(2);
   });
 
@@ -308,12 +346,12 @@ describe("Página de importação de fatura", () => {
     });
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
     await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "Transporte");
-    await user.click(screen.getByRole("button", { name: "Registrar 3 transação(ões)" }));
+    await user.click(screen.getByRole("button", { name: "Importar 3 lançamentos" }));
 
     expect(await screen.findByText("Lançamento 3 inválido: categoria é obrigatória.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "2. Conferir lançamentos" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Conferir os lançamentos" })).toBeInTheDocument();
   });
 
   it("avisa sobre fatura já importada e oferece substituir o lançamento único", async () => {
@@ -326,14 +364,14 @@ describe("Página de importação de fatura", () => {
     });
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
     expect(screen.getByText(/Esta fatura já foi importada em 01\/10\/2026/)).toBeInTheDocument();
     expect(screen.getByText(/Você já registrou esta fatura como um lançamento único/)).toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Substituir esse lançamento pelo detalhamento"));
     await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "Transporte");
-    await user.click(screen.getByRole("button", { name: "Registrar 3 transação(ões)" }));
+    await user.click(screen.getByRole("button", { name: "Importar 3 lançamentos" }));
     await screen.findByRole("status");
 
     expect(api.callsTo("POST", "/api/imports")[0].body).toMatchObject({
@@ -352,12 +390,12 @@ describe("Página de importação de fatura", () => {
     });
 
     await upload(user);
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
     await user.selectOptions(screen.getByLabelText("Categoria da linha 1"), "Alimentação");
     await user.click(screen.getByRole("button", { name: "Aplicar às outras 1 de PADARIA A" }));
 
     expect(screen.getByLabelText("Categoria da linha 2")).toHaveValue("Alimentação");
-    expect(screen.getByRole("button", { name: "Registrar 2 transação(ões)" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Importar 2 lançamentos" })).toBeEnabled();
   });
 
   it("pede a senha quando o PDF é protegido e tenta de novo com ela", async () => {
@@ -372,7 +410,7 @@ describe("Página de importação de fatura", () => {
 
     await user.type(screen.getByLabelText("Senha do PDF"), "12345");
     await user.click(screen.getByRole("button", { name: "Abrir PDF" }));
-    await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
     expect(vi.mocked(extractPdfLines).mock.calls[1][1]).toBe("12345");
   });
@@ -383,18 +421,18 @@ describe("Página de importação de fatura", () => {
       "DELETE /api/imports/batch-1": { message: "Importação desfeita.", removed: 3 },
     });
 
-    const item = (await screen.findByText(/fatura\.pdf • 3 lançamento\(s\)/)).closest("li") as HTMLElement;
+    const item = (await screen.findByText(/fatura\.pdf · 3 lançamentos/)).closest("li") as HTMLElement;
 
-    await user.click(within(item).getByRole("button", { name: "Desfazer importação" }));
+    await user.click(within(item).getByRole("button", { name: "Desfazer importação de fatura.pdf" }));
 
     const dialog = screen.getByRole("dialog", { name: "Desfazer importação" });
 
-    expect(dialog).toHaveTextContent("Todas as 3 transações importadas de fatura.pdf serão excluídas.");
+    expect(dialog).toHaveTextContent("3 lançamentos importados de fatura.pdf serão excluídos.");
 
     await user.click(within(dialog).getByRole("button", { name: "Desfazer importação" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "Importação desfeita: 3 transação(ões) removida(s).",
+      "Importação desfeita: 3 lançamentos removidos.",
     );
     expect(api.callsTo("DELETE", "/api/imports/batch-1")).toHaveLength(1);
     expect(screen.getByText("Nenhuma fatura importada ainda.")).toBeInTheDocument();
@@ -405,7 +443,7 @@ describe("Página de importação de fatura", () => {
       const { user } = await renderPage();
 
       await upload(user);
-      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+      await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
       const selectRow3 = screen.getByLabelText("Categoria da linha 3");
       expect(within(selectRow3).getByRole("option", { name: "+ Nova categoria..." })).toHaveValue("__new__");
@@ -414,7 +452,7 @@ describe("Página de importação de fatura", () => {
 
       const dialog = screen.getByRole("dialog", { name: "Nova categoria" });
       expect(dialog).toBeInTheDocument();
-      expect(within(dialog).getByLabelText("Tipo")).toHaveValue("outcome");
+      expect(within(dialog).getByRole("radio", { name: "Gasto" })).toBeChecked();
 
       // Fecha o modal
       await user.click(within(dialog).getByRole("button", { name: "Fechar" }));
@@ -425,14 +463,14 @@ describe("Página de importação de fatura", () => {
       await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "+ Nova categoria...");
 
       const dialogIncome = screen.getByRole("dialog", { name: "Nova categoria" });
-      expect(within(dialogIncome).getByLabelText("Tipo")).toHaveValue("income");
+      expect(within(dialogIncome).getByRole("radio", { name: "Receita" })).toBeChecked();
     });
 
     it("reverte o valor do select da linha para o anterior ao cancelar ou fechar o modal", async () => {
       const { user } = await renderPage();
 
       await upload(user);
-      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+      await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
       // Linha 1 tem categoria "Alimentação"
       const selectRow1 = screen.getByLabelText("Categoria da linha 1");
@@ -474,7 +512,7 @@ describe("Página de importação de fatura", () => {
       });
 
       await upload(user);
-      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+      await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
       // Edita descrição da linha 2 para conferir que não será perdida
       const descRow2 = screen.getByLabelText("Descrição da linha 2");
@@ -483,7 +521,7 @@ describe("Página de importação de fatura", () => {
 
       // Linha 3 estava sem categoria
       expect(screen.getByLabelText("Categoria da linha 3")).toHaveValue("");
-      expect(screen.getByRole("button", { name: /Registrar .* transação\(ões\)/ })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /Importar \d+ lançamentos?/ })).toBeDisabled();
 
       // Seleciona + Nova categoria... na linha 3
       await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "+ Nova categoria...");
@@ -508,7 +546,7 @@ describe("Página de importação de fatura", () => {
       expect(within(selectRow1).getByRole("option", { name: "Vestuário" })).toBeInTheDocument();
 
       // Como a pendência foi resolvida, o botão de registrar é habilitado
-      expect(screen.getByRole("button", { name: "Registrar 3 transação(ões)" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Importar 3 lançamentos" })).toBeEnabled();
 
       const [categoryCall] = api.callsTo("POST", "/api/categories");
       expect(categoryCall.body).toMatchObject({
@@ -523,7 +561,7 @@ describe("Página de importação de fatura", () => {
       });
 
       await upload(user);
-      await screen.findByRole("heading", { name: "2. Conferir lançamentos" });
+      await screen.findByRole("heading", { name: "Conferir os lançamentos" });
 
       await user.selectOptions(screen.getByLabelText("Categoria da linha 3"), "+ Nova categoria...");
 

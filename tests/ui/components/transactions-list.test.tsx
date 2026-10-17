@@ -7,7 +7,6 @@ import {
   type TransactionFiltersState,
 } from "@/components/TransactionFilters";
 import { TransactionList } from "@/components/TransactionList";
-import { TransactionTable } from "@/components/TransactionTable";
 import { mockApi, reply } from "../helpers/api";
 import { categories, transactions } from "../helpers/fixtures";
 import {
@@ -48,14 +47,28 @@ describe("TransactionFilters", () => {
     renderFilters({ search: "merc", type: "outcome", category: "Moradia", sort: "valueDesc" });
 
     expect(screen.getByLabelText("Buscar")).toHaveValue("merc");
-    expect(screen.getByLabelText("Tipo")).toHaveValue("outcome");
+    expect(screen.getByRole("button", { name: "Gastos" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByLabelText("Categoria")).toHaveValue("Moradia");
     expect(screen.getByLabelText("Ordenar")).toHaveValue("valueDesc");
     expect(
       within(screen.getByLabelText("Categoria"))
-        .getAllByRole("option")
+        .getAllByRole("option", { hidden: true })
         .map((option) => option.textContent),
     ).toEqual(["Todas", "Alimentação", "Moradia"]);
+  });
+
+  it("mostra os filtros extras só ao abrir 'Filtros', com a contagem dos ativos", async () => {
+    const { user } = renderFilters({ category: "Moradia", startDate: "2026-10-01" });
+    const toggle = screen.getByRole("button", { name: "Filtros (2)" });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("combobox", { name: "Categoria" })).toBeNull();
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("combobox", { name: "Categoria" })).toBeVisible();
   });
 
   it("notifica cada alteração com o estado completo dos filtros", async () => {
@@ -64,8 +77,10 @@ describe("TransactionFilters", () => {
     await user.type(screen.getByLabelText("Buscar"), "a");
     expect(onChange).toHaveBeenLastCalledWith({ ...baseFilters, search: "a" });
 
-    await user.selectOptions(screen.getByLabelText("Tipo"), "Investimentos");
+    await user.click(screen.getByRole("button", { name: "Investimentos" }));
     expect(onChange).toHaveBeenLastCalledWith({ ...baseFilters, type: "investment" });
+
+    await user.click(screen.getByRole("button", { name: "Filtros" }));
 
     await user.selectOptions(screen.getByLabelText("Categoria"), "Alimentação");
     expect(onChange).toHaveBeenLastCalledWith({ ...baseFilters, category: "Alimentação" });
@@ -83,6 +98,7 @@ describe("TransactionFilters", () => {
   it("aciona onReset em 'Limpar filtros'", async () => {
     const { onReset, onChange, user } = renderFilters({ search: "x" });
 
+    await user.click(screen.getByRole("button", { name: "Filtros" }));
     await user.click(screen.getByRole("button", { name: "Limpar filtros" }));
 
     expect(onReset).toHaveBeenCalledTimes(1);
@@ -95,104 +111,71 @@ describe("TransactionList", () => {
     freezeDate();
   });
 
-  function renderList(items = transactions.slice(0, 5)) {
-    const onDelete = vi.fn<(id: string) => Promise<void>>().mockResolvedValue();
-    const onUpdate = vi.fn().mockResolvedValue(undefined);
-    const utils = renderUi(
-      <TransactionList transactions={items} onDelete={onDelete} onUpdate={onUpdate} />,
-    );
+  function renderList(items = transactions.slice(0, 5), groupByDay = true, routes = {}) {
+    const api = mockApi({ "GET /api/categories": categories, "GET /api/transactions": items, ...routes });
+    const utils = renderWithProvider(<TransactionList transactions={items} groupByDay={groupByDay} />);
 
-    return { onDelete, onUpdate, ...utils };
+    return { api, ...utils };
   }
 
   function rowOf(description: string) {
-    const row = within(screen.getByRole("table")).getAllByText(description)[0].closest("tr");
-
-    if (!row) throw new Error(`Linha "${description}" não encontrada`);
-
-    return row;
+    return screen.getByRole("button", { name: new RegExp(`^${description},`) });
   }
 
   it("mostra o estado vazio e a contagem zerada", () => {
     renderList([]);
 
-    expect(screen.getByText("0 registro(s) encontrado(s)")).toBeInTheDocument();
-    expect(screen.getByText("Nenhuma transação encontrada com os filtros atuais.")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText("0 lançamentos")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum lançamento encontrado com esses filtros.")).toBeInTheDocument();
   });
 
-  it("lista descrição, valor formatado, categoria e data de cada transação", () => {
-    mockApi();
+  it("agrupa por dia, com subtotal, e mostra descrição, categoria e valor com sinal", () => {
     renderList();
 
-    expect(screen.getByText("5 registro(s) encontrado(s)")).toBeInTheDocument();
-    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(6);
+    expect(screen.getByText("5 lançamentos")).toBeInTheDocument();
+    // Um grupo por dia: 05, 06, 08, 10 e 12/10 (na ordem recebida).
+    const days = screen.getAllByRole("list", { name: /out\./ });
+    expect(days).toHaveLength(5);
+    expect(days[1]).toHaveAccessibleName("ter., 6 de out.");
+    // Cabeçalho do dia com o subtotal (visual; o nome do grupo já anuncia o dia).
+    expect(days[1].textContent).toContain("ter., 6 de out.−1.500,00");
 
-    const cells = within(rowOf("Aluguel")).getAllByRole("cell");
-    expect(cells.map((cell) => cell.textContent?.replace(/\s/g, " ")).slice(0, 4)).toEqual([
-      "Aluguel",
-      "-R$ 1.500,00",
-      "Moradia",
-      "06/10/2026",
-    ]);
-    // Receita com "+", investimento em valor absoluto e sem sinal.
-    expect(rowOf("Salário")).toHaveTextContent("+R$ 5.000,00");
-    expect(within(rowOf("Tesouro Direto")).getAllByRole("cell")[1]).toHaveTextContent(/^R\$ 1\.000,00$/);
+    expect(rowOf("Aluguel")).toHaveTextContent("Aluguel");
+    expect(rowOf("Aluguel")).toHaveTextContent("Moradia");
+    expect(rowOf("Aluguel")).toHaveTextContent("−1.500,00");
+    expect(rowOf("Aluguel")).toHaveAccessibleName(/^Aluguel, Moradia, -R\$\s1\.500,00\. Editar$/);
+    // Receita com "+"; investimento é saída de caixa e leva "−".
+    expect(rowOf("Salário")).toHaveTextContent("+5.000,00");
+    expect(rowOf("Tesouro Direto")).toHaveTextContent("−1.000,00");
+  });
+
+  it("sem agrupamento mostra a data em cada linha", () => {
+    renderList(transactions.slice(1, 3), false);
+
+    expect(screen.queryAllByRole("list", { name: /out\./ })).toHaveLength(0);
+    expect(rowOf("Aluguel")).toHaveTextContent("Moradia · ter., 6 de out.");
   });
 
   it("infere o tipo pelo sinal quando a transação não tem type", () => {
     renderList(transactions.slice(8));
 
-    expect(rowOf("Uber")).toHaveTextContent("-R$ 100,00");
-    expect(rowOf("Reembolso")).toHaveTextContent("+R$ 300,00");
+    expect(rowOf("Uber")).toHaveTextContent("−100,00");
+    expect(rowOf("Reembolso")).toHaveTextContent("+300,00");
   });
 
-  it("renderiza tabela (desktop) e cards (mobile) juntos; o CSS esconde os cards fora do mobile", () => {
-    renderList();
+  it("tocar na linha abre a edição com os dados e salva pelo contexto (PATCH)", async () => {
+    const { api, user } = renderList(transactions.slice(0, 5), true, {
+      "PATCH /api/transactions/t2": { ...transactions[1], amount: -1600 },
+    });
 
-    expect(screen.getAllByText("Aluguel")).toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: "Excluir" })).toHaveLength(5);
-    expect(screen.getAllByRole("button", { name: "Excluir", hidden: true })).toHaveLength(10);
-  });
+    await user.click(rowOf("Aluguel"));
 
-  it("pede confirmação antes de excluir e chama onDelete com o id", async () => {
-    const { onDelete, user } = renderList();
-
-    await user.click(within(rowOf("Mercado")).getByRole("button", { name: "Excluir" }));
-
-    const dialog = getModalByTitle("Confirmar exclusão");
-    expect(dialog).toHaveTextContent('Tem certeza que deseja excluir a transação "Mercado"?');
-    expect(onDelete).not.toHaveBeenCalled();
-
-    await user.click(within(dialog).getByRole("button", { name: "Confirmar exclusão" }));
-
-    await waitFor(() => expect(queryModalByTitle("Confirmar exclusão")).toBeNull());
-    expect(onDelete).toHaveBeenCalledTimes(1);
-    expect(onDelete).toHaveBeenCalledWith("t3");
-  });
-
-  it("cancelar a confirmação não exclui", async () => {
-    const { onDelete, user } = renderList();
-
-    await user.click(within(rowOf("Mercado")).getByRole("button", { name: "Excluir" }));
-    await user.click(
-      within(getModalByTitle("Confirmar exclusão")).getByRole("button", { name: "Cancelar" }),
-    );
-
-    expect(queryModalByTitle("Confirmar exclusão")).toBeNull();
-    expect(onDelete).not.toHaveBeenCalled();
-  });
-
-  it("abre a edição com os dados da transação e envia as alterações para onUpdate", async () => {
-    mockApi({ "GET /api/categories": categories });
-    const { onUpdate, user } = renderList();
-
-    await user.click(within(rowOf("Aluguel")).getByRole("button", { name: "Editar" }));
-
-    const modal = getModalByTitle("Editar transação");
+    const modal = getModalByTitle("Editar lançamento");
     expect(within(modal).getByLabelText("Descrição")).toHaveValue("Aluguel");
-    expect(within(modal).getByLabelText("Valor")).toHaveValue(1500);
-    expect(within(modal).getByLabelText("Categoria")).toHaveValue("Moradia");
+    expect(within(modal).getByLabelText("Valor")).toHaveValue("1.500,00");
+    await waitFor(() =>
+      expect(within(modal).getByRole("radio", { name: "Moradia" })).toHaveAttribute("aria-checked", "true"),
+    );
     expect(within(modal).getByLabelText("Forma de pagamento")).toHaveValue("Boleto");
     expect(within(modal).getByLabelText("Observação")).toHaveValue("Vence dia 6");
 
@@ -200,9 +183,8 @@ describe("TransactionList", () => {
     await user.type(within(modal).getByLabelText("Valor"), "1600");
     await user.click(within(modal).getByRole("button", { name: "Salvar alterações" }));
 
-    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
-    expect(onUpdate).toHaveBeenCalledWith(
-      "t2",
+    await waitFor(() => expect(queryModalByTitle("Editar lançamento")).toBeNull());
+    expect(api.callsTo("PATCH", "/api/transactions/t2")[0].body).toEqual(
       expect.objectContaining({
         description: "Aluguel",
         amount: -1600,
@@ -210,20 +192,20 @@ describe("TransactionList", () => {
         type: "outcome",
         paymentMethod: "Boleto",
         notes: "Vence dia 6",
+        date: "2026-10-06",
       }),
     );
-    await waitFor(() => expect(queryModalByTitle("Editar transação")).toBeNull());
   });
 
-  it("[regressão] a edição mantém a data original: editar em outubro uma transação de agosto preserva agosto", async () => {
-    mockApi({ "GET /api/categories": categories });
-    const { onUpdate, user } = renderList([
-      { ...transactions[1], id: "ago", date: "2026-08-01T00:00:00.000Z" },
-    ]);
+  it("[regressão] a edição mantém a data original: editar em outubro um lançamento de agosto preserva agosto", async () => {
+    const august = { ...transactions[1], id: "ago", date: "2026-08-01T00:00:00.000Z" };
+    const { api, user } = renderList([august], true, {
+      "PATCH /api/transactions/ago": { ...august, amount: -1600 },
+    });
 
-    expect(rowOf("Aluguel")).toHaveTextContent("01/08/2026");
-    await user.click(within(rowOf("Aluguel")).getByRole("button", { name: "Editar" }));
-    const modal = getModalByTitle("Editar transação");
+    expect(screen.getByRole("list", { name: "sáb., 1 de ago." })).toBeInTheDocument();
+    await user.click(rowOf("Aluguel"));
+    const modal = getModalByTitle("Editar lançamento");
 
     expect(within(modal).getByLabelText("Data")).toHaveValue("2026-08-01");
 
@@ -231,92 +213,84 @@ describe("TransactionList", () => {
     await user.type(within(modal).getByLabelText("Valor"), "1600");
     await user.click(within(modal).getByRole("button", { name: "Salvar alterações" }));
 
-    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
-    expect(onUpdate.mock.calls[0][0]).toBe("ago");
-    expect(onUpdate.mock.calls[0][1]).toMatchObject({ date: "2026-08-01", amount: -1600 });
+    await waitFor(() => expect(api.callsTo("PATCH", "/api/transactions/ago")).toHaveLength(1));
+    expect(api.callsTo("PATCH", "/api/transactions/ago")[0].body).toMatchObject({
+      date: "2026-08-01",
+      amount: -1600,
+    });
   });
 
-  it("quando onDelete rejeita mostra o erro no diálogo de confirmação, que continua aberto", async () => {
-    const { onDelete, user } = renderList();
-    onDelete.mockRejectedValueOnce(new Error("Erro ao deletar."));
+  it("excluir pede confirmação dentro da edição e chama DELETE", async () => {
+    const { api, user } = renderList(transactions.slice(0, 5), true, {
+      "DELETE /api/transactions/t3": { message: "ok" },
+    });
 
-    await user.click(within(rowOf("Mercado")).getByRole("button", { name: "Excluir" }));
+    await user.click(rowOf("Mercado"));
+    await user.click(within(getModalByTitle("Editar lançamento")).getByRole("button", { name: "Excluir" }));
+
     const dialog = getModalByTitle("Confirmar exclusão");
-    await user.click(within(dialog).getByRole("button", { name: "Confirmar exclusão" }));
+    expect(dialog).toHaveTextContent('Excluir "Mercado"? Essa ação não pode ser desfeita.');
+    expect(api.callsTo("DELETE", "/api/transactions/t3")).toHaveLength(0);
+
+    await user.click(within(dialog).getByRole("button", { name: "Excluir" }));
+
+    await waitFor(() => expect(queryModalByTitle("Confirmar exclusão")).toBeNull());
+    expect(queryModalByTitle("Editar lançamento")).toBeNull();
+    expect(api.callsTo("DELETE", "/api/transactions/t3")).toHaveLength(1);
+  });
+
+  it("cancelar a confirmação não exclui e mantém a edição aberta", async () => {
+    const { api, user } = renderList();
+
+    await user.click(rowOf("Mercado"));
+    await user.click(within(getModalByTitle("Editar lançamento")).getByRole("button", { name: "Excluir" }));
+    await user.click(
+      within(getModalByTitle("Confirmar exclusão")).getByRole("button", { name: "Cancelar" }),
+    );
+
+    expect(queryModalByTitle("Confirmar exclusão")).toBeNull();
+    expect(queryModalByTitle("Editar lançamento")).not.toBeNull();
+    expect(api.mutations()).toHaveLength(0);
+  });
+
+  it("quando a exclusão falha mostra o erro no diálogo de confirmação, que continua aberto", async () => {
+    const { user } = renderList(transactions.slice(0, 5), true, {
+      "DELETE /api/transactions/t3": reply(500, { error: "Erro ao deletar." }),
+    });
+
+    await user.click(rowOf("Mercado"));
+    await user.click(within(getModalByTitle("Editar lançamento")).getByRole("button", { name: "Excluir" }));
+    const dialog = getModalByTitle("Confirmar exclusão");
+    await user.click(within(dialog).getByRole("button", { name: "Excluir" }));
 
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Erro ao deletar.");
     expect(queryModalByTitle("Confirmar exclusão")).not.toBeNull();
   });
 
-  it("quando onUpdate rejeita mostra o erro no modal de edição e mantém os valores", async () => {
-    mockApi({ "GET /api/categories": categories });
-    const { onUpdate, user } = renderList();
-    onUpdate.mockRejectedValueOnce(new Error("Erro ao atualizar."));
+  it("quando a atualização falha mostra o erro na edição e mantém os valores", async () => {
+    const { user } = renderList(transactions.slice(0, 5), true, {
+      "PATCH /api/transactions/t2": reply(500, { error: "Erro ao atualizar." }),
+    });
 
-    await user.click(within(rowOf("Aluguel")).getByRole("button", { name: "Editar" }));
-    const modal = getModalByTitle("Editar transação");
+    await user.click(rowOf("Aluguel"));
+    const modal = getModalByTitle("Editar lançamento");
     await user.clear(within(modal).getByLabelText("Valor"));
     await user.type(within(modal).getByLabelText("Valor"), "1600");
     await user.click(within(modal).getByRole("button", { name: "Salvar alterações" }));
 
     expect(await within(modal).findByRole("alert")).toHaveTextContent("Erro ao atualizar.");
-    expect(within(modal).getByLabelText("Valor")).toHaveValue(1600);
+    expect(within(modal).getByLabelText("Valor")).toHaveValue("1600");
     expect(within(modal).getByLabelText("Descrição")).toHaveValue("Aluguel");
   });
 
-  it("fechar o modal de edição pelo ✕ não chama onUpdate", async () => {
-    mockApi({ "GET /api/categories": categories });
-    const { onUpdate, user } = renderList();
+  it("fechar a edição pelo ✕ não envia nada", async () => {
+    const { api, user } = renderList();
 
-    await user.click(within(rowOf("Aluguel")).getByRole("button", { name: "Editar" }));
-    await user.click(getModalCloseButton(getModalByTitle("Editar transação")));
+    await user.click(rowOf("Aluguel"));
+    await user.click(getModalCloseButton(getModalByTitle("Editar lançamento")));
 
-    expect(queryModalByTitle("Editar transação")).toBeNull();
-    expect(onUpdate).not.toHaveBeenCalled();
-  });
-});
-
-describe("TransactionTable (componente legado, não usado por nenhuma página)", () => {
-  it("lista as transações do contexto com valor formatado e data", async () => {
-    mockApi({ "GET /api/transactions": transactions.slice(0, 2) });
-    renderWithProvider(<TransactionTable />);
-
-    const rows = await waitFor(() => {
-      const found = screen.getAllByRole("row");
-      expect(found).toHaveLength(3);
-      return found;
-    });
-
-    expect(rows[1]).toHaveTextContent("Salário");
-    expect(rows[1]).toHaveTextContent("+R$ 5.000,00");
-    expect(rows[1]).toHaveTextContent("05/10/2026");
-    expect(rows[2]).toHaveTextContent("-R$ 1.500,00");
-  });
-
-  it("exclui pelo contexto após confirmar no modal", async () => {
-    const api = mockApi({
-      "GET /api/transactions": transactions.slice(0, 2),
-      "DELETE /api/transactions/t2": { message: "ok" },
-    });
-    const { user } = renderWithProvider(<TransactionTable />);
-
-    await screen.findByText("Aluguel");
-    await user.click(screen.getAllByRole("button", { name: "Excluir transação" })[1]);
-    await user.click(
-      within(getModalByTitle("Confirmar exclusão")).getByRole("button", { name: "Confirmar" }),
-    );
-
-    await waitFor(() => expect(screen.queryByText("Aluguel")).toBeNull());
-    expect(api.callsTo("DELETE", "/api/transactions/t2")).toHaveLength(1);
-    expect(queryModalByTitle("Confirmar exclusão")).toBeNull();
-  });
-
-  it("[comportamento atual] não tem estado vazio: sem transações mostra só o cabeçalho", async () => {
-    const api = mockApi();
-    renderWithProvider(<TransactionTable />);
-
-    await waitFor(() => expect(api.calls).toHaveLength(1));
-    expect(screen.getAllByRole("row")).toHaveLength(1);
+    expect(queryModalByTitle("Editar lançamento")).toBeNull();
+    expect(api.mutations()).toHaveLength(0);
   });
 });
 
@@ -340,18 +314,18 @@ describe("NewTransactionModal", () => {
   }
 
   async function fillAndSubmit(user: ReturnType<typeof renderUi>["user"]) {
-    const modal = getModalByTitle("Nova Transação");
-    await within(modal).findByRole("option", { name: "Alimentação" });
+    const modal = getModalByTitle("Registrar");
+    await within(modal).findByRole("radio", { name: "Alimentação" });
     await user.type(within(modal).getByLabelText("Descrição"), "Padaria");
     await user.type(within(modal).getByLabelText("Valor"), "25");
-    await user.click(within(modal).getByRole("button", { name: "Salvar Transação" }));
+    await user.click(within(modal).getByRole("button", { name: "Salvar" }));
   }
 
   it("não renderiza nada quando fechado", () => {
     mockApi();
     renderWithProvider(<NewTransactionModal isOpen={false} onClose={vi.fn()} />);
 
-    expect(queryModalByTitle("Nova Transação")).toBeNull();
+    expect(queryModalByTitle("Registrar")).toBeNull();
     expect(screen.queryByLabelText("Descrição")).toBeNull();
   });
 
@@ -375,7 +349,7 @@ describe("NewTransactionModal", () => {
       date: "2026-10-15",
       notes: null,
     });
-    expect(queryModalByTitle("Nova Transação")).toBeNull();
+    expect(queryModalByTitle("Registrar")).toBeNull();
   });
 
   it("quando a API falha mostra o erro no modal, que continua aberto com os dados digitados", async () => {
@@ -388,11 +362,11 @@ describe("NewTransactionModal", () => {
 
     await fillAndSubmit(user);
 
-    const modal = getModalByTitle("Nova Transação");
+    const modal = getModalByTitle("Registrar");
     expect(await within(modal).findByRole("alert")).toHaveTextContent("Erro ao salvar os dados.");
     expect(onClose).not.toHaveBeenCalled();
     expect(within(modal).getByLabelText("Descrição")).toHaveValue("Padaria");
-    expect(within(modal).getByLabelText("Valor")).toHaveValue(25);
+    expect(within(modal).getByLabelText("Valor")).toHaveValue("25");
   });
 
   it("fecha pelo botão ✕ sem enviar nada", async () => {
@@ -400,7 +374,7 @@ describe("NewTransactionModal", () => {
     const onClose = vi.fn();
     const { user } = renderWithProvider(<Harness onClose={onClose} />);
 
-    await user.click(getModalCloseButton(getModalByTitle("Nova Transação")));
+    await user.click(getModalCloseButton(getModalByTitle("Registrar")));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(api.mutations()).toHaveLength(0);

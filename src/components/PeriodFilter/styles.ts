@@ -2,65 +2,96 @@
 
 import styled from "styled-components";
 
-const colors = {
-  navyLight: "#1e2535",
-  green: "#00c48c",
-  greenGlow: "rgba(0, 196, 140, 0.25)",
-  textLight: "#c9d1e0",
-  border: "rgba(255, 255, 255, 0.07)",
-};
+export const Field = styled.div`
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+`;
 
-export const Wrapper = styled.div`
-  display: flex;
-  justify-content: flex-end;
+export const Label = styled.label`
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+`;
 
-  @media (max-width: 640px) {
-    justify-content: stretch;
+export const Controls = styled.div`
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+
+  @media (min-width: 600px) {
+    grid-template-columns: 44px minmax(0, 220px) 44px;
   }
 `;
 
-export const Field = styled.label`
-  display: grid;
-  gap: 6px;
-  color: ${colors.textLight};
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+export const Display = styled.div`
+  position: relative;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--sheet);
+
+  span {
+    font-family: var(--font-figures);
+    font-size: 17px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  span::first-letter {
+    text-transform: uppercase;
+  }
+
+  &:hover {
+    border-color: var(--green);
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--green);
+    outline-offset: 1px;
+  }
 `;
 
 export const Input = styled.input`
-  min-height: 42px;
-  padding: 0 12px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
-    ${colors.navyLight};
-  border: 1px solid ${colors.border};
-  border-radius: 12px;
-  color: #ffffff;
-  color-scheme: dark;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.02)),
-      ${colors.navyLight};
-  }
-
-  &:focus {
-    border-color: ${colors.green};
-    box-shadow: 0 0 0 3px ${colors.greenGlow};
-  }
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
 
   &::-webkit-calendar-picker-indicator {
-    width: 18px;
-    height: 18px;
-    border-radius: 6px;
-    padding: 4px;
-    background-color: rgba(0, 196, 140, 0.14);
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     cursor: pointer;
-    filter: invert(72%) sepia(56%) saturate(717%) hue-rotate(111deg) brightness(91%) contrast(92%);
+  }
+`;
+
+export const Step = styled.button`
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ink-soft);
+  font-size: 24px;
+  line-height: 1;
+
+  &:hover {
+    background: var(--green-wash);
+    color: var(--ink);
   }
 `;

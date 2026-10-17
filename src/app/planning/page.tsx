@@ -2,13 +2,19 @@
 
 import { useContext, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { BudgetCard, BudgetViewModel } from "@/components/BudgetCard";
 import { BudgetForm, BudgetFormData } from "@/components/BudgetForm";
+import {
+  BudgetRow,
+  BudgetStatus,
+  BudgetViewModel,
+} from "@/components/BudgetRow";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Modal } from "@/components/CustomModal";
 import { EmptyState } from "@/components/EmptyState";
-import { GoalCard, GoalViewModel } from "@/components/GoalCard";
+import { FormError } from "@/components/FormError";
 import { GoalForm, GoalFormData } from "@/components/GoalForm";
+import { GoalRow, GoalViewModel } from "@/components/GoalRow";
+import { LedgerSection } from "@/components/LedgerSection";
 import { PageHeader } from "@/components/PageHeader";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
 import {
@@ -29,25 +35,36 @@ import { Category } from "@/types/category";
 import { Goal } from "@/types/goal";
 import { getLocalMonthKey, getMonthKey } from "@/utils/dates";
 import { getTransactionType } from "@/utils/finance";
-import { formatCurrency } from "@/utils/formatters";
+import { formatMonthYear, formatPlainAmount } from "@/utils/formatters";
 import {
-  PageContent,
-  Section,
-  SectionGrid,
-  SectionHeader,
+  Column,
+  Columns,
+  LedgerList,
+  MonthBar,
+  MonthInput,
+  MonthName,
+  MonthPicker,
+  MonthStep,
+  Page,
+  TotalRow,
 } from "./styles";
 
 function getCurrentMonth() {
   return getLocalMonthKey();
 }
 
-function formatMonth(month: string) {
+function monthKeyToDate(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
 
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(year, monthNumber - 1, 1));
+  return new Date(year, monthNumber - 1, 1);
+}
+
+function shiftMonth(month: string, delta: number) {
+  const date = monthKeyToDate(month);
+
+  return getLocalMonthKey(
+    new Date(date.getFullYear(), date.getMonth() + delta, 1),
+  );
 }
 
 function getBudgetFormValues(budget: Budget): BudgetFormData {
@@ -80,10 +97,14 @@ export default function PlanningPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [loadError, setLoadError] = useState("");
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [editingGoal, setEditingGoal] = useState<{
+    goal: Goal;
+    title: string;
+  } | null>(null);
   const [deleteBudget, setDeleteBudget] = useState<Budget | null>(null);
   const [deleteGoal, setDeleteGoal] = useState<Goal | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
@@ -102,6 +123,9 @@ export default function PlanningPage() {
         setGoals(goalData);
       } catch (error) {
         console.error("Erro ao buscar dados de planejamento:", error);
+        setLoadError(
+          "Não foi possível carregar orçamentos e metas. Tente de novo em instantes.",
+        );
       }
     }
 
@@ -121,16 +145,20 @@ export default function PlanningPage() {
       })
       .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0);
     const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
-    const remaining = budget.amount - spent;
-    const status = progress >= 100 ? "danger" : progress >= 80 ? "warning" : "safe";
+    const status: BudgetStatus =
+      spent > budget.amount ? "danger" : progress >= 80 ? "warning" : "safe";
+    const category = categories.find(
+      (currentCategory) =>
+        currentCategory.type === "outcome" &&
+        currentCategory.name === budget.category,
+    );
 
     return {
       id: budget.id,
       category: budget.category,
-      amount: formatCurrency(budget.amount),
-      spent: formatCurrency(spent),
-      remaining: formatCurrency(remaining),
-      month: formatMonth(budget.month),
+      color: category?.color,
+      amount: budget.amount,
+      spent,
       progress,
       status,
     };
@@ -167,6 +195,7 @@ export default function PlanningPage() {
       currentBudgets.filter((budget) => budget.id !== deleteBudget.id),
     );
     setDeleteBudget(null);
+    setEditingBudget(null);
   }
 
   async function handleCreateGoal(data: GoalFormData) {
@@ -179,7 +208,7 @@ export default function PlanningPage() {
   async function handleUpdateGoal(data: GoalFormData) {
     if (!editingGoal) return;
 
-    const goal = await patchGoal(editingGoal.id, data);
+    const goal = await patchGoal(editingGoal.goal.id, data);
 
     setGoals((currentGoals) =>
       currentGoals.map((currentGoal) =>
@@ -200,99 +229,155 @@ export default function PlanningPage() {
     setDeleteGoal(null);
   }
 
+  function handleMonthChange(value: string) {
+    setSelectedMonth(value || getCurrentMonth());
+  }
+
+  function openMonthPicker(input: HTMLInputElement) {
+    try {
+      input.showPicker?.();
+    } catch {
+      input.focus();
+    }
+  }
+
+  const monthLabel = formatMonthYear(monthKeyToDate(selectedMonth));
   const monthlyBudgets = budgets
     .filter((budget) => budget.month === selectedMonth)
-    .sort((budgetA, budgetB) => budgetA.category.localeCompare(budgetB.category));
-  const budgetCards = monthlyBudgets.map(getBudgetMetrics);
-  const goalCards = goals.map(getGoalViewModel);
+    .sort((budgetA, budgetB) =>
+      budgetA.category.localeCompare(budgetB.category),
+    );
+  const budgetRows = monthlyBudgets.map(getBudgetMetrics);
+  const totalLimit = budgetRows.reduce((acc, budget) => acc + budget.amount, 0);
+  const totalSpent = budgetRows.reduce((acc, budget) => acc + budget.spent, 0);
+  const goalRows = goals.map(getGoalViewModel);
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Planejamento"
-        title="Orçamentos e metas"
-        subtitle="Defina limites mensais de gasto e acompanhe o progresso das suas metas financeiras."
-      />
+      <Page>
+        <PageHeader title="Planejar" />
 
-      <PageContent>
-        <Section>
-          <SectionHeader>
-            <div>
-              <h2>Orçamentos — {formatMonth(selectedMonth)}</h2>
-              <span>{budgetCards.length} orçamento(s) neste mês</span>
-            </div>
-            <div>
-              <label htmlFor="planning-month-filter">
-                Mês
-                <input
+        <FormError message={loadError} />
+
+        <Columns>
+          <Column>
+            <MonthBar>
+              <MonthStep
+                type="button"
+                aria-label="Mês anterior"
+                onClick={() => setSelectedMonth(shiftMonth(selectedMonth, -1))}
+              >
+                ‹
+              </MonthStep>
+              <MonthPicker>
+                <MonthName aria-hidden="true">{monthLabel}</MonthName>
+                <MonthInput
                   id="planning-month-filter"
                   type="month"
+                  aria-label="Mês"
                   value={selectedMonth}
-                  onChange={(event) =>
-                    setSelectedMonth(event.target.value || getCurrentMonth())
-                  }
+                  onClick={(event) => openMonthPicker(event.currentTarget)}
+                  onChange={(event) => handleMonthChange(event.target.value)}
                 />
-              </label>
-              <button
+              </MonthPicker>
+              <MonthStep
                 type="button"
-                onClick={() => setBudgetModalOpen(true)}
+                aria-label="Próximo mês"
+                onClick={() => setSelectedMonth(shiftMonth(selectedMonth, 1))}
               >
-                + Novo orçamento
-              </button>
-            </div>
-          </SectionHeader>
+                ›
+              </MonthStep>
+            </MonthBar>
 
-          {budgetCards.length === 0 ? (
-            <EmptyState>Nenhum orçamento cadastrado para este mês.</EmptyState>
-          ) : (
-            <SectionGrid>
-              {budgetCards.map((budget) => {
-                const originalBudget = monthlyBudgets.find(
-                  (currentBudget) => currentBudget.id === budget.id,
-                );
+            <LedgerSection
+              title="Orçamentos"
+              action={{
+                label: "+ Novo orçamento",
+                onClick: () => setBudgetModalOpen(true),
+              }}
+            >
+              {budgetRows.length === 0 ? (
+                <EmptyState>{`Nenhum orçamento para ${monthLabel}. Defina um limite para a categoria em que você mais gasta.`}</EmptyState>
+              ) : (
+                <>
+                  <LedgerList aria-label={`Orçamentos de ${monthLabel}`}>
+                    {budgetRows.map((budget) => {
+                      const originalBudget = monthlyBudgets.find(
+                        (currentBudget) => currentBudget.id === budget.id,
+                      );
 
-                if (!originalBudget) return null;
+                      if (!originalBudget) return null;
 
-                return (
-                  <BudgetCard
-                    key={budget.id}
-                    budget={budget}
-                    onEdit={() => setEditingBudget(originalBudget)}
-                    onDelete={() => setDeleteBudget(originalBudget)}
-                  />
-                );
-              })}
-            </SectionGrid>
-          )}
-        </Section>
+                      return (
+                        <BudgetRow
+                          key={budget.id}
+                          budget={budget}
+                          onEdit={() => setEditingBudget(originalBudget)}
+                        />
+                      );
+                    })}
+                  </LedgerList>
+                  {budgetRows.length > 1 && (
+                    <TotalRow>
+                      <span>Total</span>
+                      <strong>
+                        {formatPlainAmount(totalSpent)} <small>de</small>{" "}
+                        {formatPlainAmount(totalLimit)}
+                      </strong>
+                    </TotalRow>
+                  )}
+                </>
+              )}
+            </LedgerSection>
+          </Column>
 
-        <Section>
-          <SectionHeader>
-            <div>
-              <h2>Metas financeiras</h2>
-              <span>{goalCards.length} meta(s) em andamento</span>
-            </div>
-            <button type="button" onClick={() => setGoalModalOpen(true)}>
-              + Nova meta
-            </button>
-          </SectionHeader>
+          <Column>
+            <LedgerSection
+              title="Metas"
+              action={{
+                label: "+ Nova meta",
+                onClick: () => setGoalModalOpen(true),
+              }}
+            >
+              {goalRows.length === 0 ? (
+                <EmptyState>
+                  Nenhuma meta ainda. Uma reserva de emergência é um bom começo.
+                </EmptyState>
+              ) : (
+                <LedgerList aria-label="Metas">
+                  {goalRows.map((goal) => {
+                    const originalGoal = goals.find(
+                      (currentGoal) => currentGoal.id === goal.id,
+                    );
 
-          {goalCards.length === 0 ? (
-            <EmptyState>Nenhuma meta cadastrada ainda.</EmptyState>
-          ) : (
-            <SectionGrid>
-              {goalCards.map((goal) => (
-                <GoalCard
-                  key={goal.id}
-                  goal={goal}
-                  onEdit={() => setEditingGoal(goals.find((g) => g.id === goal.id) ?? null)}
-                  onDelete={() => setDeleteGoal(goals.find((g) => g.id === goal.id) ?? null)}
-                />
-              ))}
-            </SectionGrid>
-          )}
-        </Section>
-      </PageContent>
+                    if (!originalGoal) return null;
+
+                    return (
+                      <GoalRow
+                        key={goal.id}
+                        goal={goal}
+                        onEdit={() =>
+                          setEditingGoal({
+                            goal: originalGoal,
+                            title: "Editar meta",
+                          })
+                        }
+                        onUpdateProgress={() =>
+                          setEditingGoal({
+                            goal: originalGoal,
+                            title: "Atualizar progresso",
+                          })
+                        }
+                        onDelete={() => setDeleteGoal(originalGoal)}
+                      />
+                    );
+                  })}
+                </LedgerList>
+              )}
+            </LedgerSection>
+          </Column>
+        </Columns>
+      </Page>
 
       <Modal
         isOpen={budgetModalOpen}
@@ -319,6 +404,7 @@ export default function PlanningPage() {
             initialValues={getBudgetFormValues(editingBudget)}
             submitLabel="Salvar alterações"
             onSubmit={handleUpdateBudget}
+            onDelete={() => setDeleteBudget(editingBudget)}
           />
         )}
       </Modal>
@@ -334,12 +420,12 @@ export default function PlanningPage() {
       <Modal
         isOpen={!!editingGoal}
         onClose={() => setEditingGoal(null)}
-        title="Atualizar meta"
+        title={editingGoal?.title ?? "Editar meta"}
       >
         {editingGoal && (
           <GoalForm
-            key={editingGoal.id}
-            initialValues={getGoalFormValues(editingGoal)}
+            key={editingGoal.goal.id}
+            initialValues={getGoalFormValues(editingGoal.goal)}
             submitLabel="Salvar alterações"
             onSubmit={handleUpdateGoal}
           />
@@ -350,8 +436,8 @@ export default function PlanningPage() {
         isOpen={!!deleteBudget}
         onClose={() => setDeleteBudget(null)}
         title="Confirmar exclusão"
-        message={`Tem certeza que deseja excluir o orçamento de ${deleteBudget?.category ?? ""}?`}
-        confirmLabel="Confirmar exclusão"
+        message={`Excluir o orçamento de ${deleteBudget?.category ?? ""}? Os lançamentos não são afetados.`}
+        confirmLabel="Excluir"
         onConfirm={handleDeleteBudget}
       />
 
@@ -359,8 +445,8 @@ export default function PlanningPage() {
         isOpen={!!deleteGoal}
         onClose={() => setDeleteGoal(null)}
         title="Confirmar exclusão"
-        message={`Tem certeza que deseja excluir a meta ${deleteGoal?.name ?? ""}?`}
-        confirmLabel="Confirmar exclusão"
+        message={`Excluir a meta ${deleteGoal?.name ?? ""}? Essa ação não pode ser desfeita.`}
+        confirmLabel="Excluir"
         onConfirm={handleDeleteGoal}
       />
     </AppShell>

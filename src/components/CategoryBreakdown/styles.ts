@@ -2,71 +2,59 @@
 
 import styled from "styled-components";
 
-const colors = {
-  navyLight: "#1e2535",
-  green: "#00c48c",
-  blue: "#0ea5e9",
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  border: "rgba(255, 255, 255, 0.07)",
-};
-
-export const List = styled.div`
-  display: grid;
-  gap: 14px;
+export const List = styled.ul`
+  list-style: none;
 `;
 
-export const Item = styled.article`
+export const Item = styled.li`
   display: grid;
-  gap: 10px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid ${colors.border};
-  border-radius: 14px;
-`;
-
-export const Header = styled.header`
-  display: flex;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  gap: 8px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 14px;
 `;
 
-export const Name = styled.strong`
-  color: ${colors.textLight};
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 0.96rem;
+export const Main = styled.span`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`;
+
+export const Name = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
 `;
 
 export const Amount = styled.span`
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-family: var(--font-figures);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
 `;
 
 export const Bar = styled.div`
-  height: 9px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: ${colors.navyLight};
-  border: 1px solid ${colors.border};
+  grid-column: 1 / -1;
+  height: 4px;
+  background: var(--rule);
 `;
 
-export const Fill = styled.div<{ $value: number }>`
+export const Fill = styled.div<{ $value: number; $tone: "out" | "neutral" }>`
   width: ${({ $value }) => Math.min(Math.max($value, 0), 100)}%;
   height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, ${colors.green}, ${colors.blue});
-  box-shadow: 0 0 18px rgba(0, 196, 140, 0.22);
+  background: ${({ $tone }) => ($tone === "out" ? "var(--red)" : "var(--ink-soft)")};
 `;
 
-export const Percentage = styled.span`
-  color: ${colors.textMuted};
-  font-size: 0.78rem;
+export const Share = styled.span`
+  font-size: 12.5px;
+  color: var(--ink-soft);
 `;
 
 export const EmptyText = styled.p`
-  padding: 22px;
-  color: ${colors.textMuted};
-  text-align: center;
+  padding: 14px 0;
+  font-size: 14px;
+  color: var(--ink-soft);
 `;

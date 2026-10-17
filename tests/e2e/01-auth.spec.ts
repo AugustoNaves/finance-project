@@ -1,7 +1,16 @@
+import type { Page } from "@playwright/test";
 import bcrypt from "bcryptjs";
 import { countRows, expireResetToken, getPasswordHash, getResetTokens } from "./support/db";
 import { expect, registerAccount, signIn, test, uniqueEmail } from "./support/fixtures";
 import { metric } from "./support/ui";
+
+function submitButton(page: Page, name: string) {
+  return page.getByRole("form", { name }).getByRole("button", { name, exact: true });
+}
+
+function modeToggle(page: Page, name: string) {
+  return page.locator("button[type=button]").filter({ hasText: new RegExp(`^${name}$`) });
+}
 
 const PROTECTED_ROUTES = [
   "/",
@@ -21,7 +30,7 @@ test.describe("Proteção de rotas", () => {
       await page.goto(route);
 
       await expect(page).toHaveURL(/\/login$/);
-      await expect(page.getByRole("heading", { name: "Bem-vindo" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Entrar", level: 1 })).toBeVisible();
     });
   }
 
@@ -46,7 +55,7 @@ test.describe("Proteção de rotas", () => {
     await page.goto("/login");
 
     await expect(page).toHaveURL(/localhost:\d+\/$/);
-    await expect(page.getByRole("heading", { name: "Controle financeiro" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: / de \d{4}$/ })).toBeVisible();
     expect(account.id).toBeTruthy();
   });
 
@@ -55,7 +64,7 @@ test.describe("Proteção de rotas", () => {
     await page.goto("/budgets");
 
     await expect(page).toHaveURL(/\/planning$/);
-    await expect(page.getByRole("heading", { name: "Orçamentos e metas" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Planejar", level: 1 })).toBeVisible();
   });
 });
 
@@ -64,17 +73,17 @@ test.describe("Cadastro pela tela de login", () => {
     const email = uniqueEmail("cadastro");
 
     await page.goto("/login");
-    await page.getByRole("button", { name: "Cadastre-se" }).click();
+    await modeToggle(page, "Criar conta").click();
     await page.getByLabel("Nome").fill("Maria Cadastro");
     await page.getByLabel("E-mail").fill(email);
     await page.getByLabel("Senha").fill("SenhaForte#123");
-    await page.getByRole("button", { name: "Criar conta" }).click();
+    await submitButton(page, "Criar conta").click();
 
     await expect(
-      page.getByText("Conta criada com sucesso. Agora entre com seu e-mail e senha."),
+      page.getByText("Conta criada. Agora entre com seu e-mail e senha."),
     ).toBeVisible();
     // Volta para o modo login, mantendo o e-mail e limpando a senha.
-    await expect(page.getByRole("button", { name: "Entrar na conta" })).toBeVisible();
+    await expect(submitButton(page, "Entrar")).toBeVisible();
     await expect(page.getByLabel("Nome")).toHaveCount(0);
     await expect(page.getByLabel("E-mail")).toHaveValue(email);
     await expect(page.getByLabel("Senha")).toHaveValue("");
@@ -88,18 +97,19 @@ test.describe("Cadastro pela tela de login", () => {
     expect(await bcrypt.compare("SenhaForte#123", hash ?? "")).toBe(true);
   });
 
-  test("alterna entre os modos Entrar e Cadastre-se", async ({ page }) => {
+  test("alterna entre os modos Entrar e Criar conta", async ({ page }) => {
     await page.goto("/login");
 
     await expect(page.getByRole("link", { name: "Esqueceu a senha?" })).toBeVisible();
-    await page.getByRole("button", { name: "Cadastre-se" }).click();
+    await modeToggle(page, "Criar conta").click();
     await expect(page.getByLabel("Nome")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Criar conta" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Criar conta", level: 1 })).toBeVisible();
+    await expect(submitButton(page, "Criar conta")).toBeVisible();
     await expect(page.getByRole("link", { name: "Esqueceu a senha?" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await modeToggle(page, "Entrar").click();
     await expect(page.getByLabel("Nome")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Entrar na conta" })).toBeVisible();
+    await expect(submitButton(page, "Entrar")).toBeVisible();
   });
 
   test("validação nativa bloqueia campos vazios e senha curta", async ({ page }) => {
@@ -110,15 +120,15 @@ test.describe("Cadastro pela tela de login", () => {
       await route.continue();
     });
     await page.goto("/login");
-    await page.getByRole("button", { name: "Cadastre-se" }).click();
-    await page.getByRole("button", { name: "Criar conta" }).click();
+    await modeToggle(page, "Criar conta").click();
+    await submitButton(page, "Criar conta").click();
 
     await expect(page.getByLabel("Nome")).toHaveJSProperty("validity.valueMissing", true);
 
     await page.getByLabel("Nome").fill("Pessoa Teste");
     await page.getByLabel("E-mail").fill("email-invalido");
     await page.getByLabel("Senha").fill("1234567");
-    await page.getByRole("button", { name: "Criar conta" }).click();
+    await submitButton(page, "Criar conta").click();
 
     await expect(page.getByLabel("E-mail")).toHaveJSProperty("validity.typeMismatch", true);
     await expect(page.getByLabel("Senha")).toHaveJSProperty("validity.tooShort", true);
@@ -127,15 +137,15 @@ test.describe("Cadastro pela tela de login", () => {
 
   test("mostra o erro do servidor para e-mail sem domínio válido", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("button", { name: "Cadastre-se" }).click();
+    await modeToggle(page, "Criar conta").click();
     await page.getByLabel("Nome").fill("Pessoa Teste");
     // Passa na validação do navegador (type=email) mas não na regex da API.
     await page.getByLabel("E-mail").fill("pessoa@semdominio");
     await page.getByLabel("Senha").fill("SenhaForte#123");
-    await page.getByRole("button", { name: "Criar conta" }).click();
+    await submitButton(page, "Criar conta").click();
 
     await expect(page.getByText(/e-mail válido/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Criar conta" })).toBeEnabled();
+    await expect(submitButton(page, "Criar conta")).toBeEnabled();
     expect(await countRows("users", "pessoa@semdominio")).toBe(0);
   });
 
@@ -143,14 +153,14 @@ test.describe("Cadastro pela tela de login", () => {
     const existing = await registerAccount(request);
 
     await page.goto("/login");
-    await page.getByRole("button", { name: "Cadastre-se" }).click();
+    await modeToggle(page, "Criar conta").click();
     await page.getByLabel("Nome").fill("Outra Pessoa");
     await page.getByLabel("E-mail").fill(existing.email.toUpperCase());
     await page.getByLabel("Senha").fill("OutraSenha#456");
-    await page.getByRole("button", { name: "Criar conta" }).click();
+    await submitButton(page, "Criar conta").click();
 
     await expect(page.getByText("Já existe uma conta com este e-mail.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Criar conta" })).toBeVisible();
+    await expect(submitButton(page, "Criar conta")).toBeVisible();
     expect(await countRows("users", existing.email)).toBe(1);
   });
 });
@@ -170,10 +180,10 @@ test.describe("Login (API /api/login simulada: exige reCAPTCHA real)", () => {
     await page.goto("/login");
     await page.getByLabel("E-mail").fill(user.email);
     await page.getByLabel("Senha").fill(user.password);
-    await page.getByRole("button", { name: "Entrar na conta" }).click();
+    await submitButton(page, "Entrar").click();
 
     await expect(page).toHaveURL(/localhost:\d+\/$/);
-    await expect(page.getByRole("heading", { name: "Controle financeiro" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: / de \d{4}$/ })).toBeVisible();
     expect(payload).toEqual({
       email: user.email,
       senha: user.password,
@@ -181,7 +191,7 @@ test.describe("Login (API /api/login simulada: exige reCAPTCHA real)", () => {
     });
 
     await page.goto("/settings");
-    await expect(metric(page, "Conta")).toContainText("Lia Login");
+    await expect(metric(page, "Nome")).toContainText("Lia Login");
     await expect(metric(page, "E-mail")).toContainText(user.email);
   });
 
@@ -192,11 +202,11 @@ test.describe("Login (API /api/login simulada: exige reCAPTCHA real)", () => {
     await page.goto("/login");
     await page.getByLabel("E-mail").fill("ninguem@teste.local");
     await page.getByLabel("Senha").fill("senha-errada");
-    await page.getByRole("button", { name: "Entrar na conta" }).click();
+    await submitButton(page, "Entrar").click();
 
     await expect(page.getByText("E-mail ou senha inválidos.")).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole("button", { name: "Entrar na conta" })).toBeEnabled();
+    await expect(submitButton(page, "Entrar")).toBeEnabled();
     await expect(page.getByLabel("E-mail")).toHaveValue("ninguem@teste.local");
   });
 
@@ -210,7 +220,7 @@ test.describe("Login (API /api/login simulada: exige reCAPTCHA real)", () => {
     await page.goto("/login");
     await page.getByLabel("E-mail").fill("ninguem@teste.local");
     await page.getByLabel("Senha").fill("senha-errada");
-    await page.getByRole("button", { name: "Entrar na conta" }).click();
+    await submitButton(page, "Entrar").click();
 
     await expect(page.getByText("Muitas tentativas. Tente novamente em alguns minutos.")).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
@@ -229,12 +239,12 @@ test.describe("Login (API /api/login simulada: exige reCAPTCHA real)", () => {
     await page.goto("/login");
     await page.getByLabel("E-mail").fill("ninguem@teste.local");
     await page.getByLabel("Senha").fill("senha-errada");
-    await page.getByRole("button", { name: "Entrar na conta" }).click();
+    await submitButton(page, "Entrar").click();
 
     await expect(page.getByRole("button", { name: "Aguarde..." })).toBeDisabled();
     await expect(page.getByLabel("E-mail")).toBeDisabled();
     release();
-    await expect(page.getByRole("button", { name: "Entrar na conta" })).toBeEnabled();
+    await expect(submitButton(page, "Entrar")).toBeEnabled();
   });
 
   test("API real de login recusa token de reCAPTCHA inválido sem criar sessão", async ({ request }) => {
@@ -265,7 +275,7 @@ test.describe("Logout", () => {
     await page.getByRole("button", { name: "Sair da conta" }).click();
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole("heading", { name: "Bem-vindo" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Entrar", level: 1 })).toBeVisible();
     expect((await context.cookies()).find((cookie) => cookie.name === "session_token")).toBeUndefined();
 
     await page.goto("/transactions");
@@ -312,7 +322,7 @@ test.describe("Recuperação de senha", () => {
     await page.getByLabel("Confirmar senha").fill("NovaSenha#789");
     await page.getByRole("button", { name: "Redefinir senha" }).click();
     await expect(
-      page.getByText("Senha redefinida com sucesso. Redirecionando para o login..."),
+      page.getByText("Senha redefinida. Redirecionando para o login..."),
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
 
@@ -371,7 +381,7 @@ test.describe("Recuperação de senha", () => {
     await page.getByRole("button", { name: "Enviar link" }).click();
 
     await expect(
-      page.getByText("Se este email estiver cadastrado, você receberá um link de recuperação em breve."),
+      page.getByText("Se este e-mail estiver cadastrado, você vai receber um link para redefinir a senha."),
     ).toBeVisible();
     await expect(page.getByLabel("E-mail")).toHaveValue("");
     expect(await getResetTokens(email)).toHaveLength(0);

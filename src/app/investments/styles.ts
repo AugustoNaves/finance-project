@@ -1,62 +1,86 @@
 "use client";
 
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
+export const Hero = styled.section`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 32px;
+  padding: 4px 0 20px;
+  border-bottom: 1px solid var(--rule);
 `;
 
-const colors = {
-  textMuted: "#8892a4",
-  border: "rgba(255, 255, 255, 0.07)",
-};
+export const HeroLabel = styled.h2`
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+`;
 
-export const PageContent = styled.div`
+export const Figure = styled.p`
+  display: inline-block;
+  margin-top: 6px;
+  padding-bottom: 6px;
+  border-bottom: 4px double currentColor;
+  font-family: var(--font-figures);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  font-size: clamp(36px, 10vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+`;
+
+export const Cents = styled.span`
+  font-size: 0.5em;
+`;
+
+export const MonthLine = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+
+  b {
+    font-family: var(--font-figures);
+    font-variant-numeric: tabular-nums;
+    font-size: 19px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  @media (min-width: 600px) {
+    text-align: right;
+  }
+`;
+
+export const Grid = styled.div`
   display: grid;
-  gap: 18px;
-  animation: ${fadeUp} 0.6s ease both;
-`;
+  min-width: 0;
 
-export const InvestmentGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  > * {
+    min-width: 0;
+  }
 
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+  @media (min-width: 1180px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 48px;
+    align-items: start;
   }
 `;
 
-export const ChartSection = styled.section`
-  padding: 22px 24px;
-  background: rgba(22, 27, 39, 0.72);
-  border: 1px solid ${colors.border};
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
-
-  h2 {
-    color: #ffffff;
-    font-family: var(--font-dm-sans), sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: -0.04em;
-  }
-
-  span {
-    display: block;
-    margin: 4px 0 18px;
-    color: ${colors.textMuted};
-    font-size: 0.82rem;
-  }
+export const Caption = styled.p`
+  padding-top: 10px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
 `;
 
-export const Section = styled.section`
-  background: rgba(22, 27, 39, 0.72);
-  border: 1px solid ${colors.border};
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
-  overflow: hidden;
+export const Quiet = styled.p`
+  padding: 14px 0;
+  font-size: 14px;
+  color: var(--ink-soft);
 `;

@@ -1,74 +1,49 @@
 "use client";
 
 import { useContext, useState } from "react";
-import {
-  CategoryBreakdown,
-  CategoryBreakdownItem,
-} from "@/components/CategoryBreakdown";
 import { AppShell } from "@/components/AppShell";
 import { BalanceLineChart } from "@/components/BalanceLineChart";
-import { ExpenseDonutChart } from "@/components/ExpenseDonutChart";
+import { CategoryBreakdown, CategoryBreakdownItem } from "@/components/CategoryBreakdown";
 import { IncomeOutcomeBarChart } from "@/components/IncomeOutcomeBarChart";
+import { LedgerSection } from "@/components/LedgerSection";
 import { PageHeader } from "@/components/PageHeader";
 import { PeriodFilter } from "@/components/PeriodFilter";
-import { ReportMetricCard } from "@/components/ReportMetricCard";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
-import { Transaction } from "@/types/transaction";
 import { getLocalMonthKey, getMonthKey } from "@/utils/dates";
-import { calculateSavingsRate, calculateSummary, getTransactionType } from "@/utils/finance";
-import { formatCurrency } from "@/utils/formatters";
+import { calculateSummary, getTransactionType } from "@/utils/finance";
+import { formatPlainAmount } from "@/utils/formatters";
 import {
-  EvolutionAmount,
-  EvolutionBar,
-  EvolutionFill,
-  EvolutionItem,
+  Caption,
+  ChartsGrid,
   EvolutionList,
-  EvolutionMonth,
-  FiltersRow,
-  ChartGrid,
-  MetricsGrid,
-  PageContent,
-  Section,
-  SectionBody,
-  SectionHeader,
-  SectionsGrid,
+  Grid,
+  Sheet,
+  SheetLine,
+  SheetTotal,
+  Toolbar,
 } from "./styles";
 
-function getCurrentMonth() {
-  return getLocalMonthKey();
-}
+const shortMonth = new Intl.DateTimeFormat("pt-BR", { month: "short" });
+const longMonth = new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" });
 
-function getTransactionMonth(transaction: Transaction) {
-  return getMonthKey(transaction.date);
-}
-
-function formatMonthLabel(month: string) {
-  const [year, monthNumber] = month.split("-").map(Number);
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "numeric",
-  }).format(new Date(year, monthNumber - 1, 1));
+function money(value: number) {
+  return `${value < 0 ? "−" : ""}R$ ${formatPlainAmount(Math.abs(value))}`;
 }
 
 function getPreviousMonths(referenceMonth: string, quantity: number) {
   const [year, month] = referenceMonth.split("-").map(Number);
-  const referenceDate = new Date(year, month - 1, 1);
 
-  return Array.from({ length: quantity }, (_, index) => {
-    const date = new Date(referenceDate);
-    date.setMonth(referenceDate.getMonth() - (quantity - 1 - index));
-
-    return getLocalMonthKey(date);
-  });
+  return Array.from({ length: quantity }, (_, index) =>
+    new Date(year, month - 1 - (quantity - 1 - index), 1),
+  );
 }
 
 export default function ReportsPage() {
   const { transactions } = useContext(TransactionsContext);
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [selectedMonth, setSelectedMonth] = useState(getLocalMonthKey());
 
   const monthlyTransactions = transactions.filter(
-    (transaction) => getTransactionMonth(transaction) === selectedMonth,
+    (transaction) => getMonthKey(transaction.date) === selectedMonth,
   );
   const summary = calculateSummary(monthlyTransactions);
   const outcomeTransactions = monthlyTransactions.filter(
@@ -79,189 +54,142 @@ export default function ReportsPage() {
   )[0];
   const categoryTotals = outcomeTransactions.reduce<Record<string, number>>(
     (acc, transaction) => {
-      acc[transaction.category] =
-        (acc[transaction.category] ?? 0) + Math.abs(transaction.amount);
+      acc[transaction.category] = (acc[transaction.category] ?? 0) + Math.abs(transaction.amount);
       return acc;
     },
     {},
   );
   const totalExpenses = Math.abs(summary.outcome);
-  const categoryItems: CategoryBreakdownItem[] = Object.entries(categoryTotals)
-    .sort(([, amountA], [, amountB]) => amountB - amountA)
-    .map(([category, amount]) => ({
-      category,
-      amount: formatCurrency(amount),
-      percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
-    }));
-  const categoryChartItems = Object.entries(categoryTotals)
-    .sort(([, amountA], [, amountB]) => amountB - amountA)
-    .map(([category, amount]) => ({ category, amount }));
+  const sortedCategories = Object.entries(categoryTotals).sort(
+    ([, amountA], [, amountB]) => amountB - amountA,
+  );
+  const categoryItems: CategoryBreakdownItem[] = sortedCategories.map(([category, amount]) => ({
+    category,
+    amount: money(amount),
+    percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
+  }));
   const topCategory = categoryItems[0];
+
   const daysInSelectedMonth = new Date(
     Number(selectedMonth.slice(0, 4)),
     Number(selectedMonth.slice(5, 7)),
     0,
   ).getDate();
   const elapsedDays =
-    selectedMonth === getCurrentMonth() ? new Date().getDate() : daysInSelectedMonth;
+    selectedMonth === getLocalMonthKey() ? new Date().getDate() : daysInSelectedMonth;
   const dailyAverage = totalExpenses / elapsedDays;
-  const evolution = getPreviousMonths(selectedMonth, 6).map((month) => {
-    const monthTransactions = transactions.filter(
-      (transaction) => getTransactionMonth(transaction) === month,
+  const savingsRate =
+    summary.income > 0 ? `${Math.round((summary.total / summary.income) * 100)}%` : "Sem receitas";
+  const entryCount = monthlyTransactions.length;
+
+  const evolution = getPreviousMonths(selectedMonth, 6).map((date) => {
+    const month = getLocalMonthKey(date);
+    const monthSummary = calculateSummary(
+      transactions.filter((transaction) => getMonthKey(transaction.date) === month),
     );
-    const monthSummary = calculateSummary(monthTransactions);
 
     return {
       month,
-      label: formatMonthLabel(month),
+      label: shortMonth.format(date),
+      fullLabel: longMonth.format(date),
       income: monthSummary.income,
       outcome: Math.abs(monthSummary.outcome),
       balance: monthSummary.total,
     };
   });
-  const maxEvolution = Math.max(
-    ...evolution.map((item) => Math.abs(item.balance)),
-    1,
-  );
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Relatórios"
-        title="Análise do período"
-        subtitle="Veja receitas, despesas, categorias mais fortes e a evolução do saldo sem gráficos externos."
-      />
+      <PageHeader title="Relatórios" />
 
-      <PageContent>
-        <FiltersRow>
-          <PeriodFilter
-            value={selectedMonth}
-            onChange={(value) => setSelectedMonth(value || getCurrentMonth())}
-          />
-        </FiltersRow>
+      <Toolbar>
+        <PeriodFilter
+          value={selectedMonth}
+          onChange={(value) => setSelectedMonth(value || getLocalMonthKey())}
+        />
+      </Toolbar>
 
-        <MetricsGrid>
-          <ReportMetricCard
-            title="Receitas"
-            value={formatCurrency(summary.income)}
-            description="Total de entradas registradas no período."
-            variant="green"
-          />
-          <ReportMetricCard
-            title="Despesas"
-            value={formatCurrency(summary.outcome)}
-            description="Total de saídas registradas no período."
-            variant="red"
-          />
-          <ReportMetricCard
-            title="Saldo"
-            value={formatCurrency(summary.total)}
-            description="Diferença entre receitas e despesas do mês."
-            variant="blue"
-          />
-          <ReportMetricCard
-            title="Maior despesa"
-            value={biggestExpense ? formatCurrency(biggestExpense.amount) : "Sem dados"}
-            description={
-              biggestExpense
-                ? `${biggestExpense.description} foi a maior saída do período.`
-                : "Cadastre despesas para visualizar este indicador."
-            }
-            variant="red"
-          />
-          <ReportMetricCard
-            title="Categoria líder"
-            value={topCategory?.category ?? "Sem dados"}
-            description={
-              topCategory
-                ? `${topCategory.amount} concentrados nesta categoria.`
-                : "As categorias aparecerão conforme houver despesas."
-            }
-            variant="blue"
-          />
-          <ReportMetricCard
-            title="Média diária"
-            value={formatCurrency(dailyAverage)}
-            description="Média de despesas por dia no mês selecionado."
-            variant="green"
-          />
-          <ReportMetricCard
-            title="Taxa de economia"
-            value={calculateSavingsRate(summary.income, summary.total)}
-            description="Proporção estimada do saldo sobre as receitas do mês."
-            variant="green"
-          />
-        </MetricsGrid>
+      <Grid>
+        <LedgerSection title="Balanço do período">
+          <Sheet>
+            <SheetLine>
+              <dt>Receitas</dt>
+              <dd>{money(summary.income)}</dd>
+            </SheetLine>
+            <SheetLine>
+              <dt>Despesas</dt>
+              <dd data-tone={summary.outcome < 0 ? "out" : undefined}>{money(summary.outcome)}</dd>
+            </SheetLine>
+            <SheetLine>
+              <dt>Investimentos</dt>
+              <dd>{money(summary.investment)}</dd>
+            </SheetLine>
+            <SheetTotal $negative={summary.total < 0}>
+              <dt>Saldo</dt>
+              <dd>
+                <span>{money(summary.total)}</span>
+              </dd>
+            </SheetTotal>
+            <SheetLine>
+              <dt>Taxa de economia</dt>
+              <dd>{savingsRate}</dd>
+            </SheetLine>
+            <SheetLine>
+              <dt>Média diária</dt>
+              <dd>{money(dailyAverage)}</dd>
+            </SheetLine>
+            <SheetLine>
+              <dt>Maior despesa</dt>
+              <dd data-tone={biggestExpense ? "out" : undefined}>
+                {biggestExpense ? money(biggestExpense.amount) : "Sem dados"}
+                {biggestExpense && <small>{biggestExpense.description}</small>}
+              </dd>
+            </SheetLine>
+            <SheetLine>
+              <dt>Categoria líder</dt>
+              <dd>
+                {topCategory?.category ?? "Sem dados"}
+                {topCategory && (
+                  <small>
+                    {topCategory.amount} · {Math.round(topCategory.percentage)}%
+                  </small>
+                )}
+              </dd>
+            </SheetLine>
+            <SheetLine>
+              <dt>Movimento do período</dt>
+              <dd>{entryCount === 1 ? "1 lançamento" : `${entryCount} lançamentos`}</dd>
+            </SheetLine>
+          </Sheet>
+        </LedgerSection>
 
-        <ChartGrid>
-          <Section>
-            <SectionHeader>
-              <h2>Despesas por categoria</h2>
-              <span>Donut</span>
-            </SectionHeader>
-            <SectionBody>
-              <ExpenseDonutChart data={categoryChartItems} />
-            </SectionBody>
-          </Section>
+        <LedgerSection title="Gastos por categoria">
+          <Caption>
+            {categoryItems.length === 1 ? "1 categoria" : `${categoryItems.length} categorias`}
+          </Caption>
+          <CategoryBreakdown items={categoryItems} />
+        </LedgerSection>
+      </Grid>
 
-          <Section>
-            <SectionHeader>
-              <h2>Receitas vs despesas</h2>
-              <span>Últimos 6 meses</span>
-            </SectionHeader>
-            <SectionBody>
-              <IncomeOutcomeBarChart data={evolution} />
-            </SectionBody>
-          </Section>
+      <ChartsGrid>
+        <LedgerSection title="Receitas vs despesas">
+          <Caption>Últimos 6 meses</Caption>
+          <IncomeOutcomeBarChart data={evolution} />
+        </LedgerSection>
 
-          <Section>
-            <SectionHeader>
-              <h2>Linha do saldo</h2>
-              <span>Últimos 6 meses</span>
-            </SectionHeader>
-            <SectionBody>
-              <BalanceLineChart data={evolution} />
-            </SectionBody>
-          </Section>
-        </ChartGrid>
-
-        <SectionsGrid>
-          <Section>
-            <SectionHeader>
-              <h2>Gastos por categoria</h2>
-              <span>{categoryItems.length} categoria(s)</span>
-            </SectionHeader>
-            <SectionBody>
-              <CategoryBreakdown items={categoryItems} />
-            </SectionBody>
-          </Section>
-
-          <Section>
-            <SectionHeader>
-              <h2>Evolução do saldo</h2>
-              <span>Últimos 6 meses</span>
-            </SectionHeader>
-            <SectionBody>
-              <EvolutionList>
-                {evolution.map((item) => (
-                  <EvolutionItem key={item.month}>
-                    <EvolutionMonth>{item.label}</EvolutionMonth>
-                    <EvolutionBar>
-                      <EvolutionFill
-                        $positive={item.balance >= 0}
-                        $value={(Math.abs(item.balance) / maxEvolution) * 100}
-                      />
-                    </EvolutionBar>
-                    <EvolutionAmount $positive={item.balance >= 0}>
-                      {formatCurrency(item.balance)}
-                    </EvolutionAmount>
-                  </EvolutionItem>
-                ))}
-              </EvolutionList>
-            </SectionBody>
-          </Section>
-        </SectionsGrid>
-      </PageContent>
+        <LedgerSection title="Evolução do saldo">
+          <Caption>Últimos 6 meses</Caption>
+          <BalanceLineChart data={evolution} />
+          <EvolutionList aria-label="Saldo por mês">
+            {evolution.map((item) => (
+              <li key={item.month}>
+                <span>{item.fullLabel}</span>
+                <span data-tone={item.balance < 0 ? "out" : undefined}>{money(item.balance)}</span>
+              </li>
+            ))}
+          </EvolutionList>
+        </LedgerSection>
+      </ChartsGrid>
     </AppShell>
   );
 }

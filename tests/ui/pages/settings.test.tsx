@@ -1,13 +1,21 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import SettingsPage from "@/app/settings/page";
-import { mockApi, reply, type ApiRoutes } from "../helpers/api";
+import { mockApi, networkError, reply, type ApiRoutes } from "../helpers/api";
 import { transactions } from "../helpers/fixtures";
-import { navigationMock } from "../helpers/navigation";
+import { navigationMock, setPathname } from "../helpers/navigation";
 import { renderWithProvider } from "../helpers/render";
 
 function detail(label: string) {
-  return within(screen.getByRole("main")).getByText(label).parentElement as HTMLElement;
+  const term = within(screen.getByRole("main")).getByText(label, { selector: "dt" });
+
+  return term.parentElement as HTMLElement;
+}
+
+function navigationErrors(consoleError: ReturnType<typeof vi.spyOn>) {
+  return consoleError.mock.calls.filter((args) =>
+    args.some((arg) => String((arg as Error)?.message ?? arg).includes("Not implemented: navigation")),
+  );
 }
 
 async function renderPage(routes: ApiRoutes = {}) {
@@ -49,31 +57,53 @@ describe("Página de configurações", () => {
   it("mostra nome e e-mail do usuário vindos de GET /api/me", async () => {
     await renderPage();
 
-    expect(screen.getByRole("heading", { name: "Conta e dados", level: 1 })).toBeInTheDocument();
-    await waitFor(() => expect(detail("Conta")).toHaveTextContent("Maria Teste"));
+    expect(screen.getByRole("heading", { name: "Configurações", level: 1 })).toBeInTheDocument();
+    await waitFor(() => expect(detail("Nome")).toHaveTextContent("Maria Teste"));
     expect(detail("E-mail")).toHaveTextContent("maria@teste.com");
-    expect(detail("Moeda padrão")).toHaveTextContent("Real brasileiro (BRL)");
+    expect(detail("Moeda")).toHaveTextContent("Real brasileiro (BRL)");
   });
 
-  it("mostra a quantidade de transações carregadas e a soma de todos os valores", async () => {
+  it("organiza a página em seções pautadas: Perfil, Exportar dados, Instalar o app e Sessão", async () => {
     await renderPage();
 
-    await waitFor(() => expect(detail("Transações carregadas")).toHaveTextContent("10"));
-    expect(detail("Saldo em memória")).toHaveTextContent("R$ 2.600,00");
+    expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      "Perfil",
+      "Exportar dados",
+      "Instalar o app",
+      "Sessão",
+    ]);
   });
 
-  it("[bug] quando /api/me falha (401) o e-mail fica em 'Carregando...' para sempre", async () => {
+  it("mostra a quantidade de lançamentos carregados e a soma de todos os valores", async () => {
+    await renderPage();
+
+    await waitFor(() => expect(detail("Lançamentos")).toHaveTextContent(/^Lançamentos10$/));
+    expect(detail("Saldo acumulado")).toHaveTextContent("R$ 2.600,00");
+  });
+
+  it("enquanto /api/me não responde mostra 'Carregando…'", async () => {
+    mockApi({
+      "GET /api/transactions": transactions,
+      "GET /api/me": () => new Promise<Response>(() => {}),
+    });
+    renderWithProvider(<SettingsPage />);
+
+    expect(detail("Nome")).toHaveTextContent("Carregando…");
+    expect(detail("E-mail")).toHaveTextContent("Carregando…");
+  });
+
+  it("quando /api/me falha (401) o perfil mostra 'Indisponível' em vez de carregar para sempre", async () => {
     await renderPage({ "GET /api/me": reply(401, { error: "Não autenticado." }) });
 
-    await waitFor(() => expect(detail("Transações carregadas")).toHaveTextContent("10"));
-    expect(detail("Conta")).toHaveTextContent("Usuário autenticado");
-    expect(detail("E-mail")).toHaveTextContent("Carregando...");
+    await waitFor(() => expect(detail("E-mail")).toHaveTextContent("Indisponível"));
+    expect(detail("Nome")).toHaveTextContent("Indisponível");
+    expect(detail("Lançamentos")).toHaveTextContent("10");
   });
 
   it("exporta as transações em JSON (transacoes.json)", async () => {
     const { downloads, revoke } = captureDownloads();
     const { user } = await renderPage();
-    await waitFor(() => expect(detail("Transações carregadas")).toHaveTextContent("10"));
+    await waitFor(() => expect(detail("Lançamentos")).toHaveTextContent("10"));
 
     await user.click(screen.getByRole("button", { name: "Exportar JSON" }));
 
@@ -92,7 +122,7 @@ describe("Página de configurações", () => {
         transactions[8],
       ],
     });
-    await waitFor(() => expect(detail("Transações carregadas")).toHaveTextContent("2"));
+    await waitFor(() => expect(detail("Lançamentos")).toHaveTextContent("2"));
 
     await user.click(screen.getByRole("button", { name: "Exportar CSV" }));
 
@@ -116,40 +146,55 @@ describe("Página de configurações", () => {
     );
   });
 
-  it("'Sair da conta' chama POST /api/logout e redireciona para /login", async () => {
+  it("explica como instalar o app no iPhone e no Android, sem botão de instalação", async () => {
+    await renderPage();
+
+    const section = screen.getByRole("heading", { name: "Instalar o app", level: 2 }).closest("section") as HTMLElement;
+
+    expect(section).toHaveTextContent("Compartilhar → Adicionar à Tela de Início");
+    expect(section).toHaveTextContent("Instalar app");
+    expect(within(section).queryByRole("button")).toBeNull();
+  });
+
+  it("'Sair da conta' chama POST /api/logout e recarrega em /login (limpa a memória)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const { api, user } = await renderPage({ "POST /api/logout": { ok: true } });
 
     await user.click(screen.getByRole("button", { name: "Sair da conta" }));
 
-    await waitFor(() => expect(navigationMock.router.push).toHaveBeenCalledWith("/login"));
-    expect(api.callsTo("POST", "/api/logout")).toHaveLength(1);
-    expect(navigationMock.router.refresh).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(api.callsTo("POST", "/api/logout")).toHaveLength(1));
+    // jsdom não implementa navegação: `window.location.href = "/login"` vira "Not implemented: navigation".
+    await waitFor(() => expect(navigationErrors(consoleError)).toHaveLength(1));
+    expect(navigationMock.router.push).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Saindo…" })).toBeDisabled();
   });
 
-  it("[comportamento atual] redireciona para /login mesmo quando o logout falha no servidor", async () => {
+  it("navega para /login mesmo quando o logout falha no servidor", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const { user } = await renderPage({ "POST /api/logout": reply(500, { error: "Erro." }) });
 
     await user.click(screen.getByRole("button", { name: "Sair da conta" }));
 
-    await waitFor(() => expect(navigationMock.router.push).toHaveBeenCalledWith("/login"));
+    await waitFor(() => expect(navigationErrors(consoleError)).toHaveLength(1));
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("[comportamento atual] depois de sair, as transações continuam em memória no contexto", async () => {
-    const { user } = await renderPage({ "POST /api/logout": { ok: true } });
-    await waitFor(() => expect(detail("Transações carregadas")).toHaveTextContent("10"));
+  it("navega para /login mesmo quando a requisição de logout cai por erro de rede", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { api, user } = await renderPage({ "POST /api/logout": networkError() });
 
     await user.click(screen.getByRole("button", { name: "Sair da conta" }));
-    await waitFor(() => expect(navigationMock.router.push).toHaveBeenCalled());
 
-    expect(detail("Transações carregadas")).toHaveTextContent("10");
+    await waitFor(() => expect(navigationErrors(consoleError)).toHaveLength(1));
+    expect(api.callsTo("POST", "/api/logout")).toHaveLength(1);
   });
 
-  it("lista as informações de segurança e marca 'Configurações' na navegação", async () => {
+  it("marca 'Configurações' como página atual na navegação", async () => {
+    setPathname("/settings");
     await renderPage();
 
-    expect(screen.getByText("Cookie de sessão assinado com expiração de 30 dias.")).toBeInTheDocument();
-    const nav = screen.getAllByRole("navigation", { name: "Navegação principal" })[0];
-    expect(within(nav).getByRole("link", { name: "Configurações" })).toHaveAttribute("href", "/settings");
+    const links = screen.getAllByRole("link", { name: "Configurações", hidden: true });
+    expect(links[0]).toHaveAttribute("href", "/settings");
+    expect(links[0]).toHaveAttribute("aria-current", "page");
   });
 });

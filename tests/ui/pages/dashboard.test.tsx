@@ -2,178 +2,213 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import Home from "@/app/page";
 import { mockApi } from "../helpers/api";
-import { categories, goals, transactions } from "../helpers/fixtures";
+import { budgets, categories, transactions } from "../helpers/fixtures";
 import { freezeDate, getModalByTitle, queryModalByTitle, renderWithProvider } from "../helpers/render";
 
-/** Card de resumo (SummaryCard): o título fica dentro de um div irmão do valor. */
-function summaryCard(title: string) {
-  const main = screen.getByRole("main");
-  const titleElement = within(main)
-    .getAllByText(title)
-    .find((element) => element.tagName === "DIV");
-
-  if (!titleElement?.parentElement) throw new Error(`SummaryCard "${title}" não encontrado`);
-
-  return titleElement.parentElement;
+function summary() {
+  return screen.getByRole("region", { name: "Sobra do mês" });
 }
 
-function insightCard(title: string) {
-  const card = screen.getByRole("heading", { name: title, level: 3 }).closest("article");
-
-  if (!card) throw new Error(`InsightCard "${title}" não encontrado`);
-
-  return card;
+/** Valor de um item do trio Entrou/Saiu/Investiu. */
+function triad(label: "Entrou" | "Saiu" | "Investiu") {
+  return within(summary()).getByText(label).nextElementSibling;
 }
 
-describe("Página inicial (dashboard)", () => {
+function ledgerSection(title: string) {
+  const section = screen.getByRole("heading", { name: title, level: 2 }).closest("section");
+
+  if (!section) throw new Error(`Seção "${title}" não encontrada`);
+
+  return section;
+}
+
+function latestDescriptions() {
+  return within(ledgerSection("Últimos lançamentos"))
+    .queryAllByRole("button", { name: /Editar$/ })
+    .map((row) => row.getAttribute("aria-label")?.split(",")[0]);
+}
+
+describe("Mês (página inicial)", () => {
   beforeEach(() => {
     freezeDate();
   });
 
-  it("mostra estados vazios quando não há transações nem metas", async () => {
+  it("mostra o mês corrente zerado com convites quando não há lançamentos", async () => {
     const api = mockApi();
-    renderWithProvider(<Home />);
+    const { user } = renderWithProvider(<Home />);
 
-    await waitFor(() => expect(api.callsTo("GET", "/api/goals")).toHaveLength(1));
+    await waitFor(() => expect(api.callsTo("GET", "/api/budgets")).toHaveLength(1));
 
-    expect(screen.getByRole("heading", { name: "Controle financeiro", level: 1 })).toBeInTheDocument();
-    expect(summaryCard("Receitas")).toHaveTextContent("R$ 0,00");
-    expect(summaryCard("Saldo Total")).toHaveTextContent("R$ 0,00");
-    expect(screen.getByText("Nenhuma transação registrada ainda.")).toBeInTheDocument();
-    expect(screen.getByText("Sem receitas")).toBeInTheDocument();
-    expect(insightCard("Maior despesa")).toHaveTextContent("Sem dados");
-    expect(insightCard("Categoria em destaque")).toHaveTextContent("Sem dados");
-    expect(insightCard("Movimento do mês")).toHaveTextContent("0");
-    expect(insightCard("Meta mais próxima")).toHaveTextContent("Sem metas");
+    expect(screen.getByRole("heading", { name: "outubro de 2026", level: 1 })).toBeInTheDocument();
+    expect(summary()).toHaveTextContent("R$ 0,00");
+    expect(screen.getByText("Nada registrado em outubro.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum orçamento para outubro.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Registrar o primeiro" }));
+    expect(getModalByTitle("Registrar")).toBeInTheDocument();
   });
 
-  it("soma receitas, despesas, investimentos e saldo de TODO o histórico nos cards do topo", async () => {
-    mockApi({ "GET /api/transactions": transactions, "GET /api/goals": goals });
-    renderWithProvider(<Home />);
-
-    await waitFor(() => expect(summaryCard("Receitas")).toHaveTextContent("R$ 7.300,00"));
-    // Despesas aparecem com sinal negativo.
-    expect(summaryCard("Despesas")).toHaveTextContent("-R$ 3.200,00");
-    // Investimentos são exibidos em valor absoluto...
-    expect(summaryCard("Investimentos")).toHaveTextContent("R$ 1.500,00");
-    // ...mas são descontados do saldo total (7.300 - 3.200 - 1.500).
-    expect(summaryCard("Saldo Total")).toHaveTextContent("R$ 2.600,00");
-  });
-
-  it("calcula o resumo do mês corrente (outubro/2026) e a taxa de economia", async () => {
+  it("calcula a sobra do mês corrente, o trio entrou/saiu/investiu e o saldo acumulado", async () => {
     mockApi({ "GET /api/transactions": transactions });
     renderWithProvider(<Home />);
 
-    const summary = (await screen.findByRole("heading", { name: "Resumo do mês" })).closest("article");
-    expect(summary).not.toBeNull();
-
-    await waitFor(() => expect(summary).toHaveTextContent("34% economizado"));
-    expect(summary).toHaveTextContent("outubro de 2026");
-    expect(within(summary!).getByText("Entradas").parentElement).toHaveTextContent("R$ 5.000,00");
-    expect(within(summary!).getByText("Saídas").parentElement).toHaveTextContent("-R$ 2.300,00");
-    // Saldo do mês desconta também o investimento de R$ 1.000.
-    expect(within(summary!).getByText("Saldo do mês").parentElement).toHaveTextContent("R$ 1.700,00");
+    // Outubro: 5.000 de entrada, 2.300 de gastos e 1.000 investidos.
+    await waitFor(() => expect(triad("Entrou")).toHaveTextContent("5.000,00"));
+    expect(triad("Saiu")).toHaveTextContent("2.300,00");
+    expect(triad("Investiu")).toHaveTextContent("1.000,00");
+    expect(summary()).toHaveTextContent("R$ 1.700,00");
+    // Acumulado de todo o histórico: 7.300 - 3.200 - 1.500.
+    expect(within(summary()).getByText("Saldo acumulado")).toHaveTextContent("R$ 2.600,00");
   });
 
-  it("mostra os insights do mês: maior despesa, categoria em destaque e quantidade de transações", async () => {
+  it("mostra a sobra negativa em vermelho com sinal", async () => {
+    mockApi({
+      "GET /api/transactions": [{ ...transactions[1], id: "x", date: "2026-10-06T00:00:00.000Z" }],
+    });
+    renderWithProvider(<Home />);
+
+    await waitFor(() => expect(summary()).toHaveTextContent("−R$ 1.500,00"));
+  });
+
+  it("troca de mês pelas setas", async () => {
+    mockApi({ "GET /api/transactions": transactions });
+    const { user } = renderWithProvider(<Home />);
+
+    await waitFor(() => expect(triad("Entrou")).toHaveTextContent("5.000,00"));
+    await user.click(screen.getByRole("button", { name: "Mês anterior" }));
+
+    expect(screen.getByRole("heading", { name: "setembro de 2026", level: 1 })).toBeInTheDocument();
+    expect(triad("Entrou")).toHaveTextContent("2.000,00");
+    expect(triad("Saiu")).toHaveTextContent("800,00");
+    expect(triad("Investiu")).toHaveTextContent("500,00");
+    expect(summary()).toHaveTextContent("R$ 700,00");
+    expect(latestDescriptions()).toEqual(["Viagem", "Compra de ações", "Freelance"]);
+
+    await user.click(screen.getByRole("button", { name: "Próximo mês" }));
+    await user.click(screen.getByRole("button", { name: "Próximo mês" }));
+    expect(screen.getByRole("heading", { name: "novembro de 2026", level: 1 })).toBeInTheDocument();
+    expect(screen.getByText("Nada registrado em novembro.")).toBeInTheDocument();
+  });
+
+  it("lista os lançamentos do mês do mais novo para o mais antigo, com categoria e data", async () => {
     mockApi({ "GET /api/transactions": transactions });
     renderWithProvider(<Home />);
 
-    await waitFor(() => expect(insightCard("Movimento do mês")).toHaveTextContent("5"));
-    expect(insightCard("Maior despesa")).toHaveTextContent("-R$ 1.500,00");
-    expect(insightCard("Maior despesa")).toHaveTextContent("Aluguel foi a maior saída deste mês.");
-    expect(insightCard("Categoria em destaque")).toHaveTextContent("Moradia");
-    expect(insightCard("Categoria em destaque")).toHaveTextContent(
-      "R$ 1.500,00 concentrados nesta categoria.",
+    await waitFor(() =>
+      expect(latestDescriptions()).toEqual(["Tesouro Direto", "Restaurante", "Mercado", "Aluguel", "Salário"]),
+    );
+    const aluguel = within(ledgerSection("Últimos lançamentos")).getByRole("button", { name: /^Aluguel,/ });
+    expect(aluguel).toHaveTextContent("Moradia · ter., 6 de out.");
+    expect(aluguel).toHaveTextContent("−1.500,00");
+    expect(within(ledgerSection("Últimos lançamentos")).getByRole("link", { name: "Ver todos" })).toHaveAttribute(
+      "href",
+      "/transactions",
     );
   });
 
-  it("lista apenas as 5 transações mais recentes, da mais nova para a mais antiga", async () => {
-    mockApi({ "GET /api/transactions": [...transactions].reverse() });
+  it("mostra no máximo 7 lançamentos", async () => {
+    const many = Array.from({ length: 9 }, (_, index) => ({
+      ...transactions[2],
+      id: `m${index}`,
+      description: `Compra ${index + 1}`,
+      date: `2026-10-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+    }));
+    mockApi({ "GET /api/transactions": many });
     renderWithProvider(<Home />);
 
-    const table = await screen.findByRole("table");
-    const rows = within(table).getAllByRole("row").slice(1);
+    await waitFor(() => expect(latestDescriptions()).toHaveLength(7));
+    expect(latestDescriptions()[0]).toBe("Compra 9");
+    expect(latestDescriptions()).not.toContain("Compra 2");
+  });
 
-    expect(rows).toHaveLength(5);
-    expect(rows.map((row) => within(row).getAllByRole("cell")[0].textContent)).toEqual([
-      "Tesouro Direto",
-      "Restaurante",
-      "Mercado",
-      "Aluguel",
-      "Salário",
+  it("mostra os orçamentos do mês do mais usado ao menos usado, com estado na barra", async () => {
+    mockApi({ "GET /api/transactions": transactions, "GET /api/budgets": budgets });
+    renderWithProvider(<Home />);
+
+    const section = ledgerSection("Orçamentos");
+    await waitFor(() => expect(within(section).getAllByRole("progressbar")).toHaveLength(3));
+
+    const bars = within(section).getAllByRole("progressbar");
+    // Moradia 125% (limitado a 100 na barra), Alimentação 80%, Transporte 0%. Lazer é de setembro.
+    expect(bars.map((bar) => bar.getAttribute("aria-label"))).toEqual([
+      "Moradia: 100%",
+      "Alimentação: 80%",
+      "Transporte: 0%",
     ]);
-    expect(rows[0]).toHaveTextContent("R$ 1.000,00");
-    expect(rows[0]).not.toHaveTextContent("-R$ 1.000,00");
-    expect(rows[1]).toHaveTextContent("-R$ 200,00");
-    expect(rows[4]).toHaveTextContent("+R$ 5.000,00");
-    expect(rows[4]).toHaveTextContent("05/10/2026");
+    expect(section).toHaveTextContent("1.500,00 de 1.200,00");
+    expect(section).toHaveTextContent("800,00 de 1.000,00");
+    expect(section).not.toHaveTextContent("Lazer");
+    expect(within(section).getByRole("link", { name: "Planejar" })).toHaveAttribute("href", "/planning");
   });
 
-  it("mostra a meta com maior progresso em 'Meta mais próxima'", async () => {
-    mockApi({ "GET /api/goals": [goals[0]] });
+  it("lembra de importar a fatura do mês corrente enquanto ela não foi importada", async () => {
+    mockApi({ "GET /api/imports": [] });
+    const { user } = renderWithProvider(<Home />);
+
+    const nudge = await screen.findByRole("link", { name: /A fatura de outubro ainda não foi importada/ });
+    expect(nudge).toHaveAttribute("href", "/import");
+
+    await user.click(screen.getByRole("button", { name: "Mês anterior" }));
+    expect(screen.queryByRole("link", { name: /ainda não foi importada/ })).toBeNull();
+  });
+
+  it("não mostra o lembrete quando a fatura do mês já foi importada", async () => {
+    const api = mockApi({
+      "GET /api/imports": [
+        {
+          id: "b1",
+          fileName: "fatura.pdf",
+          issuer: "Nubank",
+          referenceMonth: "2026-10",
+          dueDate: null,
+          statedTotal: null,
+          importedTotal: 100,
+          itemCount: 2,
+          createdAt: "2026-10-10T12:00:00.000Z",
+        },
+      ],
+    });
     renderWithProvider(<Home />);
 
-    await waitFor(() => expect(insightCard("Meta mais próxima")).toHaveTextContent("25%"));
-    expect(insightCard("Meta mais próxima")).toHaveTextContent(
-      "Reserva de emergência: R$ 2.500,00 de R$ 10.000,00.",
-    );
+    await waitFor(() => expect(api.callsTo("GET", "/api/imports")).toHaveLength(1));
+    await screen.findByText("Nenhum orçamento para outubro.");
+    expect(screen.queryByRole("link", { name: /ainda não foi importada/ })).toBeNull();
   });
 
-  it("ignora metas já concluídas ao escolher a 'Meta mais próxima'", async () => {
-    mockApi({ "GET /api/goals": goals });
-    renderWithProvider(<Home />);
-
-    // "Notebook novo" está em 125% (concluída); a mais próxima em andamento é a reserva (25%).
-    await waitFor(() => expect(insightCard("Meta mais próxima")).toHaveTextContent("25%"));
-    expect(insightCard("Meta mais próxima")).toHaveTextContent("Reserva de emergência");
-  });
-
-  it("mostra 'Sem metas' quando todas as metas já foram concluídas", async () => {
-    const api = mockApi({ "GET /api/goals": [goals[1]] });
-    renderWithProvider(<Home />);
-
-    await waitFor(() => expect(api.callsTo("GET", "/api/goals")).toHaveLength(1));
-    await waitFor(() => expect(api.callsTo("GET", "/api/transactions")).toHaveLength(1));
-    expect(insightCard("Meta mais próxima")).toHaveTextContent("Sem metas");
-  });
-
-  it("[regressão de fuso] transação de 2026-08-01T00:00Z conta no resumo de agosto e aparece como 01/08/2026", async () => {
+  it("[regressão de fuso] lançamento de 2026-08-01T00:00Z conta em agosto e aparece como 1º de agosto", async () => {
     freezeDate("2026-08-15T15:00:00.000Z");
     mockApi({
       "GET /api/transactions": [{ ...transactions[0], id: "tz", date: "2026-08-01T00:00:00.000Z" }],
     });
     renderWithProvider(<Home />);
 
-    const summary = (await screen.findByRole("heading", { name: "Resumo do mês" })).closest("article")!;
-    await waitFor(() =>
-      expect(within(summary).getByText("Entradas").parentElement).toHaveTextContent("R$ 5.000,00"),
+    await waitFor(() => expect(triad("Entrou")).toHaveTextContent("5.000,00"));
+    expect(screen.getByRole("heading", { name: "agosto de 2026", level: 1 })).toBeInTheDocument();
+    expect(within(ledgerSection("Últimos lançamentos")).getByRole("button", { name: /^Salário,/ })).toHaveTextContent(
+      "sáb., 1 de ago.",
     );
-    expect(summary).toHaveTextContent("agosto de 2026");
-    expect(insightCard("Movimento do mês")).toHaveTextContent("1");
-    expect(within(screen.getByRole("table")).getByText("01/08/2026")).toBeInTheDocument();
   });
 
-  it("[regressão de fuso] a mesma transação não conta no resumo de julho", async () => {
+  it("[regressão de fuso] o mesmo lançamento não conta em julho", async () => {
     freezeDate("2026-07-31T15:00:00.000Z");
     mockApi({
       "GET /api/transactions": [{ ...transactions[0], id: "tz", date: "2026-08-01T00:00:00.000Z" }],
     });
     renderWithProvider(<Home />);
 
-    await screen.findByRole("table");
-    expect(insightCard("Movimento do mês")).toHaveTextContent("0");
-    expect(screen.getByText("Sem receitas")).toBeInTheDocument();
+    await waitFor(() => expect(within(summary()).getByText("Saldo acumulado")).toHaveTextContent("R$ 5.000,00"));
+    expect(triad("Entrou")).toHaveTextContent("0,00");
+    expect(screen.getByText("Nada registrado em julho.")).toBeInTheDocument();
   });
 
-  it("continua renderizando quando a busca de metas falha", async () => {
-    mockApi({ "GET /api/goals": { error: "Não autenticado." } });
+  it("continua renderizando quando a busca de orçamentos falha", async () => {
+    mockApi({ "GET /api/budgets": { error: "Não autenticado." } });
     renderWithProvider(<Home />);
 
-    await waitFor(() => expect(insightCard("Meta mais próxima")).toHaveTextContent("Sem metas"));
+    expect(await screen.findByText("Nenhum orçamento para outubro.")).toBeInTheDocument();
   });
 
-  it("abre o modal de nova transação e adiciona o registro criado à lista e aos totais", async () => {
+  it("Registrar na barra abre a folha e o lançamento criado entra na lista e na sobra", async () => {
     const api = mockApi({
       "GET /api/categories": categories,
       "POST /api/transactions": (call) => ({
@@ -184,32 +219,42 @@ describe("Página inicial (dashboard)", () => {
     });
     const { user } = renderWithProvider(<Home />);
 
-    expect(queryModalByTitle("Nova Transação")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "+ Nova Transação" }));
+    expect(queryModalByTitle("Registrar")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Registrar" }));
 
-    const modal = getModalByTitle("Nova Transação");
-    await within(modal).findByRole("option", { name: "Alimentação" });
+    const modal = getModalByTitle("Registrar");
+    await within(modal).findByRole("radio", { name: "Alimentação" });
     await user.type(within(modal).getByLabelText("Descrição"), "Padaria");
     await user.type(within(modal).getByLabelText("Valor"), "50");
-    await user.click(within(modal).getByRole("button", { name: "Salvar Transação" }));
+    await user.click(within(modal).getByRole("button", { name: "Salvar" }));
 
-    await waitFor(() => expect(queryModalByTitle("Nova Transação")).toBeNull());
+    await waitFor(() => expect(queryModalByTitle("Registrar")).toBeNull());
     expect(api.callsTo("POST", "/api/transactions")[0].body).toMatchObject({
       description: "Padaria",
       amount: -50,
       category: "Alimentação",
       type: "outcome",
     });
-    expect(within(screen.getByRole("table")).getByText("Padaria")).toBeInTheDocument();
-    expect(summaryCard("Despesas")).toHaveTextContent("-R$ 50,00");
+    expect(latestDescriptions()).toEqual(["Padaria"]);
+    expect(triad("Saiu")).toHaveTextContent("50,00");
+    expect(summary()).toHaveTextContent("−R$ 50,00");
   });
 
-  it("exibe a navegação principal com 'Início' ativo", async () => {
+  it("tocar num lançamento abre a edição", async () => {
+    mockApi({ "GET /api/transactions": transactions, "GET /api/categories": categories });
+    const { user } = renderWithProvider(<Home />);
+
+    await user.click(await screen.findByRole("button", { name: /^Mercado,/ }));
+
+    expect(within(getModalByTitle("Editar lançamento")).getByLabelText("Descrição")).toHaveValue("Mercado");
+  });
+
+  it("marca 'Mês' como item ativo da navegação", async () => {
     mockApi();
     renderWithProvider(<Home />);
 
-    const nav = screen.getAllByRole("navigation", { name: "Navegação principal" })[0];
-    expect(within(nav).getByRole("link", { name: "Início" })).toHaveAttribute("href", "/");
-    await waitFor(() => expect(screen.getByText("Sem receitas")).toBeInTheDocument());
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" });
+    expect(within(nav).getByRole("link", { name: "Mês" })).toHaveAttribute("aria-current", "page");
+    await screen.findByText("Nenhum orçamento para outubro.");
   });
 });

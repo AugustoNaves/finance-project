@@ -6,20 +6,26 @@ import { mockApi, reply, type ApiRoutes } from "../helpers/api";
 import { categories, transactions } from "../helpers/fixtures";
 import { freezeDate, getModalByTitle, queryModalByTitle, renderWithProvider } from "../helpers/render";
 
-function metricCard(title: string) {
-  const element = screen.getByRole("heading", { name: title, level: 3 }).closest("article");
-
-  if (!element) throw new Error(`Métrica "${title}" não encontrada`);
-
-  return element;
-}
-
 function sectionOf(title: string) {
   const element = screen.getByRole("heading", { name: title, level: 2 }).closest("section");
 
   if (!element) throw new Error(`Seção "${title}" não encontrada`);
 
   return element;
+}
+
+function sheetLine(label: string) {
+  const term = within(sectionOf("Balanço do período")).getByText(label, { selector: "dt" });
+
+  return term.parentElement as HTMLElement;
+}
+
+function value(label: string) {
+  return sheetLine(label).querySelector("dd") as HTMLElement;
+}
+
+function evolutionRows() {
+  return within(screen.getByRole("list", { name: "Saldo por mês" })).getAllByRole("listitem");
 }
 
 describe("Página de relatórios", () => {
@@ -37,48 +43,59 @@ describe("Página de relatórios", () => {
     return { api, ...utils };
   }
 
-  it("mostra estados vazios quando não há transações", async () => {
+  it("mostra estados vazios quando não há lançamentos", async () => {
     await renderPage({ "GET /api/transactions": [] });
 
-    expect(screen.getByRole("heading", { name: "Análise do período", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Relatórios", level: 1 })).toBeInTheDocument();
     expect(screen.getByLabelText("Período")).toHaveValue("2026-10");
-    expect(metricCard("Receitas")).toHaveTextContent("R$ 0,00");
-    expect(metricCard("Maior despesa")).toHaveTextContent("Sem dados");
-    expect(metricCard("Categoria líder")).toHaveTextContent("Sem dados");
-    expect(metricCard("Taxa de economia")).toHaveTextContent("Sem receitas");
+    expect(value("Receitas")).toHaveTextContent(/^R\$ 0,00$/);
+    expect(value("Maior despesa")).toHaveTextContent(/^Sem dados$/);
+    expect(value("Categoria líder")).toHaveTextContent(/^Sem dados$/);
+    expect(value("Taxa de economia")).toHaveTextContent("Sem receitas");
+    expect(value("Movimento do período")).toHaveTextContent("0 lançamentos");
     expect(screen.getByText("Nenhuma despesa encontrada neste período.")).toBeInTheDocument();
-    expect(screen.getByText("Nenhuma despesa para exibir no gráfico.")).toBeInTheDocument();
-    expect(sectionOf("Gastos por categoria")).toHaveTextContent("0 categoria(s)");
+    expect(sectionOf("Gastos por categoria")).toHaveTextContent("0 categorias");
   });
 
-  it("calcula as métricas do mês atual (outubro/2026)", async () => {
+  it("monta a folha de balanço do mês atual (outubro/2026)", async () => {
     await renderPage();
 
-    await waitFor(() => expect(metricCard("Receitas")).toHaveTextContent("R$ 5.000,00"));
-    expect(metricCard("Despesas")).toHaveTextContent("-R$ 2.300,00");
+    await waitFor(() => expect(value("Receitas")).toHaveTextContent(/^R\$ 5\.000,00$/));
+    expect(value("Despesas")).toHaveTextContent(/^−R\$ 2\.300,00$/);
+    expect(value("Investimentos")).toHaveTextContent(/^−R\$ 1\.000,00$/);
     // Saldo desconta o investimento de R$ 1.000 (5.000 - 2.300 - 1.000).
-    expect(metricCard("Saldo")).toHaveTextContent("R$ 1.700,00");
-    expect(metricCard("Maior despesa")).toHaveTextContent("-R$ 1.500,00");
-    expect(metricCard("Maior despesa")).toHaveTextContent("Aluguel foi a maior saída do período.");
-    expect(metricCard("Categoria líder")).toHaveTextContent("Moradia");
-    expect(metricCard("Categoria líder")).toHaveTextContent("R$ 1.500,00 concentrados nesta categoria.");
-    expect(metricCard("Taxa de economia")).toHaveTextContent("34% economizado");
+    expect(value("Saldo")).toHaveTextContent(/^R\$ 1\.700,00$/);
+    expect(value("Maior despesa")).toHaveTextContent("−R$ 1.500,00");
+    expect(value("Maior despesa")).toHaveTextContent("Aluguel");
+    expect(value("Categoria líder")).toHaveTextContent("Moradia");
+    expect(value("Categoria líder")).toHaveTextContent("R$ 1.500,00 · 65%");
+    expect(value("Taxa de economia")).toHaveTextContent(/^34%$/);
+    expect(value("Movimento do período")).toHaveTextContent("5 lançamentos");
   });
 
-  it("no mês corrente a média diária divide pelas despesas pelos dias já decorridos (dia 15)", async () => {
+  it("despesas e maior despesa aparecem em vermelho; receitas não", async () => {
+    await renderPage();
+
+    await waitFor(() => expect(value("Despesas")).toHaveAttribute("data-tone", "out"));
+    expect(value("Maior despesa")).toHaveAttribute("data-tone", "out");
+    expect(value("Receitas")).not.toHaveAttribute("data-tone");
+  });
+
+  it("no mês corrente a média diária divide as despesas pelos dias já decorridos (dia 15)", async () => {
     await renderPage();
 
     // 2.300 / 15 dias = 153,33
-    await waitFor(() => expect(metricCard("Média diária")).toHaveTextContent("R$ 153,33"));
+    await waitFor(() => expect(value("Média diária")).toHaveTextContent("R$ 153,33"));
   });
 
   it("lista os gastos por categoria com valor e participação percentual, do maior para o menor", async () => {
     await renderPage();
 
     const section = sectionOf("Gastos por categoria");
-    await waitFor(() => expect(section).toHaveTextContent("2 categoria(s)"));
-    const items = within(section).getAllByRole("article");
+    await waitFor(() => expect(section).toHaveTextContent("2 categorias"));
+    const items = within(section).getAllByRole("listitem");
 
+    expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent("Moradia");
     expect(items[0]).toHaveTextContent("R$ 1.500,00");
     expect(items[0]).toHaveTextContent("65% das despesas");
@@ -90,9 +107,8 @@ describe("Página de relatórios", () => {
   it("mostra a evolução do saldo dos últimos 6 meses terminando no mês selecionado", async () => {
     await renderPage();
 
-    const section = sectionOf("Evolução do saldo");
-    await waitFor(() => expect(section).toHaveTextContent("R$ 1.700,00"));
-    const items = within(section).getAllByRole("article");
+    await waitFor(() => expect(evolutionRows()[5]).toHaveTextContent("R$ 1.700,00"));
+    const items = evolutionRows();
 
     expect(items).toHaveLength(6);
     expect(items.map((item) => item.textContent?.replace(/\s/g, " "))).toEqual([
@@ -107,29 +123,46 @@ describe("Página de relatórios", () => {
 
   it("recalcula tudo ao trocar o período (setembro/2026; mês passado usa todos os dias na média)", async () => {
     await renderPage();
-    await waitFor(() => expect(metricCard("Receitas")).toHaveTextContent("R$ 5.000,00"));
+    await waitFor(() => expect(value("Receitas")).toHaveTextContent("R$ 5.000,00"));
 
     fireEvent.change(screen.getByLabelText("Período"), { target: { value: "2026-09" } });
 
-    expect(metricCard("Receitas")).toHaveTextContent("R$ 2.000,00");
-    expect(metricCard("Despesas")).toHaveTextContent("-R$ 800,00");
-    expect(metricCard("Saldo")).toHaveTextContent("R$ 700,00");
-    expect(metricCard("Maior despesa")).toHaveTextContent("Viagem foi a maior saída do período.");
-    expect(metricCard("Categoria líder")).toHaveTextContent("Lazer");
+    expect(value("Receitas")).toHaveTextContent(/^R\$ 2\.000,00$/);
+    expect(value("Despesas")).toHaveTextContent(/^−R\$ 800,00$/);
+    expect(value("Saldo")).toHaveTextContent(/^R\$ 700,00$/);
+    expect(value("Maior despesa")).toHaveTextContent("Viagem");
+    expect(value("Categoria líder")).toHaveTextContent("Lazer");
     // 800 / 30 dias = 26,67
-    expect(metricCard("Média diária")).toHaveTextContent("R$ 26,67");
-    expect(metricCard("Taxa de economia")).toHaveTextContent("35% economizado");
+    expect(value("Média diária")).toHaveTextContent("R$ 26,67");
+    expect(value("Taxa de economia")).toHaveTextContent(/^35%$/);
+    expect(value("Movimento do período")).toHaveTextContent("3 lançamentos");
 
-    const evolution = within(sectionOf("Evolução do saldo")).getAllByRole("article");
+    const evolution = evolutionRows();
     expect(evolution[0]).toHaveTextContent(/abr\.? de 2026/);
     expect(evolution[5]).toHaveTextContent(/set\.? de 2026/);
   });
 
-  it("mês só com despesas mostra 'Sem receitas' e saldo negativo", async () => {
+  it("as setas do período voltam e avançam um mês", async () => {
+    const { user } = await renderPage();
+    await waitFor(() => expect(value("Receitas")).toHaveTextContent("R$ 5.000,00"));
+
+    await user.click(screen.getByRole("button", { name: "Mês anterior" }));
+
+    expect(screen.getByLabelText("Período")).toHaveValue("2026-09");
+    expect(value("Receitas")).toHaveTextContent(/^R\$ 2\.000,00$/);
+
+    await user.click(screen.getByRole("button", { name: "Próximo mês" }));
+
+    expect(screen.getByLabelText("Período")).toHaveValue("2026-10");
+    expect(value("Receitas")).toHaveTextContent(/^R\$ 5\.000,00$/);
+  });
+
+  it("mês só com despesas mostra 'Sem receitas' e saldo negativo em vermelho", async () => {
     await renderPage({ "GET /api/transactions": [transactions[2]] });
 
-    await waitFor(() => expect(metricCard("Saldo")).toHaveTextContent("-R$ 600,00"));
-    expect(metricCard("Taxa de economia")).toHaveTextContent("Sem receitas");
+    await waitFor(() => expect(value("Saldo")).toHaveTextContent(/^−R\$ 600,00$/));
+    expect(value("Taxa de economia")).toHaveTextContent("Sem receitas");
+    expect(evolutionRows()[5].querySelector("[data-tone='out']")).toHaveTextContent("−R$ 600,00");
   });
 
   it("limpar o período volta para o mês atual", async () => {
@@ -139,28 +172,31 @@ describe("Página de relatórios", () => {
     fireEvent.change(screen.getByLabelText("Período"), { target: { value: "" } });
 
     expect(screen.getByLabelText("Período")).toHaveValue("2026-10");
-    await waitFor(() => expect(metricCard("Receitas")).toHaveTextContent("R$ 5.000,00"));
+    await waitFor(() => expect(value("Receitas")).toHaveTextContent("R$ 5.000,00"));
   });
 
-  it("[regressão de fuso] transação de 2026-08-01T00:00Z entra no relatório de agosto, não no de julho", async () => {
+  it("[regressão de fuso] lançamento de 2026-08-01T00:00Z entra no relatório de agosto, não no de julho", async () => {
     await renderPage({
       "GET /api/transactions": [{ ...transactions[2], id: "tz", date: "2026-08-01T00:00:00.000Z" }],
     });
 
     fireEvent.change(screen.getByLabelText("Período"), { target: { value: "2026-08" } });
-    await waitFor(() => expect(metricCard("Despesas")).toHaveTextContent("-R$ 600,00"));
-    expect(metricCard("Categoria líder")).toHaveTextContent("Alimentação");
+    await waitFor(() => expect(value("Despesas")).toHaveTextContent(/^−R\$ 600,00$/));
+    expect(value("Categoria líder")).toHaveTextContent("Alimentação");
 
     fireEvent.change(screen.getByLabelText("Período"), { target: { value: "2026-07" } });
-    expect(metricCard("Despesas")).toHaveTextContent("R$ 0,00");
-    expect(metricCard("Maior despesa")).toHaveTextContent("Sem dados");
+    expect(value("Despesas")).toHaveTextContent(/^R\$ 0,00$/);
+    expect(value("Maior despesa")).toHaveTextContent("Sem dados");
   });
 
-  it("[texto desatualizado] o subtítulo diz 'sem gráficos externos', mas a página usa recharts", async () => {
+  it("desenha os gráficos de receitas vs despesas e da linha do saldo (sem donut)", async () => {
     await renderPage();
 
-    expect(screen.getByText(/sem gráficos externos/)).toBeInTheDocument();
-    expect(document.querySelectorAll(".recharts-responsive-container").length).toBeGreaterThan(0);
+    expect(within(sectionOf("Receitas vs despesas")).getByText("Receitas")).toBeInTheDocument();
+    expect(within(sectionOf("Receitas vs despesas")).getByText("Despesas")).toBeInTheDocument();
+    expect(sectionOf("Receitas vs despesas").querySelector(".recharts-responsive-container")).not.toBeNull();
+    expect(sectionOf("Evolução do saldo").querySelector(".recharts-responsive-container")).not.toBeNull();
+    expect(document.querySelectorAll(".recharts-responsive-container")).toHaveLength(2);
   });
 });
 
@@ -170,10 +206,12 @@ describe("Página de investimentos", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
-  function summaryCard(title: string) {
-    const titleElement = within(screen.getByRole("main")).getByText(title);
+  function figure(label: string) {
+    return within(screen.getByRole("main")).getByText(label).parentElement as HTMLElement;
+  }
 
-    return titleElement.parentElement as HTMLElement;
+  function entryButtons() {
+    return within(sectionOf("Aportes")).getAllByRole("button");
   }
 
   async function renderPage(routes: ApiRoutes = {}) {
@@ -189,49 +227,68 @@ describe("Página de investimentos", () => {
     return { api, ...utils };
   }
 
-  it("mostra zeros e a lista vazia quando não há investimentos", async () => {
+  it("mostra zeros e o aviso de lista vazia quando não há investimentos", async () => {
     await renderPage({ "GET /api/transactions": transactions.slice(0, 4) });
 
-    expect(screen.getByRole("heading", { name: "Aportes e patrimônio", level: 1 })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("0 registro(s) encontrado(s)")).toBeInTheDocument());
-    expect(summaryCard("Total investido")).toHaveTextContent("R$ 0,00");
-    expect(summaryCard("Aportes no mês")).toHaveTextContent("R$ 0,00");
+    expect(screen.getByRole("heading", { name: "Investimentos", level: 1 })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Nenhum aporte registrado ainda.")).toBeInTheDocument());
+    expect(screen.getByText("Nenhum aporte registrado.")).toBeInTheDocument();
+    expect(figure("Total investido")).toHaveTextContent("R$ 0,00");
+    expect(figure("Aportes no mês")).toHaveTextContent("R$ 0,00");
   });
 
   it("soma o total investido (todo o histórico) e os aportes do mês atual em valor absoluto", async () => {
     await renderPage();
 
-    await waitFor(() => expect(summaryCard("Total investido")).toHaveTextContent("R$ 1.500,00"));
-    expect(summaryCard("Aportes no mês")).toHaveTextContent("R$ 1.000,00");
+    await waitFor(() => expect(figure("Total investido")).toHaveTextContent("R$ 1.500,00"));
+    expect(figure("Aportes no mês")).toHaveTextContent("R$ 1.000,00");
   });
 
-  it("lista apenas as transações do tipo investimento", async () => {
+  it("distribui o total por categoria com participação percentual", async () => {
     await renderPage();
 
-    await waitFor(() => expect(screen.getByText("2 registro(s) encontrado(s)")).toBeInTheDocument());
-    const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
-    expect(rows.map((row) => within(row).getAllByRole("cell")[0].textContent)).toEqual([
-      "Tesouro Direto",
-      "Compra de ações",
-    ]);
-    expect(within(rows[0]).getAllByRole("cell")[1]).toHaveTextContent(/^R\$ 1\.000,00$/);
+    const section = sectionOf("Por categoria");
+    await waitFor(() => expect(within(section).getAllByRole("listitem")).toHaveLength(2));
+    const items = within(section).getAllByRole("listitem");
+
+    expect(items[0]).toHaveTextContent("Renda fixa");
+    expect(items[0]).toHaveTextContent("R$ 1.000,00");
+    expect(items[0]).toHaveTextContent("67% do total");
+    expect(items[1]).toHaveTextContent("Ações");
+    expect(items[1]).toHaveTextContent("33% do total");
   });
 
-  it("'+ Novo Aporte' abre o formulário já como Investimento e envia valor negativo", async () => {
+  it("lista apenas os lançamentos de investimento, do mais recente para o mais antigo", async () => {
+    await renderPage();
+
+    await waitFor(() => expect(sectionOf("Aportes")).toHaveTextContent("2 lançamentos"));
+    const buttons = entryButtons();
+
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toHaveAccessibleName(/^Tesouro Direto, Renda fixa, -R\$\s1\.000,00\. Editar$/);
+    expect(buttons[1]).toHaveAccessibleName(/^Compra de ações, Ações,/);
+    expect(buttons[0]).toHaveTextContent("−1.000,00");
+    expect(screen.getByRole("heading", { name: "Evolução dos aportes", level: 2 })).toBeInTheDocument();
+  });
+
+  it("'Novo aporte' abre a folha já como Investimento e envia valor negativo", async () => {
     const { api, user } = await renderPage({
       "POST /api/transactions": (call) =>
         reply(201, { id: "novo", ...(call.body as object), date: "2026-10-15T00:00:00.000Z" }),
     });
-    await waitFor(() => expect(summaryCard("Total investido")).toHaveTextContent("R$ 1.500,00"));
+    await waitFor(() => expect(figure("Total investido")).toHaveTextContent("R$ 1.500,00"));
 
-    await user.click(screen.getByRole("button", { name: "+ Novo Aporte" }));
-    const modal = getModalByTitle("Novo Aporte");
-    await waitFor(() => expect(within(modal).getByLabelText("Categoria")).toHaveValue("Renda fixa"));
+    await user.click(screen.getByRole("button", { name: "Novo aporte" }));
+    const modal = getModalByTitle("Novo aporte");
+    expect(within(modal).getByRole("radio", { name: "Investimento" })).toHaveAttribute("aria-checked", "true");
+    await waitFor(() =>
+      expect(within(modal).getByRole("radio", { name: "Renda fixa" })).toHaveAttribute("aria-checked", "true"),
+    );
     await user.type(within(modal).getByLabelText("Descrição"), "CDB");
     await user.type(within(modal).getByLabelText("Valor"), "500");
-    await user.click(within(modal).getByRole("button", { name: "Salvar Transação" }));
+    await user.click(within(modal).getByRole("button", { name: "Salvar" }));
 
-    await waitFor(() => expect(queryModalByTitle("Novo Aporte")).toBeNull());
+    await waitFor(() => expect(queryModalByTitle("Novo aporte")).toBeNull());
     expect(api.callsTo("POST", "/api/transactions")[0].body).toMatchObject({
       description: "CDB",
       amount: -500,
@@ -239,28 +296,41 @@ describe("Página de investimentos", () => {
       category: "Renda fixa",
       date: "2026-10-15",
     });
-    expect(summaryCard("Total investido")).toHaveTextContent("R$ 2.000,00");
-    expect(summaryCard("Aportes no mês")).toHaveTextContent("R$ 1.500,00");
-    expect(screen.getByText("3 registro(s) encontrado(s)")).toBeInTheDocument();
+    expect(figure("Total investido")).toHaveTextContent("R$ 2.000,00");
+    expect(figure("Aportes no mês")).toHaveTextContent("R$ 1.500,00");
+    expect(sectionOf("Aportes")).toHaveTextContent("3 lançamentos");
   });
 
-  it("exclui um aporte pela lista e atualiza os totais", async () => {
+  it("tocar num aporte abre a edição; excluir pede confirmação e atualiza os totais", async () => {
     const { api, user } = await renderPage({ "DELETE /api/transactions/t8": { message: "ok" } });
-    await waitFor(() => expect(screen.getByText("2 registro(s) encontrado(s)")).toBeInTheDocument());
+    await waitFor(() => expect(entryButtons()).toHaveLength(2));
 
-    const row = within(screen.getByRole("table")).getByText("Compra de ações").closest("tr")!;
-    await user.click(within(row).getByRole("button", { name: "Excluir" }));
-    await user.click(
-      within(getModalByTitle("Confirmar exclusão")).getByRole("button", { name: "Confirmar exclusão" }),
-    );
+    await user.click(within(sectionOf("Aportes")).getByRole("button", { name: /^Compra de ações,/ }));
+    await user.click(within(getModalByTitle("Editar lançamento")).getByRole("button", { name: "Excluir" }));
+    await user.click(within(getModalByTitle("Confirmar exclusão")).getByRole("button", { name: "Excluir" }));
 
-    await waitFor(() => expect(summaryCard("Total investido")).toHaveTextContent("R$ 1.000,00"));
+    await waitFor(() => expect(figure("Total investido")).toHaveTextContent("R$ 1.000,00"));
     expect(api.callsTo("DELETE", "/api/transactions/t8")).toHaveLength(1);
+    expect(entryButtons()).toHaveLength(1);
   });
 
-  it("[comportamento atual] a lista de aportes usa o título genérico 'Transações'", async () => {
-    await renderPage();
+  it("editar um aporte envia PATCH e recalcula o total", async () => {
+    const { api, user } = await renderPage({
+      "PATCH /api/transactions/t5": (call) =>
+        reply(200, { ...transactions[4], ...(call.body as object), date: "2026-10-12T00:00:00.000Z" }),
+    });
+    await waitFor(() => expect(entryButtons()).toHaveLength(2));
 
-    expect(screen.getByRole("heading", { name: "Transações", level: 2 })).toBeInTheDocument();
+    await user.click(within(sectionOf("Aportes")).getByRole("button", { name: /^Tesouro Direto,/ }));
+    const modal = getModalByTitle("Editar lançamento");
+    await user.clear(within(modal).getByLabelText("Valor"));
+    await user.type(within(modal).getByLabelText("Valor"), "1200");
+    await user.click(within(modal).getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(figure("Total investido")).toHaveTextContent("R$ 1.700,00"));
+    expect(api.callsTo("PATCH", "/api/transactions/t5")[0].body).toMatchObject({
+      amount: -1200,
+      type: "investment",
+    });
   });
 });

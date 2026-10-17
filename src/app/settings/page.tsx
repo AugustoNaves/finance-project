@@ -1,23 +1,23 @@
 "use client";
 
 import { useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { LedgerSection } from "@/components/LedgerSection";
 import { PageHeader } from "@/components/PageHeader";
-import { SettingsCard } from "@/components/SettingsCard";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
 import { Transaction } from "@/types/transaction";
-import { formatCurrency } from "@/utils/formatters";
+import { formatPlainAmount } from "@/utils/formatters";
 import {
-  ActionButton,
-  DangerButton,
-  DataGrid,
-  DetailItem,
+  Details,
   ExportActions,
-  PageContent,
-  SecurityList,
-  SettingsGrid,
+  InstallSteps,
+  LogoutButton,
+  Note,
+  OutlineButton,
 } from "./styles";
+
+type Profile = { name: string; email: string };
+type ProfileState = { status: "loading" } | { status: "ready"; user: Profile } | { status: "error" };
 
 function downloadFile(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type });
@@ -65,29 +65,30 @@ function toCsv(transactions: Transaction[]) {
   return [header.join(","), ...rows].join("\n");
 }
 
+function money(value: number) {
+  return `${value < 0 ? "−" : ""}R$ ${formatPlainAmount(Math.abs(value))}`;
+}
+
 export default function SettingsPage() {
-  const router = useRouter();
   const { transactions } = useContext(TransactionsContext);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const totalStored = transactions.reduce(
-    (acc, transaction) => acc + transaction.amount,
-    0,
-  );
+  const [profile, setProfile] = useState<ProfileState>({ status: "loading" });
+  const [leaving, setLeaving] = useState(false);
+  const totalStored = transactions.reduce((acc, transaction) => acc + transaction.amount, 0);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadUser() {
-      const response = await fetch("/api/me");
+      try {
+        const response = await fetch("/api/me");
 
-      if (!response.ok) {
-        return;
-      }
+        if (!response.ok) throw new Error("Falha ao carregar o perfil");
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (isMounted) {
-        setUser(data.user);
+        if (isMounted) setProfile({ status: "ready", user: data.user });
+      } catch {
+        if (isMounted) setProfile({ status: "error" });
       }
     }
 
@@ -111,78 +112,74 @@ export default function SettingsPage() {
   }
 
   async function handleLogout() {
-    await fetch("/api/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    setLeaving(true);
+    await fetch("/api/logout", { method: "POST" }).catch(() => null);
+    window.location.href = "/login";
   }
+
+  const user = profile.status === "ready" ? profile.user : null;
+  const unavailable = profile.status === "error" ? "Indisponível" : "Carregando…";
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Configurações"
-        title="Conta e dados"
-        subtitle="Gerencie preferências simples, exporte seus registros e encerre a sessão com segurança."
-      />
+      <PageHeader title="Configurações" />
 
-      <PageContent>
-        <SettingsGrid>
-          <SettingsCard
-            title="Perfil"
-            description="Informações básicas da sessão atual."
-          >
-            <DataGrid>
-              <DetailItem>
-                <span>Conta</span>
-                <strong>{user?.name || "Usuário autenticado"}</strong>
-              </DetailItem>
-              <DetailItem>
-                <span>E-mail</span>
-                <strong>{user?.email || "Carregando..."}</strong>
-              </DetailItem>
-              <DetailItem>
-                <span>Moeda padrão</span>
-                <strong>Real brasileiro (BRL)</strong>
-              </DetailItem>
-              <DetailItem>
-                <span>Transações carregadas</span>
-                <strong>{transactions.length}</strong>
-              </DetailItem>
-              <DetailItem>
-                <span>Saldo em memória</span>
-                <strong>{formatCurrency(totalStored)}</strong>
-              </DetailItem>
-            </DataGrid>
-          </SettingsCard>
+      <LedgerSection title="Perfil">
+        <Details>
+          <div>
+            <dt>Nome</dt>
+            <dd>{user?.name || unavailable}</dd>
+          </div>
+          <div>
+            <dt>E-mail</dt>
+            <dd>{user?.email || unavailable}</dd>
+          </div>
+          <div>
+            <dt>Moeda</dt>
+            <dd>Real brasileiro (BRL)</dd>
+          </div>
+          <div>
+            <dt>Lançamentos</dt>
+            <dd data-figure>{transactions.length}</dd>
+          </div>
+          <div>
+            <dt>Saldo acumulado</dt>
+            <dd data-figure>{money(totalStored)}</dd>
+          </div>
+        </Details>
+      </LedgerSection>
 
-          <SettingsCard
-            title="Exportar dados"
-            description="Baixe uma cópia simples das transações carregadas no app."
-          >
-            <ExportActions>
-              <ActionButton type="button" onClick={handleExportJson}>
-                Exportar JSON
-              </ActionButton>
-              <ActionButton type="button" onClick={handleExportCsv}>
-                Exportar CSV
-              </ActionButton>
-            </ExportActions>
-          </SettingsCard>
+      <LedgerSection title="Exportar dados">
+        <Note>Baixe uma cópia de todos os seus lançamentos.</Note>
+        <ExportActions>
+          <OutlineButton type="button" onClick={handleExportCsv}>
+            Exportar CSV
+          </OutlineButton>
+          <OutlineButton type="button" onClick={handleExportJson}>
+            Exportar JSON
+          </OutlineButton>
+        </ExportActions>
+      </LedgerSection>
 
-          <SettingsCard
-            title="Segurança"
-            description="O acesso usa sessão assinada em cookie httpOnly."
-          >
-            <SecurityList>
-              <li>Cookie de sessão assinado com expiração de 30 dias.</li>
-              <li>reCAPTCHA v3 permanece ativo apenas no login.</li>
-              <li>Ao sair, a sessão local é removida pela API de logout.</li>
-            </SecurityList>
-            <DangerButton type="button" onClick={handleLogout}>
-              Sair da conta
-            </DangerButton>
-          </SettingsCard>
-        </SettingsGrid>
-      </PageContent>
+      <LedgerSection title="Instalar o app">
+        <InstallSteps>
+          <li>
+            <b>iPhone</b>
+            <span>No Safari, toque em Compartilhar → Adicionar à Tela de Início.</span>
+          </li>
+          <li>
+            <b>Android</b>
+            <span>No Chrome, abra o menu ⋮ → Instalar app.</span>
+          </li>
+        </InstallSteps>
+      </LedgerSection>
+
+      <LedgerSection title="Sessão">
+        <Note>A sessão fica salva neste aparelho por 30 dias.</Note>
+        <LogoutButton type="button" onClick={handleLogout} disabled={leaving}>
+          {leaving ? "Saindo…" : "Sair da conta"}
+        </LogoutButton>
+      </LedgerSection>
     </AppShell>
   );
 }

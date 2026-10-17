@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ForgotPasswordPage from "@/app/forgot-password/page";
@@ -16,6 +16,18 @@ vi.mock("react-google-recaptcha-v3", () => ({
   GoogleReCaptchaProvider: ({ children }: { children: ReactNode }) => children,
   useGoogleReCaptcha: () => ({ executeRecaptcha: recaptcha.executeRecaptcha }),
 }));
+
+function submitButton(name: string) {
+  return within(screen.getByRole("form", { name })).getByRole("button", { name });
+}
+
+function modeToggle(name: string) {
+  const button = screen.getByRole("button", { name });
+
+  expect(button).toHaveAttribute("type", "button");
+  expect(screen.getByRole("form")).not.toContainElement(button);
+  return button;
+}
 
 describe("Página de login", () => {
   let executeRecaptcha: ReturnType<typeof vi.fn<(action: string) => Promise<string>>>;
@@ -35,13 +47,15 @@ describe("Página de login", () => {
     mockApi();
     renderUi(<LoginPage />);
 
-    expect(screen.getByRole("heading", { name: "Bem-vindo", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Entrar", level: 1 })).toBeInTheDocument();
+    expect(screen.getByText("Suas contas do mês, num caderno que cabe no bolso.")).toBeInTheDocument();
+    expect(modeToggle("Criar conta")).toBeEnabled();
     expect(screen.getByLabelText("E-mail")).toBeRequired();
     expect(screen.getByLabelText("E-mail")).toHaveAttribute("type", "email");
     expect(screen.getByLabelText("Senha")).toBeRequired();
     expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "password");
     expect(screen.queryByLabelText("Nome")).toBeNull();
-    expect(screen.getByRole("button", { name: "Entrar na conta" })).toBeEnabled();
+    expect(submitButton("Entrar")).toBeEnabled();
     expect(screen.getByRole("link", { name: "Esqueceu a senha?" })).toHaveAttribute("href", "/forgot-password");
   });
 
@@ -49,7 +63,7 @@ describe("Página de login", () => {
     const api = mockApi();
     const { user } = renderUi(<LoginPage />);
 
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
 
     expect(api.calls).toHaveLength(0);
     expect(executeRecaptcha).not.toHaveBeenCalled();
@@ -62,7 +76,7 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
 
     await waitFor(() => expect(api.callsTo("POST", "/api/login")).toHaveLength(1));
     expect(executeRecaptcha).toHaveBeenCalledWith("login");
@@ -70,7 +84,7 @@ describe("Página de login", () => {
       body: { email: "maria@teste.com", senha: "segredo123", recaptchaToken: "token-recaptcha" },
       headers: { "content-type": "application/json" },
     });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Entrar na conta" })).toBeEnabled());
+    await waitFor(() => expect(submitButton("Entrar")).toBeEnabled());
     expect(screen.queryByText(/Não foi possível|Erro inesperado/)).toBeNull();
     await waitFor(() =>
       expect(
@@ -87,11 +101,11 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
 
     expect(await screen.findByText("E-mail ou senha inválidos.")).toBeInTheDocument();
     expect(screen.getByLabelText("E-mail")).toHaveValue("maria@teste.com");
-    expect(screen.getByRole("button", { name: "Entrar na conta" })).toBeEnabled();
+    expect(submitButton("Entrar")).toBeEnabled();
     expect(consoleError).not.toHaveBeenCalled();
   });
 
@@ -100,7 +114,7 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
 
     expect(await screen.findByText("Não foi possível entrar.")).toBeInTheDocument();
   });
@@ -111,7 +125,7 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
 
     expect(await screen.findByText("reCAPTCHA ainda não carregou. Tente novamente.")).toBeInTheDocument();
     expect(api.calls).toHaveLength(0);
@@ -124,11 +138,11 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
     expect(await screen.findByText("Erro inesperado. Tente novamente.")).toBeInTheDocument();
     expect(api.calls).toHaveLength(0);
 
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
     await waitFor(() => expect(api.callsTo("POST", "/api/login")).toHaveLength(1));
     expect(await screen.findByText("Erro inesperado. Tente novamente.")).toBeInTheDocument();
   });
@@ -139,7 +153,7 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
 
     expect(await screen.findByText("Erro inesperado. Tente novamente.")).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith("Erro ao gerar o token do reCAPTCHA:", expect.anything());
@@ -151,15 +165,15 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
 
     expect(await screen.findByRole("button", { name: "Aguarde..." })).toBeDisabled();
     expect(screen.getByLabelText("E-mail")).toBeDisabled();
     expect(screen.getByLabelText("Senha")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cadastre-se" })).toBeDisabled();
+    expect(modeToggle("Criar conta")).toBeDisabled();
 
     respond(reply(401, { error: "E-mail ou senha inválidos." }));
-    expect(await screen.findByRole("button", { name: "Entrar na conta" })).toBeEnabled();
+    await waitFor(() => expect(submitButton("Entrar")).toBeEnabled());
   });
 
   it("alterna para o modo cadastro (campo Nome, senha mínima de 8, sem link de recuperação) e volta", async () => {
@@ -168,31 +182,32 @@ describe("Página de login", () => {
 
     expect(screen.getByLabelText("Senha")).not.toHaveAttribute("minlength");
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
     await screen.findByText("E-mail ou senha inválidos.");
 
-    await user.click(screen.getByRole("button", { name: "Cadastre-se" }));
+    await user.click(modeToggle("Criar conta"));
 
+    expect(screen.getByRole("heading", { name: "Criar conta", level: 1 })).toBeInTheDocument();
     expect(screen.getByLabelText("Nome")).toBeRequired();
     expect(screen.getByLabelText("Senha")).toHaveAttribute("minlength", "8");
-    expect(screen.getByRole("button", { name: "Criar conta" })).toBeInTheDocument();
+    expect(submitButton("Criar conta")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Esqueceu a senha?" })).toBeNull();
     // Trocar de modo limpa a mensagem, mas mantém o que foi digitado.
     expect(screen.queryByText("E-mail ou senha inválidos.")).toBeNull();
     expect(screen.getByLabelText("E-mail")).toHaveValue("maria@teste.com");
 
-    await user.click(screen.getByRole("button", { name: "Entrar" }));
+    await user.click(modeToggle("Entrar"));
     expect(screen.queryByLabelText("Nome")).toBeNull();
-    expect(screen.getByRole("button", { name: "Entrar na conta" })).toBeInTheDocument();
+    expect(submitButton("Entrar")).toBeInTheDocument();
   });
 
   it("cadastro: exige nome e não envia sem ele", async () => {
     const api = mockApi();
     const { user } = renderUi(<LoginPage />);
 
-    await user.click(screen.getByRole("button", { name: "Cadastre-se" }));
+    await user.click(modeToggle("Criar conta"));
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
+    await user.click(submitButton("Criar conta"));
 
     expect(api.calls).toHaveLength(0);
   });
@@ -201,13 +216,13 @@ describe("Página de login", () => {
     const api = mockApi({ "POST /api/register": reply(201, { id: "u1" }) });
     const { user } = renderUi(<LoginPage />);
 
-    await user.click(screen.getByRole("button", { name: "Cadastre-se" }));
+    await user.click(modeToggle("Criar conta"));
     await user.type(screen.getByLabelText("Nome"), "Maria Teste");
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
+    await user.click(submitButton("Criar conta"));
 
     expect(
-      await screen.findByText("Conta criada com sucesso. Agora entre com seu e-mail e senha."),
+      await screen.findByText("Conta criada. Agora entre com seu e-mail e senha."),
     ).toBeInTheDocument();
     expect(api.calls).toEqual([
       expect.objectContaining({
@@ -218,7 +233,7 @@ describe("Página de login", () => {
     ]);
     expect(executeRecaptcha).not.toHaveBeenCalled();
     expect(screen.queryByLabelText("Nome")).toBeNull();
-    expect(screen.getByRole("button", { name: "Entrar na conta" })).toBeInTheDocument();
+    expect(submitButton("Entrar")).toBeInTheDocument();
     expect(screen.getByLabelText("E-mail")).toHaveValue("maria@teste.com");
     expect(screen.getByLabelText("Senha")).toHaveValue("");
   });
@@ -227,25 +242,25 @@ describe("Página de login", () => {
     mockApi({ "POST /api/register": reply(409, { error: "E-mail já cadastrado." }) });
     const { user } = renderUi(<LoginPage />);
 
-    await user.click(screen.getByRole("button", { name: "Cadastre-se" }));
+    await user.click(modeToggle("Criar conta"));
     await user.type(screen.getByLabelText("Nome"), "Maria Teste");
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
+    await user.click(submitButton("Criar conta"));
 
     expect(await screen.findByText("E-mail já cadastrado.")).toBeInTheDocument();
     expect(screen.getByLabelText("Nome")).toHaveValue("Maria Teste");
     expect(screen.getByLabelText("Senha")).toHaveValue("segredo123");
-    expect(screen.getByRole("button", { name: "Criar conta" })).toBeEnabled();
+    expect(submitButton("Criar conta")).toBeEnabled();
   });
 
   it("cadastro com erro sem campo 'error' usa a mensagem padrão", async () => {
     mockApi({ "POST /api/register": reply(500, {}) });
     const { user } = renderUi(<LoginPage />);
 
-    await user.click(screen.getByRole("button", { name: "Cadastre-se" }));
+    await user.click(modeToggle("Criar conta"));
     await user.type(screen.getByLabelText("Nome"), "Maria Teste");
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
+    await user.click(submitButton("Criar conta"));
 
     expect(await screen.findByText("Não foi possível criar a conta.")).toBeInTheDocument();
   });
@@ -255,7 +270,7 @@ describe("Página de login", () => {
     const { user } = renderUi(<LoginPage />);
 
     await fillLogin(user);
-    await user.click(screen.getByRole("button", { name: "Entrar na conta" }));
+    await user.click(submitButton("Entrar"));
     await screen.findByText("E-mail ou senha inválidos.");
 
     expect(screen.getByRole("alert")).toHaveTextContent("E-mail ou senha inválidos.");
@@ -290,7 +305,7 @@ describe("Página de recuperação de senha (forgot-password)", () => {
 
     expect(
       await screen.findByText(
-        "Se este email estiver cadastrado, você receberá um link de recuperação em breve.",
+        "Se este e-mail estiver cadastrado, você vai receber um link para redefinir a senha.",
       ),
     ).toBeInTheDocument();
     expect(api.calls).toEqual([
@@ -417,7 +432,7 @@ describe("Página de redefinição de senha (reset-password)", () => {
     await user.click(screen.getByRole("button", { name: "Redefinir senha" }));
 
     expect(
-      await screen.findByText("Senha redefinida com sucesso. Redirecionando para o login..."),
+      await screen.findByText("Senha redefinida. Redirecionando para o login..."),
     ).toBeInTheDocument();
     expect(api.calls).toEqual([
       expect.objectContaining({

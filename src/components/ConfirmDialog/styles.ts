@@ -2,15 +2,8 @@
 
 import styled from "styled-components";
 
-const colors = {
-  red: "#f75a68",
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  border: "rgba(255, 255, 255, 0.07)",
-};
-
 export const Message = styled.p`
-  color: ${colors.textMuted};
+  color: var(--ink-soft);
   line-height: 1.6;
 `;
 
@@ -34,29 +27,27 @@ export const Actions = styled.div`
 `;
 
 export const CancelButton = styled.button`
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 16px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${colors.border};
-  color: ${colors.textLight};
-  font-size: 0.88rem;
-  font-weight: 700;
+  color: var(--ink);
+  font-weight: 500;
+
+  &:hover {
+    background: var(--green-wash);
+  }
 `;
 
 export const ConfirmButton = styled.button`
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--red);
+  color: var(--sheet);
+  font-weight: 600;
+
   &:disabled {
     opacity: 0.6;
-    cursor: not-allowed;
+    cursor: progress;
   }
-
-  min-height: 42px;
-  padding: 0 16px;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #f75a68 0%, #ff7a7a 100%);
-  color: #ffffff;
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  box-shadow: 0 8px 24px rgba(247, 90, 104, 0.22);
 `;

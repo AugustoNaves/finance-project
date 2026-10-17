@@ -48,17 +48,55 @@ export function section(page: Page, heading: string | RegExp) {
     .last();
 }
 
+/** Valor como as listas do app exibem: sinal tipográfico e sem "R$" (ex.: "−1.234,50", "+80,00"). */
+export function ledger(value: number) {
+  const absolute = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+    Math.abs(value),
+  );
+
+  if (value > 0) return `+${absolute}`;
+  if (value < 0) return `−${absolute}`;
+  return absolute;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Linha de lançamento (botão que abre a edição), localizada pela descrição. */
 export function transactionRow(page: Page, description: string) {
-  return page.getByRole("row").filter({ hasText: description });
+  return page
+    .getByRole("main")
+    .getByRole("button", { name: new RegExp(`^${escapeRegExp(description)},.*Editar$`) });
+}
+
+/** Linhas de lançamento visíveis na página, na ordem exibida. */
+export function transactionRows(page: Page) {
+  return page.getByRole("main").getByRole("button", { name: /\. Editar$/ });
+}
+
+/** Conta exibida acima da lista de lançamentos ("3 lançamentos"). */
+export function entryCount(page: Page, count: number) {
+  return page.getByText(count === 1 ? "1 lançamento" : `${count} lançamentos`, { exact: true });
 }
 
 export function transactionForm(page: Page) {
   return page.locator("form").filter({ has: page.getByLabel("Descrição") });
 }
 
-const TYPE_BUTTON: Record<TransactionKind, string> = {
-  income: "Entrada",
-  outcome: "Saída",
+/** Abre a folha Registrar (botão "+ Registrar" da coluna ou "Registrar" da barra inferior). */
+export async function openRegister(page: Page) {
+  await page
+    .getByRole("button", { name: /^\+? ?Registrar$/ })
+    .filter({ visible: true })
+    .first()
+    .click();
+  await expect(modal(page, "Registrar")).toBeVisible();
+}
+
+const TYPE_OPTION: Record<TransactionKind, string> = {
+  income: "Receita",
+  outcome: "Gasto",
   investment: "Investimento",
 };
 
@@ -72,26 +110,33 @@ export type TransactionInput = {
   notes?: string;
 };
 
+/** Nomes das categorias oferecidas no formulário, na ordem exibida. */
+export function categoryChoices(page: Page) {
+  return transactionForm(page).getByRole("radiogroup", { name: "Categoria" }).getByRole("radio");
+}
+
 export async function fillTransactionForm(page: Page, input: TransactionInput) {
   const form = transactionForm(page);
-  const category = form.getByLabel("Categoria", { exact: true });
 
-  // As categorias chegam por fetch; espera o select sair do "Carregando...".
-  await expect(category.locator("option", { hasText: "Selecione uma categoria" })).toBeAttached();
+  // As categorias chegam por fetch.
+  await expect(form.getByText("Carregando categorias…")).toHaveCount(0);
 
-  await form.getByLabel("Descrição").fill(input.description);
+  if (input.type) {
+    await form.getByRole("radio", { name: TYPE_OPTION[input.type], exact: true }).click();
+  }
+
   await form.getByLabel("Valor").fill(input.amount);
+  await form.getByLabel("Descrição").fill(input.description);
 
   if (input.date) {
     await form.getByLabel("Data").fill(input.date);
   }
 
-  if (input.type) {
-    await form.getByRole("button", { name: TYPE_BUTTON[input.type], exact: true }).click();
-  }
-
   if (input.category) {
-    await category.selectOption(input.category);
+    await form
+      .getByRole("radiogroup", { name: "Categoria" })
+      .getByRole("radio", { name: input.category, exact: true })
+      .click();
   }
 
   if (input.paymentMethod) {
@@ -105,26 +150,32 @@ export async function fillTransactionForm(page: Page, input: TransactionInput) {
   return form;
 }
 
-/** Abre o modal pelo botão do cabeçalho, preenche e salva uma transação. */
-export async function createTransactionViaUi(
-  page: Page,
-  input: TransactionInput,
-  openLabel = "+ Nova Transação",
-) {
-  await page.getByRole("button", { name: openLabel }).click();
-  await expect(modal(page, "Nova Transação")).toBeVisible();
+/** Abre a folha Registrar, preenche e salva um lançamento. */
+export async function createTransactionViaUi(page: Page, input: TransactionInput) {
+  await openRegister(page);
 
   const form = await fillTransactionForm(page, input);
 
-  await form.getByRole("button", { name: "Salvar Transação" }).click();
-  await expect(modal(page, "Nova Transação")).toBeHidden();
+  await form.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(modal(page, "Registrar")).toBeHidden();
 }
 
+/** Abre a edição de um lançamento tocando na linha. */
+export async function openTransaction(page: Page, description: string) {
+  await transactionRow(page, description).click();
+
+  const dialog = modal(page, "Editar lançamento");
+
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+/** Confirma o diálogo "Confirmar exclusão" (botão "Excluir" ou "Confirmar exclusão"). */
 export async function confirmDeletion(page: Page) {
   const dialog = modal(page, "Confirmar exclusão");
 
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Confirmar exclusão" }).click();
+  await dialog.getByRole("button", { name: /^(Excluir|Confirmar exclusão)$/ }).click();
   await expect(dialog).toBeHidden();
 }
 

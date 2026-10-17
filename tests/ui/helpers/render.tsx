@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
+import { EntrySheetProvider } from "@/contexts/EntrySheetContext";
 import { TransactionsProvider } from "@/contexts/TransactionsContenxt";
 import { NOW } from "./fixtures";
 
@@ -11,11 +12,18 @@ export function freezeDate(iso: string = NOW) {
   vi.setSystemTime(new Date(iso));
 }
 
-/** Renderiza dentro do TransactionsProvider real (que busca GET /api/transactions). */
+/**
+ * Renderiza dentro dos providers reais do layout: TransactionsProvider (que busca
+ * GET /api/transactions) e EntrySheetProvider (folhas Registrar/Editar lançamento).
+ */
 export function renderWithProvider(ui: ReactElement) {
   return {
     user: userEvent.setup(),
-    ...render(<TransactionsProvider>{ui}</TransactionsProvider>),
+    ...render(
+      <TransactionsProvider>
+        <EntrySheetProvider>{ui}</EntrySheetProvider>
+      </TransactionsProvider>,
+    ),
   };
 }
 

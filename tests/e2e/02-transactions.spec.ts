@@ -1,14 +1,20 @@
 import { E2E_MONTH } from "./support/env";
 import { expect, test, type SeedTransaction } from "./support/fixtures";
 import {
+  categoryChoices,
   confirmDeletion,
   createTransactionViaUi,
+  entryCount,
   fillTransactionForm,
   formError,
   gotoAndWaitForTransactions,
+  ledger,
   modal,
+  openRegister,
+  openTransaction,
   transactionForm,
   transactionRow,
+  transactionRows,
 } from "./support/ui";
 
 const day = (dayOfMonth: number) => `${E2E_MONTH}-${String(dayOfMonth).padStart(2, "0")}`;
@@ -21,11 +27,12 @@ const SEEDS: SeedTransaction[] = [
   { description: "Mercado atacado", value: 450, type: "outcome", category: "Alimentação", date: day(25) },
 ];
 
-test.describe("Transações — criação", () => {
-  test("cria uma receita pelo modal, lista e mantém após recarregar", async ({ page, api }) => {
+test.describe("Lançamentos — criação", () => {
+  test("cria uma receita pela folha Registrar, lista e mantém após recarregar", async ({ page, api }) => {
     await gotoAndWaitForTransactions(page, "/transactions");
-    await expect(page.getByText("Nenhuma transação encontrada com os filtros atuais.")).toBeVisible();
-    await expect(page.getByText("0 registro(s) encontrado(s)")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Lançamentos", level: 1 })).toBeVisible();
+    await expect(page.getByText("Nenhum lançamento encontrado com esses filtros.")).toBeVisible();
+    await expect(entryCount(page, 0)).toBeVisible();
 
     await createTransactionViaUi(page, {
       description: "Salário de outubro",
@@ -38,9 +45,10 @@ test.describe("Transações — criação", () => {
     const row = transactionRow(page, "Salário de outubro");
 
     await expect(row).toBeVisible();
-    await expect(row).toContainText("+R$ 5.000,00");
+    await expect(row).toContainText(ledger(5000));
     await expect(row).toContainText("Salário");
-    await expect(page.getByText("1 registro(s) encontrado(s)")).toBeVisible();
+    await expect(entryCount(page, 1)).toBeVisible();
+    await expect(page.getByRole("list", { name: "sáb., 10 de out." })).toContainText("Salário de outubro");
 
     const [saved] = await api.list("transactions");
 
@@ -55,20 +63,20 @@ test.describe("Transações — criação", () => {
     expect(String(saved.date)).toContain(day(10));
 
     await page.reload();
-    await expect(transactionRow(page, "Salário de outubro")).toContainText("+R$ 5.000,00");
+    await expect(transactionRow(page, "Salário de outubro")).toContainText(ledger(5000));
   });
 
-  test("cria uma despesa com forma de pagamento e observação", async ({ page, api }) => {
+  test("cria um gasto com forma de pagamento e observação", async ({ page, api }) => {
     await gotoAndWaitForTransactions(page, "/transactions");
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
+    await openRegister(page);
 
     const form = transactionForm(page);
 
-    // Padrão do formulário: tipo Saída com a primeira categoria de despesa.
-    await expect(form.getByLabel("Categoria", { exact: true })).toHaveValue("Alimentação");
+    // Padrão: tipo Gasto, Pix e a primeira categoria de gasto já escolhida.
+    await expect(form.getByRole("radio", { name: "Gasto", exact: true })).toHaveAttribute("aria-checked", "true");
     await expect(form.getByLabel("Forma de pagamento")).toHaveValue("Pix");
-    await expect(form.getByLabel("Categoria", { exact: true }).locator("option")).toHaveText([
-      "Selecione uma categoria",
+    // Sem histórico, a ordem é a da API (alfabética).
+    await expect(categoryChoices(page)).toHaveText([
       "Alimentação",
       "Contas",
       "Educação",
@@ -79,6 +87,7 @@ test.describe("Transações — criação", () => {
       "Transporte",
       "Vestuário",
     ]);
+    await expect(categoryChoices(page).first()).toHaveAttribute("aria-checked", "true");
 
     await fillTransactionForm(page, {
       description: "Jantar de aniversário",
@@ -88,11 +97,11 @@ test.describe("Transações — criação", () => {
       paymentMethod: "Cartão de crédito",
       notes: "Restaurante com a família",
     });
-    await form.getByRole("button", { name: "Salvar Transação" }).click();
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
 
     const row = transactionRow(page, "Jantar de aniversário");
 
-    await expect(row).toContainText("-R$ 150,00");
+    await expect(row).toContainText(ledger(-150));
     await expect(row).toContainText("Lazer");
 
     const [saved] = await api.list("transactions");
@@ -106,21 +115,26 @@ test.describe("Transações — criação", () => {
     });
   });
 
+  test("categorias mais usadas aparecem primeiro", async ({ page, api }) => {
+    await api.createTransaction({ description: "Gasolina", value: 200, type: "outcome", category: "Transporte", date: day(2) });
+    await api.createTransaction({ description: "Pedágio", value: 20, type: "outcome", category: "Transporte", date: day(3) });
+    await api.createTransaction({ description: "Cinema", value: 40, type: "outcome", category: "Lazer", date: day(4) });
+    await gotoAndWaitForTransactions(page, "/transactions");
+    await openRegister(page);
+
+    await expect(categoryChoices(page).nth(0)).toHaveText("Transporte");
+    await expect(categoryChoices(page).nth(1)).toHaveText("Lazer");
+    await expect(categoryChoices(page).nth(0)).toHaveAttribute("aria-checked", "true");
+  });
+
   test("cria um investimento com as categorias de investimento", async ({ page, api }) => {
     await gotoAndWaitForTransactions(page, "/transactions");
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
+    await openRegister(page);
 
     const form = transactionForm(page);
 
-    await form.getByRole("button", { name: "Investimento", exact: true }).click();
-    await expect(form.getByLabel("Categoria", { exact: true }).locator("option")).toHaveText([
-      "Selecione uma categoria",
-      "Ações",
-      "Criptomoedas",
-      "Fundos",
-      "Outros",
-      "Renda Fixa",
-    ]);
+    await form.getByRole("radio", { name: "Investimento", exact: true }).click();
+    await expect(categoryChoices(page)).toHaveText(["Ações", "Criptomoedas", "Fundos", "Outros", "Renda Fixa"]);
 
     await fillTransactionForm(page, {
       description: "Aporte em CDB",
@@ -128,51 +142,50 @@ test.describe("Transações — criação", () => {
       category: "Renda Fixa",
       date: day(14),
     });
-    await form.getByRole("button", { name: "Salvar Transação" }).click();
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
 
     const row = transactionRow(page, "Aporte em CDB");
 
-    // Investimentos aparecem sem sinal na lista, mas são gravados como saída de caixa.
-    await expect(row).toContainText("R$ 800,00");
-    await expect(row).not.toContainText("-R$");
+    // Investimento é saída de caixa: aparece com "−", mas em tinta neutra.
+    await expect(row).toContainText(ledger(-800));
     await expect(row).toContainText("Renda Fixa");
     expect((await api.list("transactions"))[0]).toMatchObject({ amount: -800, type: "investment" });
   });
 
-  test("campos obrigatórios impedem o envio e o modal pode ser fechado sem salvar", async ({ page, api }) => {
+  test("sem descrição usa o nome da categoria; sem valor não envia; a folha fecha sem salvar", async ({ page, api }) => {
     await gotoAndWaitForTransactions(page, "/transactions");
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
+    await openRegister(page);
 
     const form = transactionForm(page);
-    const dialog = modal(page, "Nova Transação");
+    const dialog = modal(page, "Registrar");
 
-    await form.getByRole("button", { name: "Salvar Transação" }).click();
-    await expect(form.getByLabel("Descrição")).toHaveJSProperty("validity.valueMissing", true);
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(formError(dialog)).toHaveText("Informe um valor maior que zero.");
     await expect(dialog).toBeVisible();
-
-    await form.getByLabel("Descrição").fill("Rascunho descartado");
-    await form.getByRole("button", { name: "Salvar Transação" }).click();
-    await expect(form.getByLabel("Valor")).toHaveJSProperty("validity.valueMissing", true);
 
     await dialog.getByRole("button", { name: "Fechar" }).click();
     await expect(dialog).toBeHidden();
 
     // Esc e clique fora também fecham sem salvar.
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
-    await expect(dialog).toBeVisible();
+    await openRegister(page);
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
 
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
-    await expect(dialog).toBeVisible();
+    await openRegister(page);
     await page.mouse.click(5, 5);
     await expect(dialog).toBeHidden();
     expect(await api.list("transactions")).toHaveLength(0);
+
+    await openRegister(page);
+    await form.getByLabel("Valor").fill("12,50");
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(transactionRow(page, "Alimentação")).toContainText(ledger(-12.5));
   });
 });
 
-test.describe("Transações — edição e exclusão", () => {
-  test("edita descrição, valor, tipo e categoria", async ({ page, api }) => {
+test.describe("Lançamentos — edição e exclusão", () => {
+  test("edita descrição, valor, tipo e categoria tocando na linha", async ({ page, api }) => {
     await api.createTransaction({
       description: "Mercado",
       value: 200,
@@ -183,30 +196,27 @@ test.describe("Transações — edição e exclusão", () => {
     });
     await gotoAndWaitForTransactions(page, "/transactions");
 
-    await transactionRow(page, "Mercado").getByRole("button", { name: "Editar" }).click();
-
-    const dialog = modal(page, "Editar transação");
+    const dialog = await openTransaction(page, "Mercado");
     const form = transactionForm(page);
 
-    await expect(dialog).toBeVisible();
     await expect(form.getByLabel("Descrição")).toHaveValue("Mercado");
-    await expect(form.getByLabel("Valor")).toHaveValue("200");
-    await expect(form.getByLabel("Categoria", { exact: true })).toHaveValue("Alimentação");
+    await expect(form.getByLabel("Valor")).toHaveValue("200,00");
+    await expect(form.getByRole("radio", { name: "Alimentação", exact: true })).toHaveAttribute("aria-checked", "true");
     await expect(form.getByLabel("Observação")).toHaveValue("Compra do mês");
 
     await form.getByLabel("Descrição").fill("Reembolso do mercado");
     await form.getByLabel("Valor").fill("250");
-    await form.getByRole("button", { name: "Entrada", exact: true }).click();
-    await form.getByLabel("Categoria", { exact: true }).selectOption("Outros");
+    await form.getByRole("radio", { name: "Receita", exact: true }).click();
+    await form.getByRole("radio", { name: "Outros", exact: true }).click();
     await form.getByRole("button", { name: "Salvar alterações" }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(transactionRow(page, "Reembolso do mercado")).toContainText("+R$ 250,00");
+    await expect(transactionRow(page, "Reembolso do mercado")).toContainText(ledger(250));
     await expect(transactionRow(page, "Reembolso do mercado")).toContainText("Outros");
-    await expect(page.getByText("1 registro(s) encontrado(s)")).toBeVisible();
+    await expect(entryCount(page, 1)).toBeVisible();
 
     await page.reload();
-    await expect(transactionRow(page, "Reembolso do mercado")).toContainText("+R$ 250,00");
+    await expect(transactionRow(page, "Reembolso do mercado")).toContainText(ledger(250));
     expect(await api.list("transactions")).toHaveLength(1);
     expect((await api.list("transactions"))[0]).toMatchObject({
       description: "Reembolso do mercado",
@@ -216,26 +226,30 @@ test.describe("Transações — edição e exclusão", () => {
     });
   });
 
-  test("exclui somente após confirmar no diálogo", async ({ page, api }) => {
+  test("exclui pela edição somente após confirmar no diálogo", async ({ page, api }) => {
     await api.createTransaction({ description: "Assinatura streaming", value: 40, type: "outcome", category: "Lazer", date: day(9) });
     await api.createTransaction({ description: "Conta de luz", value: 180, type: "outcome", category: "Contas", date: day(10) });
     await gotoAndWaitForTransactions(page, "/transactions");
 
-    await transactionRow(page, "Assinatura streaming").getByRole("button", { name: "Excluir" }).click();
+    let edit = await openTransaction(page, "Assinatura streaming");
+    await edit.getByRole("button", { name: "Excluir" }).click();
 
     const dialog = modal(page, "Confirmar exclusão");
 
-    await expect(dialog).toContainText('Tem certeza que deseja excluir a transação "Assinatura streaming"?');
+    await expect(dialog).toContainText('Excluir "Assinatura streaming"? Essa ação não pode ser desfeita.');
     await dialog.getByRole("button", { name: "Cancelar" }).click();
     await expect(dialog).toBeHidden();
+    await edit.getByRole("button", { name: "Fechar" }).click();
     await expect(transactionRow(page, "Assinatura streaming")).toBeVisible();
 
-    await transactionRow(page, "Assinatura streaming").getByRole("button", { name: "Excluir" }).click();
+    edit = await openTransaction(page, "Assinatura streaming");
+    await edit.getByRole("button", { name: "Excluir" }).click();
     await confirmDeletion(page);
+    await expect(edit).toBeHidden();
 
     await expect(transactionRow(page, "Assinatura streaming")).toHaveCount(0);
     await expect(transactionRow(page, "Conta de luz")).toBeVisible();
-    await expect(page.getByText("1 registro(s) encontrado(s)")).toBeVisible();
+    await expect(entryCount(page, 1)).toBeVisible();
 
     await page.reload();
     await expect(transactionRow(page, "Conta de luz")).toBeVisible();
@@ -244,39 +258,43 @@ test.describe("Transações — edição e exclusão", () => {
   });
 });
 
-test.describe("Transações — busca, filtros e ordenação", () => {
+test.describe("Lançamentos — busca, filtros e ordenação", () => {
   test.beforeEach(async ({ page, api }) => {
     for (const seed of SEEDS) {
       await api.createTransaction(seed);
     }
 
     await gotoAndWaitForTransactions(page, "/transactions");
-    await expect(page.getByText("5 registro(s) encontrado(s)")).toBeVisible();
+    await expect(entryCount(page, 5)).toBeVisible();
   });
 
-  const rows = (page: import("@playwright/test").Page) => page.getByRole("table").locator("tbody tr");
+  const openFilters = (page: import("@playwright/test").Page) =>
+    page.getByRole("button", { name: /^Filtros/ }).click();
 
   test("busca por descrição sem diferenciar maiúsculas", async ({ page }) => {
     await page.getByLabel("Buscar").fill("MERCADO");
 
-    await expect(page.getByText("2 registro(s) encontrado(s)")).toBeVisible();
-    await expect(rows(page)).toHaveText([/Mercado atacado/, /Mercado da semana/]);
+    await expect(entryCount(page, 2)).toBeVisible();
+    await expect(transactionRows(page)).toHaveText([/Mercado atacado/, /Mercado da semana/]);
   });
 
   test("filtra por tipo", async ({ page }) => {
-    const type = page.getByLabel("Tipo", { exact: true });
+    const types = page.getByRole("group", { name: "Tipo" });
 
-    await type.selectOption("Receitas");
-    await expect(rows(page)).toHaveText([/Salário mensal/]);
+    await types.getByRole("button", { name: "Receitas" }).click();
+    await expect(transactionRows(page)).toHaveText([/Salário mensal/]);
 
-    await type.selectOption("Despesas");
-    await expect(rows(page)).toHaveText([/Mercado atacado/, /Uber aeroporto/, /Mercado da semana/]);
+    await types.getByRole("button", { name: "Gastos" }).click();
+    await expect(transactionRows(page)).toHaveText([/Mercado atacado/, /Uber aeroporto/, /Mercado da semana/]);
 
-    await type.selectOption("Investimentos");
-    await expect(rows(page)).toHaveText([/Aporte Tesouro/]);
+    await types.getByRole("button", { name: "Investimentos" }).click();
+    await expect(transactionRows(page)).toHaveText([/Aporte Tesouro/]);
+    await expect(types.getByRole("button", { name: "Investimentos" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("filtra por categoria (opções vêm das transações existentes)", async ({ page }) => {
+  test("filtra por categoria (opções vêm dos lançamentos existentes)", async ({ page }) => {
+    await openFilters(page);
+
     const category = page.getByLabel("Categoria", { exact: true });
 
     await expect(category.locator("option")).toHaveText([
@@ -288,81 +306,93 @@ test.describe("Transações — busca, filtros e ordenação", () => {
     ]);
     await category.selectOption("Transporte");
 
-    await expect(rows(page)).toHaveText([/Uber aeroporto/]);
+    await expect(transactionRows(page)).toHaveText([/Uber aeroporto/]);
+    await expect(page.getByRole("button", { name: "Filtros (1)" })).toBeVisible();
   });
 
   test("filtra por período", async ({ page }) => {
+    await openFilters(page);
     await page.getByLabel("De", { exact: true }).fill(day(12));
     await page.getByLabel("Até", { exact: true }).fill(day(22));
 
-    await expect(page.getByText("2 registro(s) encontrado(s)")).toBeVisible();
-    await expect(rows(page)).toHaveText([/Aporte Tesouro/, /Uber aeroporto/]);
+    await expect(entryCount(page, 2)).toBeVisible();
+    await expect(transactionRows(page)).toHaveText([/Aporte Tesouro/, /Uber aeroporto/]);
   });
 
-  test("ordena por data e por valor", async ({ page }) => {
+  test("ordena por data (agrupado por dia) e por valor", async ({ page }) => {
+    await expect(transactionRows(page)).toHaveText([
+      /Mercado atacado/,
+      /Aporte Tesouro/,
+      /Uber aeroporto/,
+      /Mercado da semana/,
+      /Salário mensal/,
+    ]);
+    await expect(page.getByRole("list", { name: /15 de out\./ })).toContainText(ledger(-80));
+
+    await openFilters(page);
+
     const sort = page.getByLabel("Ordenar");
 
-    await expect(rows(page)).toHaveText([
-      /Mercado atacado/,
-      /Aporte Tesouro/,
-      /Uber aeroporto/,
-      /Mercado da semana/,
-      /Salário mensal/,
-    ]);
-
     await sort.selectOption("Mais antigas");
-    await expect(rows(page).first()).toContainText("Salário mensal");
-    await expect(rows(page).last()).toContainText("Mercado atacado");
+    await expect(transactionRows(page).first()).toContainText("Salário mensal");
+    await expect(transactionRows(page).last()).toContainText("Mercado atacado");
 
     await sort.selectOption("Maior valor");
-    await expect(rows(page)).toHaveText([
+    await expect(transactionRows(page)).toHaveText([
       /Salário mensal/,
       /Aporte Tesouro/,
       /Mercado atacado/,
       /Mercado da semana/,
       /Uber aeroporto/,
     ]);
+    await expect(page.getByRole("list", { name: /15 de out\./ })).toHaveCount(0);
 
     await sort.selectOption("Menor valor");
-    await expect(rows(page).first()).toContainText("Uber aeroporto");
+    await expect(transactionRows(page).first()).toContainText("Uber aeroporto");
   });
 
   test("combina filtros, mostra estado vazio e limpa tudo", async ({ page }) => {
     await page.getByLabel("Buscar").fill("mercado");
-    await page.getByLabel("Tipo", { exact: true }).selectOption("Receitas");
+    await page.getByRole("group", { name: "Tipo" }).getByRole("button", { name: "Receitas" }).click();
 
-    await expect(page.getByText("0 registro(s) encontrado(s)")).toBeVisible();
-    await expect(page.getByText("Nenhuma transação encontrada com os filtros atuais.")).toBeVisible();
+    await expect(entryCount(page, 0)).toBeVisible();
+    await expect(page.getByText("Nenhum lançamento encontrado com esses filtros.")).toBeVisible();
 
+    await openFilters(page);
     await page.getByRole("button", { name: "Limpar filtros" }).click();
 
     await expect(page.getByLabel("Buscar")).toHaveValue("");
-    await expect(page.getByLabel("Tipo", { exact: true })).toHaveValue("all");
-    await expect(page.getByText("5 registro(s) encontrado(s)")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+    await expect(entryCount(page, 5)).toBeVisible();
   });
 
   test("período inclui o próprio dia inicial e final", async ({ page }) => {
+    await openFilters(page);
     await page.getByLabel("De", { exact: true }).fill(day(15));
     await page.getByLabel("Até", { exact: true }).fill(day(15));
 
-    await expect(page.getByText("1 registro(s) encontrado(s)")).toBeVisible();
-    await expect(rows(page)).toHaveText([/Uber aeroporto/]);
+    await expect(entryCount(page, 1)).toBeVisible();
+    await expect(transactionRows(page)).toHaveText([/Uber aeroporto/]);
   });
 });
 
-test.describe("Transações — validação e erros", () => {
-  test("aceita valores com centavos", async ({ page, api }) => {
+test.describe("Lançamentos — validação e erros", () => {
+  test("aceita valores com centavos, com ponto ou vírgula", async ({ page, api }) => {
     await gotoAndWaitForTransactions(page, "/transactions");
     await createTransactionViaUi(page, { description: "Farmácia", amount: "49.90", category: "Saúde", date: day(10) });
+    await createTransactionViaUi(page, { description: "Padaria", amount: "1.234,56", category: "Alimentação", date: day(11) });
 
-    await expect(transactionRow(page, "Farmácia")).toContainText("-R$ 49,90");
-    expect((await api.list("transactions"))[0]).toMatchObject({ amount: -49.9 });
+    await expect(transactionRow(page, "Farmácia")).toContainText(ledger(-49.9));
+    await expect(transactionRow(page, "Padaria")).toContainText(ledger(-1234.56));
+    const saved = await api.list("transactions");
+    expect(saved.map((item) => item.amount).sort()).toEqual([-1234.56, -49.9]);
   });
 
-  test("valor zero ou negativo é barrado pelo formulário", async ({ page, api }) => {
+  test("valor zero, negativo ou inválido é barrado pelo formulário", async ({ page, api }) => {
     await gotoAndWaitForTransactions(page, "/transactions");
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
+    await openRegister(page);
 
+    const dialog = modal(page, "Registrar");
     const form = await fillTransactionForm(page, {
       description: "Valor inválido",
       amount: "-50",
@@ -371,18 +401,17 @@ test.describe("Transações — validação e erros", () => {
       date: day(10),
     });
 
-    await form.getByRole("button", { name: "Salvar Transação" }).click();
-    await expect(form.getByLabel("Valor")).toHaveJSProperty("validity.rangeUnderflow", true);
+    for (const invalid of ["-50", "0", "abc"]) {
+      await form.getByLabel("Valor").fill(invalid);
+      await form.getByRole("button", { name: "Salvar", exact: true }).click();
+      await expect(formError(dialog)).toHaveText("Informe um valor maior que zero.");
+    }
 
-    await form.getByLabel("Valor").fill("0");
-    await form.getByRole("button", { name: "Salvar Transação" }).click();
-    await expect(form.getByLabel("Valor")).toHaveJSProperty("validity.rangeUnderflow", true);
-
-    await expect(modal(page, "Nova Transação")).toBeVisible();
+    await expect(dialog).toBeVisible();
     expect(await api.list("transactions")).toHaveLength(0);
   });
 
-  test("API recusa transação inválida com 400", async ({ api, context }) => {
+  test("API recusa lançamento inválido com 400", async ({ api, context }) => {
     const invalid = [
       { amount: -10, category: "Outros", type: "outcome" },
       { description: "Sem valor", category: "Outros", type: "outcome" },
@@ -400,7 +429,7 @@ test.describe("Transações — validação e erros", () => {
     expect(await api.list("transactions")).toHaveLength(0);
   });
 
-  test("erro do servidor ao salvar aparece no modal e mantém os dados digitados", async ({ page, account }) => {
+  test("erro do servidor ao salvar aparece na folha e mantém os dados digitados", async ({ page, account }) => {
     void account;
     await gotoAndWaitForTransactions(page, "/transactions");
     await page.route("**/api/transactions", async (route) => {
@@ -411,9 +440,9 @@ test.describe("Transações — validação e erros", () => {
 
       await route.continue();
     });
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
+    await openRegister(page);
 
-    const dialog = modal(page, "Nova Transação");
+    const dialog = modal(page, "Registrar");
     const form = await fillTransactionForm(page, {
       description: "Não será salva",
       amount: "10",
@@ -421,16 +450,16 @@ test.describe("Transações — validação e erros", () => {
       date: day(10),
     });
 
-    await form.getByRole("button", { name: "Salvar Transação" }).click();
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
 
-    await expect(formError(dialog)).toBeVisible();
+    await expect(formError(dialog)).toHaveText("Erro ao salvar os dados.");
     await expect(dialog).toBeVisible();
     await expect(form.getByLabel("Descrição")).toHaveValue("Não será salva");
     await expect(form.getByLabel("Valor")).toHaveValue("10");
-    await expect(page.getByText("0 registro(s) encontrado(s)")).toBeVisible();
+    await expect(entryCount(page, 0)).toBeAttached();
   });
 
-  test("falha ao excluir mantém a transação e avisa no diálogo", async ({ page, api }) => {
+  test("falha ao excluir mantém o lançamento e avisa no diálogo", async ({ page, api }) => {
     await api.createTransaction({ description: "Não some", value: 70, type: "outcome", category: "Outros", date: day(10) });
     await page.route("**/api/transactions/*", async (route) => {
       if (route.request().method() === "DELETE") {
@@ -441,15 +470,18 @@ test.describe("Transações — validação e erros", () => {
       await route.continue();
     });
     await gotoAndWaitForTransactions(page, "/transactions");
-    await transactionRow(page, "Não some").getByRole("button", { name: "Excluir" }).click();
+
+    const edit = await openTransaction(page, "Não some");
+    await edit.getByRole("button", { name: "Excluir" }).click();
 
     const dialog = modal(page, "Confirmar exclusão");
 
-    await dialog.getByRole("button", { name: "Confirmar exclusão" }).click();
+    await dialog.getByRole("button", { name: "Excluir" }).click();
 
     await expect(formError(dialog)).toBeVisible();
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Cancelar" }).click();
+    await edit.getByRole("button", { name: "Fechar" }).click();
     await expect(transactionRow(page, "Não some")).toBeVisible();
     expect(await api.list("transactions")).toHaveLength(1);
   });

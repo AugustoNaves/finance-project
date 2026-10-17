@@ -1,6 +1,6 @@
-# 💰 Finanças Pessoais (Finance Dashboard)
+# Finance-app — Finanças Pessoais
 
-Um sistema completo de gestão financeira pessoal (SaaS-like) focado em usabilidade, performance e segurança. Desenvolvido com uma arquitetura moderna para demonstrar boas práticas de engenharia de software no ecossistema React/Next.js.
+App de finanças pessoais para uso frequente no celular: registrar um gasto em segundos, conferir como está o mês e importar a fatura do cartão. Interface "Caderneta" (livro-razão: linhas pautadas, valores em serifa, tinta verde e vermelha), com tema claro e escuro conforme o sistema, e instalável como PWA.
 
 ## 🚀 Tecnologias Utilizadas
 
@@ -19,8 +19,9 @@ Este projeto foi construído utilizando as ferramentas mais modernas do mercado:
 ## ✨ Principais Funcionalidades
 
 - **Contas e sessão:** cadastro, login com reCAPTCHA v3, recuperação de senha por e-mail e logout.
-- **Dashboard:** receitas, despesas, investimentos e saldo acumulados, resumo do mês e indicadores.
-- **Transações:** criar, editar, excluir, buscar, filtrar (tipo, categoria, período) e ordenar.
+- **Mês (início):** sobra do mês, entrou/saiu/investiu, saldo acumulado, orçamentos em alerta, lembrete da fatura e últimos lançamentos; troca de mês pelas setas.
+- **Registrar:** folha com valor em destaque, tipo, categorias mais usadas primeiro, data de hoje e forma de pagamento — sempre ao alcance pelo botão "+".
+- **Lançamentos:** lista agrupada por dia, buscar, filtrar (tipo, categoria, período) e ordenar; tocar na linha edita ou exclui.
 - **Importação de fatura por PDF:** lê a fatura do cartão no navegador, sugere categorias, mostra um preview editável, registra tudo de uma vez e permite desfazer.
 - **Categorias:** por tipo (receita, despesa, investimento), com cor e sigla; 18 categorias padrão no cadastro.
 - **Planejamento:** orçamentos mensais por categoria com progresso de gasto, e metas financeiras.
@@ -28,7 +29,8 @@ Este projeto foi construído utilizando as ferramentas mais modernas do mercado:
 - **Relatórios:** indicadores e gráficos por mês selecionado.
 - **Configurações:** dados da conta e exportação das transações em JSON/CSV.
 - **Isolamento de dados:** cada usuário só acessa os próprios registros.
-- **Interface responsiva** em tema escuro.
+- **PWA:** instalável, com ícone, tela de abertura e página offline; o service worker nunca guarda dados financeiros (ver [docs/PWA.md](docs/PWA.md)).
+- **Interface responsiva e acessível**, com tema claro e escuro.
 
 ## 📚 Documentação
 
@@ -38,6 +40,8 @@ Este projeto foi construído utilizando as ferramentas mais modernas do mercado:
 | [docs/API.md](docs/API.md) | Arquitetura, modelo de dados, autenticação e referência da API |
 | [docs/TESTES.md](docs/TESTES.md) | Como rodar os testes e o que cada suíte cobre |
 | [docs/MELHORIAS.md](docs/MELHORIAS.md) | Melhorias aplicadas e pendentes, com prioridade |
+| [docs/PWA.md](docs/PWA.md) | Manifest, ícones, service worker e como testar a instalação |
+| [docs/design/](docs/design/) | Direção de design "Caderneta": brief, direções visuais, especificação e revisão |
 | [docs/specs/SPEC-importacao-fatura-pdf.md](docs/specs/SPEC-importacao-fatura-pdf.md) | Especificação da importação de fatura por PDF |
 
 ## 💻 Como rodar o projeto localmente
