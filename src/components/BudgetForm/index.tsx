@@ -6,7 +6,17 @@ import { getErrorMessage } from "@/services/http";
 import { BudgetPayload } from "@/types/budget";
 import { Category } from "@/types/category";
 import { getLocalMonthKey } from "@/utils/dates";
-import { Field, Form, Input, Label, Select, SubmitButton } from "./styles";
+import {
+  Actions,
+  DeleteButton,
+  Field,
+  FieldRow,
+  Form,
+  Input,
+  Label,
+  Select,
+  SubmitButton,
+} from "./styles";
 
 export type BudgetFormData = BudgetPayload;
 
@@ -16,6 +26,7 @@ interface BudgetFormProps {
   defaultMonth?: string;
   submitLabel?: string;
   onSubmit: (data: BudgetFormData) => Promise<void> | void;
+  onDelete?: () => void;
 }
 
 function getCurrentMonth() {
@@ -28,6 +39,7 @@ export function BudgetForm({
   defaultMonth,
   submitLabel = "Salvar orçamento",
   onSubmit,
+  onDelete,
 }: BudgetFormProps) {
   const outcomeCategories = categories.filter((category) => category.type === "outcome");
   const initialCategory = initialValues?.category ?? outcomeCategories[0]?.name ?? "";
@@ -92,36 +104,46 @@ export function BudgetForm({
         </Select>
       </Field>
 
-      <Field>
-        <Label htmlFor="budget-amount">Limite mensal</Label>
-        <Input
-          id="budget-amount"
-          type="number"
-          min="0.01"
-          step="0.01"
-          placeholder="R$ 0,00"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          required
-        />
-      </Field>
+      <FieldRow>
+        <Field>
+          <Label htmlFor="budget-amount">Limite mensal</Label>
+          <Input
+            id="budget-amount"
+            type="number"
+            inputMode="decimal"
+            min="0.01"
+            step="0.01"
+            placeholder="0,00"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            required
+          />
+        </Field>
 
-      <Field>
-        <Label htmlFor="budget-month">Mês</Label>
-        <Input
-          id="budget-month"
-          type="month"
-          value={month}
-          onChange={(event) => setMonth(event.target.value)}
-          required
-        />
-      </Field>
+        <Field>
+          <Label htmlFor="budget-month">Mês</Label>
+          <Input
+            id="budget-month"
+            type="month"
+            value={month}
+            onChange={(event) => setMonth(event.target.value)}
+            required
+          />
+        </Field>
+      </FieldRow>
 
       <FormError message={error} />
 
-      <SubmitButton type="submit" disabled={submitting}>
-        {submitLabel}
-      </SubmitButton>
+      <Actions>
+        {onDelete && (
+          <DeleteButton type="button" onClick={onDelete}>
+            Excluir
+          </DeleteButton>
+        )}
+        <SubmitButton type="submit" disabled={submitting}>
+          {submitLabel}
+        </SubmitButton>
+      </Actions>
     </Form>
   );
 }

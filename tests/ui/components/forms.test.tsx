@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BudgetForm, type BudgetFormData } from "@/components/BudgetForm";
 import { CategoryForm, type CategoryFormData } from "@/components/CategoryForm";
+import { colorPalette, defaultColor } from "@/components/ColorSwatches";
 import { GoalForm, type GoalFormData } from "@/components/GoalForm";
 import { categories } from "../helpers/fixtures";
 import { freezeDate, renderUi } from "../helpers/render";
@@ -13,13 +14,14 @@ describe("CategoryForm", () => {
     return { onSubmit, ...renderUi(<CategoryForm onSubmit={onSubmit} {...props} />) };
   }
 
-  it("inicia vazio, como Despesa e com a cor padrão", () => {
+  it("inicia vazio, como Gasto e com a primeira cor da paleta", () => {
     renderForm();
 
     expect(screen.getByLabelText("Nome")).toHaveValue("");
     expect(screen.getByLabelText("Nome")).toBeRequired();
-    expect(screen.getByLabelText("Tipo")).toHaveValue("outcome");
-    expect(screen.getByLabelText("Cor")).toHaveValue("#00c48c");
+    expect(screen.getByRole("radio", { name: "Gasto" })).toBeChecked();
+    expect(within(screen.getByRole("radiogroup", { name: "Cor" })).getByRole("radio", { name: "Verde" })).toBeChecked();
+    expect(screen.getByLabelText("Cor personalizada")).toHaveValue(defaultColor);
     expect(screen.getByLabelText("Ícone simples")).toHaveValue("");
     expect(screen.getByRole("button", { name: "Salvar categoria" })).toBeInTheDocument();
   });
@@ -36,8 +38,8 @@ describe("CategoryForm", () => {
     const { onSubmit, user } = renderForm();
 
     await user.type(screen.getByLabelText("Nome"), "  Salário  ");
-    await user.selectOptions(screen.getByLabelText("Tipo"), "Receita");
-    fireEvent.change(screen.getByLabelText("Cor"), { target: { value: "#ff0000" } });
+    await user.click(screen.getByRole("radio", { name: "Receita" }));
+    fireEvent.change(screen.getByLabelText("Cor personalizada"), { target: { value: "#ff0000" } });
     await user.type(screen.getByLabelText("Ícone simples"), " money ");
     await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
 
@@ -50,30 +52,74 @@ describe("CategoryForm", () => {
     });
   });
 
-  it("oferece os três tipos: Receita, Despesa e Investimento", () => {
+  it("oferece os três tipos: Gasto, Receita e Investimento", () => {
     renderForm();
 
     expect(
-      within(screen.getByLabelText("Tipo"))
-        .getAllByRole("option")
-        .map((option) => [option.textContent, (option as HTMLOptionElement).value]),
+      within(screen.getByRole("radiogroup", { name: "Tipo" }))
+        .getAllByRole("radio")
+        .map((radio) => [radio.parentElement?.textContent, (radio as HTMLInputElement).value]),
     ).toEqual([
+      ["Gasto", "outcome"],
       ["Receita", "income"],
-      ["Despesa", "outcome"],
       ["Investimento", "investment"],
     ]);
+  });
+
+  it("escolhe a cor pela paleta (radiogroup acessível) e envia o valor da amostra", async () => {
+    const { onSubmit, user } = renderForm();
+    const palette = screen.getByRole("radiogroup", { name: "Cor" });
+
+    expect(within(palette).getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual(
+      colorPalette.map((color) => color.name),
+    );
+
+    await user.type(screen.getByLabelText("Nome"), "Pets");
+    await user.click(within(palette).getByRole("radio", { name: "Azul" }));
+    expect(within(palette).getByRole("radio", { name: "Azul" })).toBeChecked();
+    expect(within(palette).getByRole("radio", { name: "Verde" })).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0].color).toBe(colorPalette.find((color) => color.name === "Azul")!.value);
+  });
+
+  it("aceita o tipo padrão (defaultType) e volta a ele após criar", async () => {
+    const { onSubmit, user } = renderForm({ defaultType: "income" });
+
+    expect(screen.getByRole("radio", { name: "Receita" })).toBeChecked();
+    await user.type(screen.getByLabelText("Nome"), "Bônus");
+    await user.click(screen.getByRole("radio", { name: "Gasto" }));
+    await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ type: "outcome" })));
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Receita" })).toBeChecked());
+  });
+
+  it("mostra Excluir só quando recebe onDelete", async () => {
+    const onDelete = vi.fn();
+    const { user, unmount } = renderForm({ onDelete });
+
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    unmount();
+
+    renderForm();
+    expect(screen.queryByRole("button", { name: "Excluir" })).toBeNull();
   });
 
   it("limpa os campos após criar", async () => {
     const { onSubmit, user } = renderForm();
 
     await user.type(screen.getByLabelText("Nome"), "Lazer");
-    await user.selectOptions(screen.getByLabelText("Tipo"), "Investimento");
+    await user.click(screen.getByRole("radio", { name: "Investimento" }));
+    fireEvent.change(screen.getByLabelText("Cor personalizada"), { target: { value: "#123456" } });
     await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByLabelText("Nome")).toHaveValue(""));
-    expect(screen.getByLabelText("Tipo")).toHaveValue("outcome");
+    expect(screen.getByRole("radio", { name: "Gasto" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Verde" })).toBeChecked();
   });
 
   it("no modo edição preenche os campos e não limpa após salvar", async () => {
@@ -83,7 +129,13 @@ describe("CategoryForm", () => {
     });
 
     expect(screen.getByLabelText("Nome")).toHaveValue("Alimentação");
-    expect(screen.getByLabelText("Cor")).toHaveValue("#f75a68");
+    expect(screen.getByRole("radio", { name: "Gasto" })).toBeChecked();
+    expect(screen.getByLabelText("Cor personalizada")).toHaveValue("#f75a68");
+    expect(
+      within(screen.getByRole("radiogroup", { name: "Cor" }))
+        .getAllByRole("radio")
+        .filter((radio) => (radio as HTMLInputElement).checked),
+    ).toHaveLength(0);
     expect(screen.getByLabelText("Ícone simples")).toHaveValue("food");
 
     await user.clear(screen.getByLabelText("Nome"));
@@ -244,6 +296,14 @@ describe("BudgetForm", () => {
     expect(screen.getByLabelText("Mês")).toHaveValue("2026-08");
   });
 
+  it("mostra Excluir só quando recebe onDelete", async () => {
+    const onDelete = vi.fn();
+    const { user } = renderForm({ onDelete });
+
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
   it("o mês padrão é o mês LOCAL: às 22h de 31/10 (Brasília, já novembro em UTC) sugere outubro", () => {
     freezeDate("2026-11-01T01:00:00.000Z");
     renderForm();
@@ -259,14 +319,15 @@ describe("GoalForm", () => {
     return { onSubmit, ...renderUi(<GoalForm onSubmit={onSubmit} {...props} />) };
   }
 
-  it("inicia vazio com a cor padrão; nome e valor alvo são obrigatórios", () => {
+  it("inicia vazio com a primeira cor da paleta; nome e valor alvo são obrigatórios", () => {
     renderForm();
 
     expect(screen.getByLabelText("Nome da meta")).toBeRequired();
     expect(screen.getByLabelText("Valor alvo")).toBeRequired();
     expect(screen.getByLabelText("Valor atual")).not.toBeRequired();
     expect(screen.getByLabelText("Prazo (opcional)")).not.toBeRequired();
-    expect(screen.getByLabelText("Cor")).toHaveValue("#00c48c");
+    expect(screen.getByRole("radio", { name: "Verde" })).toBeChecked();
+    expect(screen.getByLabelText("Cor personalizada")).toHaveValue(defaultColor);
   });
 
   it("não envia sem nome ou sem valor alvo, nem com alvo zero", async () => {
@@ -297,7 +358,7 @@ describe("GoalForm", () => {
       targetAmount: 5000,
       currentAmount: 0,
       deadline: null,
-      color: "#00c48c",
+      color: defaultColor,
     });
   });
 
@@ -308,7 +369,7 @@ describe("GoalForm", () => {
     await user.type(screen.getByLabelText("Valor alvo"), "30000.50");
     await user.type(screen.getByLabelText("Valor atual"), "1200");
     fireEvent.change(screen.getByLabelText("Prazo (opcional)"), { target: { value: "2026-12-31" } });
-    fireEvent.change(screen.getByLabelText("Cor"), { target: { value: "#0ea5e9" } });
+    fireEvent.change(screen.getByLabelText("Cor personalizada"), { target: { value: "#0ea5e9" } });
     await user.click(screen.getByRole("button", { name: "Salvar meta" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
@@ -349,7 +410,7 @@ describe("GoalForm", () => {
     expect(screen.getByLabelText("Valor alvo")).toHaveValue(10000);
     expect(screen.getByLabelText("Valor atual")).toHaveValue(2500);
     expect(screen.getByLabelText("Prazo (opcional)")).toHaveValue("2026-12-31");
-    expect(screen.getByLabelText("Cor")).toHaveValue("#8b5cf6");
+    expect(screen.getByLabelText("Cor personalizada")).toHaveValue("#8b5cf6");
 
     await user.clear(screen.getByLabelText("Valor atual"));
     await user.type(screen.getByLabelText("Valor atual"), "3000");
@@ -400,12 +461,12 @@ describe("Formulários: falha no envio (onSubmit rejeitado)", () => {
     const { user } = renderUi(<CategoryForm onSubmit={onSubmit} />);
 
     await user.type(screen.getByLabelText("Nome"), "Moradia");
-    await user.selectOptions(screen.getByLabelText("Tipo"), "Receita");
+    await user.click(screen.getByRole("radio", { name: "Receita" }));
     await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Categoria já existe.");
     expect(screen.getByLabelText("Nome")).toHaveValue("Moradia");
-    expect(screen.getByLabelText("Tipo")).toHaveValue("income");
+    expect(screen.getByRole("radio", { name: "Receita" })).toBeChecked();
     expect(screen.getByRole("button", { name: "Salvar categoria" })).toBeEnabled();
   });
 

@@ -1,378 +1,627 @@
 "use client";
 
-import styled, { keyframes } from "styled-components";
+import styled, { css } from "styled-components";
 
-const colors = {
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  green: "#00c48c",
-  greenGlow: "rgba(0, 196, 140, 0.25)",
-  red: "#f75a68",
-  yellow: "#feca57",
-  border: "rgba(255, 255, 255, 0.07)",
-  navyLight: "#1e2535",
-};
+const WIDE = "@media (min-width: 1180px)";
 
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
+const label = css`
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+`;
+
+const figures = css`
+  font-family: var(--font-figures);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+`;
+
+const control = css`
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--rule-strong);
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: 15px;
+`;
+
+const inlineControl = css`
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+
+  &:hover {
+    border-color: var(--rule);
+  }
+
+  &:focus {
+    border-color: var(--rule-strong);
+    background: var(--sheet);
+  }
 `;
 
 export const PageContent = styled.div`
   display: grid;
-  gap: 24px;
-  animation: ${fadeUp} 0.6s ease both;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  max-width: 1000px;
 `;
 
-export const Section = styled.section`
-  padding: 22px 24px;
-  background: rgba(22, 27, 39, 0.72);
-  border: 1px solid ${colors.border};
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
-
-  h2 {
-    color: #ffffff;
-    font-family: var(--font-dm-sans), sans-serif;
-    font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-  }
-
-  > p {
-    margin-top: 6px;
-    color: ${colors.textMuted};
-    line-height: 1.6;
-  }
-
-  @media (max-width: 560px) {
-    padding: 18px 16px;
-  }
-`;
-
-export const UploadArea = styled.label`
+export const Step = styled.section`
   display: grid;
-  gap: 8px;
-  place-items: center;
-  margin-top: 18px;
-  padding: 34px 18px;
-  border: 1.5px dashed rgba(0, 196, 140, 0.4);
-  border-radius: 16px;
-  background: rgba(0, 196, 140, 0.05);
-  color: ${colors.textLight};
-  text-align: center;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding-top: 20px;
+`;
 
-  &:hover,
-  &:focus-within {
-    background: rgba(0, 196, 140, 0.1);
-    border-color: ${colors.green};
-  }
+export const StepHead = styled.h2`
+  ${label}
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-strong);
+`;
+
+export const StepNumber = styled.span`
+  ${figures}
+  font-size: 15px;
+  letter-spacing: 0;
+  color: var(--green);
+`;
+
+export const Hint = styled.p`
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+`;
+
+export const DropZone = styled.label<{ $active: boolean; $busy: boolean }>`
+  position: relative;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
+  padding: 32px 16px;
+  border-radius: 10px;
+  border: 1px dashed ${({ $active }) => ($active ? "var(--green)" : "var(--rule-strong)")};
+  background: ${({ $active }) => ($active ? "var(--green-wash)" : "var(--sheet)")};
+  cursor: ${({ $busy }) => ($busy ? "progress" : "pointer")};
 
   strong {
-    color: #ffffff;
-    font-size: 1rem;
+    font-weight: 600;
+    color: var(--green);
   }
 
   span {
-    color: ${colors.textMuted};
-    font-size: 0.85rem;
+    font-size: 12.5px;
+    color: var(--ink-soft);
   }
 
   input {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     opacity: 0;
+    cursor: inherit;
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
   }
 `;
 
-export const Row = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  margin-top: 16px;
+export const PasswordRow = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+
+  @media (min-width: 600px) {
+    grid-template-columns: minmax(0, 320px) auto;
+  }
 `;
 
 export const Field = styled.label`
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  color: ${colors.textLight};
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-`;
+  min-width: 0;
 
-const controlStyles = `
-  min-height: 40px;
-  padding: 0 10px;
-  background: ${colors.navyLight};
-  border: 1px solid ${colors.border};
-  border-radius: 10px;
-  color: #ffffff;
-  font-size: 0.86rem;
-  outline: none;
-  color-scheme: dark;
-
-  &:focus {
-    border-color: ${colors.green};
-    box-shadow: 0 0 0 3px ${colors.greenGlow};
+  > span {
+    ${label}
   }
 `;
 
 export const Input = styled.input`
-  ${controlStyles}
-  width: 100%;
+  ${control}
 `;
 
-export const Select = styled.select`
-  ${controlStyles}
-  width: 100%;
-`;
-
-export const Button = styled.button<{ $variant?: "primary" | "ghost" | "danger" }>`
-  min-height: 42px;
+export const PrimaryButton = styled.button`
+  min-height: 44px;
   padding: 0 18px;
-  border-radius: 12px;
-  font-size: 0.88rem;
+  border-radius: 10px;
+  background: var(--green);
+  color: var(--on-green);
   font-weight: 600;
-  color: #ffffff;
-  background: ${({ $variant }) =>
-    $variant === "ghost"
-      ? "rgba(255, 255, 255, 0.05)"
-      : $variant === "danger"
-        ? "linear-gradient(90deg, #f75a68 0%, #ff7a7a 100%)"
-        : `linear-gradient(90deg, ${colors.green} 0%, #00b8d9 100%)`};
-  border: 1px solid ${({ $variant }) => ($variant === "ghost" ? colors.border : "transparent")};
-  cursor: pointer;
 
   &:disabled {
-    opacity: 0.55;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 `;
 
-export const SummaryGrid = styled.dl`
+export const QuietButton = styled.button`
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  color: var(--ink-soft);
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    color: var(--ink);
+    background: var(--green-wash);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+  }
+`;
+
+export const Notice = styled.div<{ $tone: "error" | "warning" | "info" | "success" }>`
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin-top: 16px;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: ${({ $tone }) => ($tone === "error" ? "var(--red)" : "var(--ink)")};
+  background: ${({ $tone }) =>
+    $tone === "error"
+      ? "var(--red-wash)"
+      : $tone === "warning"
+        ? "var(--amber-wash)"
+        : $tone === "success"
+          ? "var(--green-wash)"
+          : "var(--sheet)"};
+
+  a {
+    color: var(--green);
+    font-weight: 600;
+  }
+`;
+
+export const Meta = styled.dl`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+
+  @media (min-width: 720px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 
   div {
-    padding: 12px 14px;
-    border: 1px solid ${colors.border};
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
   }
 
   dt {
-    color: ${colors.textMuted};
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 12px;
+    color: var(--ink-soft);
   }
 
   dd {
-    margin-top: 4px;
-    color: #ffffff;
-    font-weight: 700;
-  }
-
-  @media (max-width: 980px) {
-    grid-template-columns: repeat(2, 1fr);
+    font-size: 15px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
   }
 `;
 
-export const Notice = styled.div<{ $variant: "warning" | "error" | "success" | "info" }>`
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  line-height: 1.5;
-  font-size: 0.88rem;
-  color: ${({ $variant }) =>
-    $variant === "error"
-      ? "#ff9aa3"
-      : $variant === "warning"
-        ? "#ffe08a"
-        : $variant === "success"
-          ? "#7be3c2"
-          : colors.textLight};
-  background: ${({ $variant }) =>
-    $variant === "error"
-      ? "rgba(247, 90, 104, 0.1)"
-      : $variant === "warning"
-        ? "rgba(254, 202, 87, 0.08)"
-        : $variant === "success"
-          ? "rgba(0, 196, 140, 0.08)"
-          : "rgba(255, 255, 255, 0.03)"};
-  border: 1px solid
-    ${({ $variant }) =>
-      $variant === "error"
-        ? "rgba(247, 90, 104, 0.35)"
-        : $variant === "warning"
-          ? "rgba(254, 202, 87, 0.3)"
-          : $variant === "success"
-            ? "rgba(0, 196, 140, 0.3)"
-            : colors.border};
+export const MonthRow = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
 
-  label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    color: #ffffff;
-  }
-
-  a {
-    color: inherit;
-    font-weight: 600;
-    text-decoration: underline;
+  @media (min-width: 600px) {
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+    align-items: end;
   }
 `;
 
-export const TableWrapper = styled.div`
-  margin-top: 16px;
-  overflow-x: auto;
-  border: 1px solid ${colors.border};
-  border-radius: 14px;
-`;
-
-export const Table = styled.table`
-  width: 100%;
-  min-width: 1080px;
-  border-collapse: collapse;
-
-  th,
-  td {
-    padding: 10px 12px;
-    text-align: left;
-    vertical-align: top;
-    border-bottom: 1px solid ${colors.border};
-  }
-
-  th {
-    color: ${colors.textMuted};
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.02);
-  }
-
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
-
-  th:nth-child(6),
-  td:nth-child(6) {
-    min-width: 132px;
-  }
-
-  th:nth-child(5),
-  td:nth-child(5) {
-    min-width: 120px;
-  }
-
-  tr[data-excluded="true"] {
-    opacity: 0.5;
-  }
-`;
-
-export const Badge = styled.span<{ $tone?: "green" | "yellow" | "red" | "muted" }>`
-  display: inline-block;
-  margin: 4px 6px 0 0;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  white-space: nowrap;
-  color: ${({ $tone }) =>
-    $tone === "green"
-      ? "#7be3c2"
-      : $tone === "yellow"
-        ? "#ffe08a"
-        : $tone === "red"
-          ? "#ff9aa3"
-          : colors.textMuted};
-  background: ${({ $tone }) =>
-    $tone === "green"
-      ? "rgba(0, 196, 140, 0.12)"
-      : $tone === "yellow"
-        ? "rgba(254, 202, 87, 0.12)"
-        : $tone === "red"
-          ? "rgba(247, 90, 104, 0.12)"
-          : "rgba(255, 255, 255, 0.05)"};
-`;
-
-export const InlineButton = styled.button`
-  margin-top: 6px;
-  padding: 0;
-  background: none;
-  color: ${colors.green};
-  font-size: 0.76rem;
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-`;
-
-export const CheckLabel = styled.label`
+export const Check = styled.label`
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  color: ${colors.textMuted};
-  font-size: 0.76rem;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+
+  input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--green);
+  }
 `;
 
-export const Footer = styled.div`
+export const Lines = styled.ul`
+  list-style: none;
+`;
+
+const wideColumns = css`
+  grid-template-columns: 36px 136px minmax(0, 1fr) 48px 120px 200px 116px;
+  column-gap: 10px;
+`;
+
+export const LinesHead = styled.li`
+  display: none;
+
+  ${WIDE} {
+    ${wideColumns}
+    ${label}
+    display: grid;
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--rule-strong);
+
+    span:last-child {
+      text-align: right;
+    }
+  }
+`;
+
+export const Line = styled.li<{ $excluded: boolean }>`
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "check desc amount"
+    ". info info"
+    ". cat cat"
+    ". extra extra";
+  column-gap: 8px;
+  row-gap: 4px;
+  padding: 8px 0 10px;
+  border-bottom: 1px solid var(--rule);
+  color: ${({ $excluded }) => ($excluded ? "var(--ink-soft)" : "var(--ink)")};
+
+  ${WIDE} {
+    ${wideColumns}
+    grid-template-areas:
+      "check date desc parcel type cat amount"
+      ". . flags flags extra extra extra";
+    align-items: center;
+    row-gap: 0;
+  }
+`;
+
+export const LineCheck = styled.label`
+  grid-area: check;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--green);
+  }
+`;
+
+export const DescriptionInput = styled.input`
+  ${inlineControl}
+  grid-area: desc;
+  width: 100%;
+  font-weight: 500;
+  font-size: 15px;
+`;
+
+export const AmountCell = styled.span<{ $outcome: boolean }>`
+  grid-area: amount;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  ${figures}
+  font-size: 16px;
+  color: ${({ $outcome }) => ($outcome ? "var(--red)" : "var(--ink)")};
+`;
+
+export const Info = styled.div`
+  grid-area: info;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 4px 8px;
+  min-width: 0;
 
-  p {
-    color: ${colors.textLight};
-  }
-
-  > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+  ${WIDE} {
+    display: contents;
   }
 `;
 
-export const BatchList = styled.ul`
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
-  list-style: none;
+export const DateInput = styled.input`
+  ${inlineControl}
+  grid-area: date;
+  min-height: 36px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
 
-  li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid ${colors.border};
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
+  ${WIDE} {
+    min-height: 44px;
+    font-size: 14px;
+  }
+`;
+
+export const Parcel = styled.span`
+  grid-area: parcel;
+  ${figures}
+  font-size: 12.5px;
+  color: var(--ink-soft);
+
+  &[data-empty="true"] {
+    display: none;
   }
 
+  ${WIDE} {
+    font-size: 14px;
+
+    &[data-empty="true"] {
+      display: block;
+    }
+  }
+`;
+
+export const Flags = styled.span`
+  grid-area: flags;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+`;
+
+export const Tag = styled.span<{ $tone: "muted" | "amber" | "red" | "green" }>`
+  font-size: 12.5px;
+  font-weight: ${({ $tone }) => ($tone === "red" || $tone === "amber" ? 600 : 400)};
+  color: ${({ $tone }) =>
+    $tone === "red"
+      ? "var(--red)"
+      : $tone === "amber"
+        ? "var(--amber)"
+        : $tone === "green"
+          ? "var(--green)"
+          : "var(--ink-soft)"};
+`;
+
+export const CategoryCell = styled.div`
+  grid-area: cat;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 116px);
+  gap: 8px;
+
+  ${WIDE} {
+    display: contents;
+  }
+`;
+
+export const CategoryPick = styled.span`
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+
+  ${WIDE} {
+    grid-area: cat;
+  }
+`;
+
+export const Dot = styled.span<{ $color: string | null }>`
+  position: absolute;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${({ $color }) => $color ?? "var(--rule-strong)"};
+  pointer-events: none;
+`;
+
+export const Select = styled.select<{ $missing?: boolean }>`
+  ${control}
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 14px;
+  border-color: ${({ $missing }) => ($missing ? "var(--red)" : "var(--rule-strong)")};
+`;
+
+export const CategorySelect = styled(Select)`
+  padding-left: 26px;
+`;
+
+export const TypeSelect = styled(Select)`
+  ${WIDE} {
+    grid-area: type;
+  }
+`;
+
+export const Extra = styled.div`
+  grid-area: extra;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+
+  &:empty {
+    display: none;
+  }
+
+  ${Check} {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+`;
+
+export const LinkButton = styled.button`
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--green);
+  text-align: left;
+`;
+
+export const Totals = styled.dl`
+  display: grid;
+  gap: 2px;
+  padding-top: 4px;
+
+  div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 12px;
+    min-height: 36px;
+    padding: 6px 0;
+  }
+
+  dt {
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+
+  dd {
+    ${figures}
+    font-size: 17px;
+    text-align: right;
+  }
+
+  div[data-total] dt {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  div[data-total] dd {
+    font-size: 22px;
+    padding-bottom: 4px;
+    border-bottom: 4px double currentColor;
+  }
+
+  dd[data-tone="red"] {
+    color: var(--red);
+  }
+
+  @media (min-width: 720px) {
+    margin-left: auto;
+    width: min(100%, 380px);
+  }
+`;
+
+export const Footer = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding-top: 8px;
+
+  p {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  p[data-pending] {
+    color: var(--red);
+    font-weight: 500;
+  }
+
+  div {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  @media (min-width: 600px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+
+    div {
+      flex-direction: row;
+    }
+  }
+`;
+
+export const Quiet = styled.p`
+  padding: 14px 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+`;
+
+export const Batches = styled.ul`
+  list-style: none;
+`;
+
+export const Batch = styled.li`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main total"
+    "main undo";
+  column-gap: 12px;
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+
+  @media (min-width: 720px) {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "main total undo";
+    column-gap: 20px;
+  }
+`;
+
+export const BatchMain = styled.div`
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
   strong {
-    display: block;
-    color: #ffffff;
+    font-weight: 500;
+  }
+
+  strong::first-letter {
+    text-transform: uppercase;
   }
 
   span {
-    color: ${colors.textMuted};
-    font-size: 0.84rem;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
   }
+`;
+
+export const BatchTotal = styled.span`
+  grid-area: total;
+  ${figures}
+  font-size: 16px;
+  text-align: right;
+  color: var(--red);
+`;
+
+export const UndoButton = styled.button`
+  grid-area: undo;
+  justify-self: end;
+  min-height: 44px;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--red);
 `;

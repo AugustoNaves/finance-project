@@ -4,59 +4,91 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { ChartEmpty, ChartFrame } from "./styles";
+import { formatCurrency } from "@/utils/formatters";
+import {
+  ChartEmpty,
+  ChartFrame,
+  chartTick,
+  tooltipContentStyle,
+  tooltipItemStyle,
+  tooltipLabelStyle,
+} from "./styles";
 
 export interface BalanceLineChartItem {
   label: string;
   balance: number;
+  fullLabel?: string;
 }
 
 interface BalanceLineChartProps {
   data: BalanceLineChartItem[];
+  seriesName?: string;
 }
 
-export function BalanceLineChart({ data }: BalanceLineChartProps) {
+const compactAmount = new Intl.NumberFormat("pt-BR", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+export function formatAxisAmount(value: number) {
+  return compactAmount.format(value);
+}
+
+export function BalanceLineChart({ data, seriesName = "Saldo" }: BalanceLineChartProps) {
   if (data.length === 0) {
     return <ChartEmpty>Nenhum saldo para exibir no gráfico.</ChartEmpty>;
   }
 
+  const hasNegative = data.some((item) => item.balance < 0);
+
   return (
     <ChartFrame>
-      <ResponsiveContainer width="100%" height={280}>
-        <LineChart data={data} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="rgba(255, 255, 255, 0.07)" vertical={false} />
-          <XAxis dataKey="label" stroke="#8892a4" tickLine={false} axisLine={false} />
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+          <CartesianGrid stroke="var(--rule)" vertical={false} />
+          <XAxis
+            dataKey="label"
+            tick={chartTick}
+            tickLine={false}
+            axisLine={{ stroke: "var(--rule-strong)" }}
+            interval={0}
+            tickMargin={8}
+          />
           <YAxis
-            stroke="#8892a4"
+            tick={chartTick}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => `R$ ${Number(value) / 1000}k`}
+            width={56}
+            tickFormatter={(value) => formatAxisAmount(Number(value))}
           />
+          {hasNegative && <ReferenceLine y={0} stroke="var(--rule-strong)" />}
           <Tooltip
-            formatter={(value) => Number(value).toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-            contentStyle={{
-              background: "#161b27",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: 12,
-              color: "#ffffff",
-            }}
+            cursor={{ stroke: "var(--rule-strong)", strokeWidth: 1 }}
+            contentStyle={tooltipContentStyle}
+            labelStyle={tooltipLabelStyle}
+            itemStyle={tooltipItemStyle}
+            labelFormatter={(label, payload) =>
+              (payload?.[0]?.payload as BalanceLineChartItem | undefined)?.fullLabel ?? label
+            }
+            formatter={(value) => [formatCurrency(Number(value)), seriesName]}
           />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="balance"
-            name="Saldo"
-            stroke="#00c48c"
-            strokeWidth={3}
-            dot={{ r: 4, fill: "#00c48c", strokeWidth: 0 }}
-            activeDot={{ r: 6, fill: "#0ea5e9", strokeWidth: 0 }}
+            name={seriesName}
+            stroke="var(--ink)"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            dot={{ r: 4, fill: "var(--ink)", stroke: "var(--paper)", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "var(--green)", stroke: "var(--paper)", strokeWidth: 2 }}
+            isAnimationActive={false}
           />
         </LineChart>
       </ResponsiveContainer>

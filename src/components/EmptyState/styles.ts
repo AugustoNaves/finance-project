@@ -3,8 +3,8 @@
 import styled from "styled-components";
 
 export const EmptyText = styled.p`
-  padding: 24px;
-  color: #8892a4;
-  font-size: 0.92rem;
+  padding: 28px 0;
+  color: var(--ink-soft);
+  text-align: center;
   line-height: 1.6;
 `;

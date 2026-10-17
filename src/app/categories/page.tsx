@@ -1,13 +1,14 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
+import { KeyboardEvent, useContext, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { CategoryCard, CategoryViewModel } from "@/components/CategoryCard";
 import { CategoryForm, CategoryFormData } from "@/components/CategoryForm";
+import { CategoryRow, CategoryViewModel } from "@/components/CategoryRow";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Modal } from "@/components/CustomModal";
 import { EmptyState } from "@/components/EmptyState";
 import { FormError } from "@/components/FormError";
+import { LedgerSection } from "@/components/LedgerSection";
 import { PageHeader } from "@/components/PageHeader";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
 import {
@@ -18,36 +19,56 @@ import {
 } from "@/services/categories";
 import { deleteCategoryRule, getCategoryRules } from "@/services/categoryRules";
 import { getErrorMessage } from "@/services/http";
-import { Category } from "@/types/category";
+import { Category, CategoryType } from "@/types/category";
 import { CategoryRule } from "@/types/categoryRule";
 import { getTransactionType, isSameMonth } from "@/utils/finance";
-import { formatCurrency, formatDate } from "@/utils/formatters";
 import {
-  CategoryTag,
-  DeleteButton,
-  ErrorContainer,
+  formatCurrency,
+  formatDate,
+  formatMonthYear,
+} from "@/utils/formatters";
+import {
+  LedgerList,
+  Page,
   PageContent,
-  RuleDate,
-  RuleMobileCard,
-  RuleMobileCardFooter,
-  RuleMobileCardHeader,
-  RuleMobileCardMeta,
-  RulesMobileList,
-  RulesTable,
-  RulesTableWrapper,
-  RulesToolbar,
+  RuleDelete,
+  RuleDot,
+  RuleItem,
+  RuleMain,
+  RuleMeta,
+  RulePattern,
+  SearchField,
   SearchIcon,
   SearchInput,
-  SearchWrapper,
-  Section,
-  SectionGrid,
-  SectionHeader,
-  TabBadge,
   TabButton,
-  TabPanel,
-  TabsContainer,
-  TypeBadge,
+  TabCount,
+  TabList,
 } from "./styles";
+
+type TabId = CategoryType | "rules";
+
+const categoryTabs: { id: CategoryType; label: string; emptyText: string }[] = [
+  {
+    id: "outcome",
+    label: "Gastos",
+    emptyText:
+      "Nenhuma categoria de gasto ainda. Crie a primeira em Nova categoria.",
+  },
+  {
+    id: "income",
+    label: "Receitas",
+    emptyText:
+      "Nenhuma categoria de receita ainda. Crie a primeira em Nova categoria.",
+  },
+  {
+    id: "investment",
+    label: "Investimentos",
+    emptyText:
+      "Nenhuma categoria de investimento ainda. Crie a primeira em Nova categoria.",
+  },
+];
+
+const tabOrder: TabId[] = ["outcome", "income", "investment", "rules"];
 
 function getCategoryFormValues(category: Category): CategoryFormData {
   return {
@@ -59,18 +80,17 @@ function getCategoryFormValues(category: Category): CategoryFormData {
 }
 
 function formatRuleDate(dateString?: string | null) {
-  if (!dateString) return "—";
-  try {
-    const d = new Date(dateString);
-    if (Number.isNaN(d.getTime())) return "—";
-    return formatDate(d);
-  } catch {
-    return "—";
-  }
+  if (!dateString) return null;
+
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return formatDate(date);
 }
 
 function formatRuleType(type: string) {
-  if (type === "outcome") return "Despesa";
+  if (type === "outcome") return "Gasto";
   if (type === "income") return "Receita";
   if (type === "investment") return "Investimento";
   return type;
@@ -84,9 +104,13 @@ export default function CategoriesPage({
   defaultTab = "categories",
 }: CategoriesPageProps = {}) {
   const { transactions } = useContext(TransactionsContext);
-  const [activeTab, setActiveTab] = useState<"categories" | "rules">(defaultTab);
+  const [activeTab, setActiveTab] = useState<TabId>(
+    defaultTab === "rules" ? "rules" : "outcome",
+  );
+  const tabRefs = useRef<Partial<Record<TabId, HTMLButtonElement | null>>>({});
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesError, setCategoriesError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
@@ -104,6 +128,9 @@ export default function CategoriesPage({
         setCategories(data);
       } catch (error) {
         console.error("Erro ao buscar categorias:", error);
+        setCategoriesError(
+          "Não foi possível carregar as categorias. Tente de novo em instantes.",
+        );
       }
     }
 
@@ -118,7 +145,9 @@ export default function CategoriesPage({
         const data = await getCategoryRules();
         setRules(data);
       } catch (error) {
-        setRulesError(getErrorMessage(error, "Erro ao carregar regras de categorização."));
+        setRulesError(
+          getErrorMessage(error, "Erro ao carregar regras de categorização."),
+        );
       } finally {
         setRulesLoading(false);
       }
@@ -154,6 +183,7 @@ export default function CategoriesPage({
     const category = await createCategory(data);
 
     setCategories((currentCategories) => [...currentCategories, category]);
+    setActiveTab(category.type);
     setModalOpen(false);
   }
 
@@ -179,6 +209,7 @@ export default function CategoriesPage({
       currentCategories.filter((category) => category.id !== deleteCategory.id),
     );
     setDeleteCategory(null);
+    setEditingCategory(null);
   }
 
   async function handleDeleteRule() {
@@ -192,256 +223,222 @@ export default function CategoriesPage({
     setDeleteRule(null);
   }
 
-  const incomeCategories = categories
-    .filter((category) => category.type === "income")
-    .map(getCategoryMetrics);
-  const outcomeCategories = categories
-    .filter((category) => category.type === "outcome")
-    .map(getCategoryMetrics);
-  const investmentCategories = categories
-    .filter((category) => category.type === "investment")
-    .map(getCategoryMetrics);
+  function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const index = tabOrder.indexOf(activeTab);
+    let next: TabId | null = null;
 
+    if (event.key === "ArrowRight")
+      next = tabOrder[(index + 1) % tabOrder.length];
+    if (event.key === "ArrowLeft")
+      next = tabOrder[(index - 1 + tabOrder.length) % tabOrder.length];
+    if (event.key === "Home") next = tabOrder[0];
+    if (event.key === "End") next = tabOrder[tabOrder.length - 1];
+
+    if (!next) return;
+
+    event.preventDefault();
+    setActiveTab(next);
+    tabRefs.current[next]?.focus();
+  }
+
+  const categoriesByType = Object.fromEntries(
+    categoryTabs.map((tab) => [
+      tab.id,
+      categories
+        .filter((category) => category.type === tab.id)
+        .map(getCategoryMetrics),
+    ]),
+  ) as Record<CategoryType, CategoryViewModel[]>;
+
+  const normalizedSearch = search.trim().toLowerCase();
   const filteredRules = rules.filter((rule) =>
-    rule.pattern.toLowerCase().includes(search.trim().toLowerCase()),
+    rule.pattern.toLowerCase().includes(normalizedSearch),
   );
+
+  function getRuleColor(rule: CategoryRule) {
+    return categories.find(
+      (category) =>
+        category.name === rule.category && category.type === rule.type,
+    )?.color;
+  }
+
+  const activeCategoryTab = categoryTabs.find((tab) => tab.id === activeTab);
+  const tabs = [
+    ...categoryTabs.map((tab) => ({
+      id: tab.id as TabId,
+      label: tab.label,
+      count: categoriesByType[tab.id].length,
+    })),
+    { id: "rules" as TabId, label: "Regras", count: rules.length },
+  ];
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Categorias"
-        title={activeTab === "categories" ? "Organize seus grupos" : "Regras de importação"}
-        subtitle={
-          activeTab === "categories"
-            ? "Crie categorias de receitas, despesas e investimentos para acompanhar onde o dinheiro entra, sai e é aplicado."
-            : "Gerencie as regras automáticas de categorização aprendidas a partir das faturas importadas."
-        }
-        actionLabel={activeTab === "categories" ? "+ Nova Categoria" : undefined}
-        onAction={activeTab === "categories" ? () => setModalOpen(true) : undefined}
-      />
+      <Page>
+        <PageHeader
+          title="Categorias e regras"
+          actionLabel={activeCategoryTab ? "Nova categoria" : undefined}
+          onAction={activeCategoryTab ? () => setModalOpen(true) : undefined}
+        />
 
-      <PageContent>
-        <TabsContainer role="tablist" aria-label="Abas de categorias">
-          <TabButton
-            type="button"
-            role="tab"
-            id="tab-categories"
-            aria-selected={activeTab === "categories"}
-            aria-controls="panel-categories"
-            $active={activeTab === "categories"}
-            onClick={() => setActiveTab("categories")}
+        <PageContent>
+          <TabList
+            role="tablist"
+            aria-label="Categorias e regras"
+            onKeyDown={handleTabKeyDown}
           >
-            Categorias
-            <TabBadge>{categories.length}</TabBadge>
-          </TabButton>
-          <TabButton
-            type="button"
-            role="tab"
-            id="tab-rules"
-            aria-selected={activeTab === "rules"}
-            aria-controls="panel-rules"
-            $active={activeTab === "rules"}
-            onClick={() => setActiveTab("rules")}
-          >
-            Regras de Importação
-            <TabBadge>{rules.length}</TabBadge>
-          </TabButton>
-        </TabsContainer>
+            {tabs.map((tab) => (
+              <TabButton
+                key={tab.id}
+                ref={(element) => {
+                  tabRefs.current[tab.id] = element;
+                }}
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-selected={activeTab === tab.id}
+                aria-controls={`panel-${tab.id}`}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label} <TabCount>{tab.count}</TabCount>
+              </TabButton>
+            ))}
+          </TabList>
 
-        {activeTab === "categories" ? (
-          <TabPanel id="panel-categories" role="tabpanel" aria-labelledby="tab-categories">
-            <Section>
-              <SectionHeader>
-                <h2>Despesas</h2>
-                <span>{outcomeCategories.length} categoria(s)</span>
-              </SectionHeader>
-              {outcomeCategories.length === 0 ? (
-                <EmptyState>Nenhuma categoria de despesa cadastrada.</EmptyState>
-              ) : (
-                <SectionGrid>
-                  {outcomeCategories.map((category) => (
-                    <CategoryCard
-                      key={category.id}
-                      category={category}
-                      onEdit={() => setEditingCategory(category)}
-                      onDelete={() => setDeleteCategory(category)}
-                    />
-                  ))}
-                </SectionGrid>
-              )}
-            </Section>
-
-            <Section>
-              <SectionHeader>
-                <h2>Receitas</h2>
-                <span>{incomeCategories.length} categoria(s)</span>
-              </SectionHeader>
-              {incomeCategories.length === 0 ? (
-                <EmptyState>Nenhuma categoria de receita cadastrada.</EmptyState>
-              ) : (
-                <SectionGrid>
-                  {incomeCategories.map((category) => (
-                    <CategoryCard
-                      key={category.id}
-                      category={category}
-                      onEdit={() => setEditingCategory(category)}
-                      onDelete={() => setDeleteCategory(category)}
-                    />
-                  ))}
-                </SectionGrid>
-              )}
-            </Section>
-
-            <Section>
-              <SectionHeader>
-                <h2>Investimentos</h2>
-                <span>{investmentCategories.length} categoria(s)</span>
-              </SectionHeader>
-              {investmentCategories.length === 0 ? (
-                <EmptyState>Nenhuma categoria de investimento cadastrada.</EmptyState>
-              ) : (
-                <SectionGrid>
-                  {investmentCategories.map((category) => (
-                    <CategoryCard
-                      key={category.id}
-                      category={category}
-                      onEdit={() => setEditingCategory(category)}
-                      onDelete={() => setDeleteCategory(category)}
-                    />
-                  ))}
-                </SectionGrid>
-              )}
-            </Section>
-          </TabPanel>
-        ) : (
-          <Section id="panel-rules" role="tabpanel" aria-labelledby="tab-rules">
-            <SectionHeader>
-              <div>
-                <h2>Regras de Importação</h2>
-                <span>{rules.length} regra(s) cadastrada(s)</span>
-              </div>
-            </SectionHeader>
-
-            <RulesToolbar>
-              <SearchWrapper>
-                <SearchIcon aria-hidden="true">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+          {activeCategoryTab ? (
+            <div
+              id={`panel-${activeCategoryTab.id}`}
+              role="tabpanel"
+              aria-labelledby={`tab-${activeCategoryTab.id}`}
+            >
+              <LedgerSection
+                title={`${activeCategoryTab.label} em ${formatMonthYear(now)}`}
+              >
+                <FormError message={categoriesError} />
+                {categoriesByType[activeCategoryTab.id].length === 0 ? (
+                  <EmptyState>{activeCategoryTab.emptyText}</EmptyState>
+                ) : (
+                  <LedgerList
+                    aria-label={`Categorias de ${activeCategoryTab.label.toLowerCase()}`}
                   >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </SearchIcon>
-                <SearchInput
-                  id="rule-search"
-                  type="search"
-                  placeholder="Buscar por estabelecimento..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  aria-label="Buscar regra por estabelecimento"
-                />
-              </SearchWrapper>
-            </RulesToolbar>
+                    {categoriesByType[activeCategoryTab.id].map((category) => {
+                      const original = categories.find(
+                        (current) => current.id === category.id,
+                      );
 
-            {rulesError && (
-              <ErrorContainer>
-                <FormError message={rulesError} />
-              </ErrorContainer>
-            )}
+                      return (
+                        <CategoryRow
+                          key={category.id}
+                          category={category}
+                          onEdit={() => setEditingCategory(original ?? null)}
+                        />
+                      );
+                    })}
+                  </LedgerList>
+                )}
+              </LedgerSection>
+            </div>
+          ) : (
+            <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules">
+              <LedgerSection title="Regras de importação">
+                {rules.length > 0 && (
+                  <SearchField>
+                    <SearchIcon aria-hidden="true">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="11" cy="11" r="7" />
+                        <line x1="20" y1="20" x2="16.2" y2="16.2" />
+                      </svg>
+                    </SearchIcon>
+                    <SearchInput
+                      id="rule-search"
+                      type="search"
+                      placeholder="Buscar estabelecimento"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      aria-label="Buscar regra por estabelecimento"
+                    />
+                  </SearchField>
+                )}
 
-            {rulesLoading ? (
-              <EmptyState>Carregando regras...</EmptyState>
-            ) : rules.length === 0 ? (
-              <EmptyState>
-                Nenhuma regra cadastrada. Ao importar faturas e marcar &apos;Lembrar&apos;, as regras aparecerão aqui
-              </EmptyState>
-            ) : filteredRules.length === 0 ? (
-              <EmptyState>Nenhuma regra encontrada para a busca.</EmptyState>
-            ) : (
-              <>
-                <RulesTableWrapper>
-                  <RulesTable>
-                    <thead>
-                      <tr>
-                        <th>Estabelecimento</th>
-                        <th>Categoria associada</th>
-                        <th>Tipo</th>
-                        <th>Data de criação</th>
-                        <th>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRules.map((rule) => (
-                        <tr key={rule.id}>
-                          <td>
-                            <strong>{rule.pattern}</strong>
-                          </td>
-                          <td>
-                            <CategoryTag>{rule.category}</CategoryTag>
-                          </td>
-                          <td>
-                            <TypeBadge $type={rule.type}>
-                              {formatRuleType(rule.type)}
-                            </TypeBadge>
-                          </td>
-                          <td>
-                            <RuleDate>{formatRuleDate(rule.createdAt)}</RuleDate>
-                          </td>
-                          <td>
-                            <DeleteButton
-                              type="button"
-                              onClick={() => setDeleteRule(rule)}
-                              aria-label={`Excluir regra de ${rule.pattern}`}
-                            >
-                              Excluir
-                            </DeleteButton>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </RulesTable>
-                </RulesTableWrapper>
+                {rulesError && <FormError message={rulesError} />}
 
-                <RulesMobileList>
-                  {filteredRules.map((rule) => (
-                    <RuleMobileCard key={rule.id}>
-                      <RuleMobileCardHeader>
-                        <strong>{rule.pattern}</strong>
-                        <TypeBadge $type={rule.type}>
-                          {formatRuleType(rule.type)}
-                        </TypeBadge>
-                      </RuleMobileCardHeader>
-                      <RuleMobileCardMeta>
-                        <CategoryTag>{rule.category}</CategoryTag>
-                      </RuleMobileCardMeta>
-                      <RuleMobileCardFooter>
-                        <RuleDate>{formatRuleDate(rule.createdAt)}</RuleDate>
-                        <DeleteButton
-                          type="button"
-                          onClick={() => setDeleteRule(rule)}
-                          aria-label={`Excluir regra de ${rule.pattern}`}
-                        >
-                          Excluir
-                        </DeleteButton>
-                      </RuleMobileCardFooter>
-                    </RuleMobileCard>
-                  ))}
-                </RulesMobileList>
-              </>
-            )}
-          </Section>
-        )}
-      </PageContent>
+                {rulesLoading ? (
+                  <EmptyState>Carregando regras…</EmptyState>
+                ) : rules.length === 0 ? (
+                  rulesError ? null : (
+                    <EmptyState>
+                      Nenhuma regra ainda. Ao importar uma fatura e marcar
+                      “Lembrar”, a regra aparece aqui.
+                    </EmptyState>
+                  )
+                ) : filteredRules.length === 0 ? (
+                  <EmptyState>Nenhuma regra para essa busca.</EmptyState>
+                ) : (
+                  <LedgerList aria-label="Regras de importação">
+                    {filteredRules.map((rule) => {
+                      const createdAt = formatRuleDate(rule.createdAt);
+                      const color = getRuleColor(rule);
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Nova categoria">
-        <CategoryForm onSubmit={handleCreateCategory} />
+                      return (
+                        <RuleItem key={rule.id}>
+                          <RuleMain>
+                            <RulePattern>{rule.pattern}</RulePattern>
+                            <RuleMeta>
+                              <RuleDot
+                                aria-hidden="true"
+                                style={
+                                  color ? { background: color } : undefined
+                                }
+                              />
+                              <span>{rule.category}</span>
+                              {" · "}
+                              <span>{formatRuleType(rule.type)}</span>
+                              {createdAt && (
+                                <>
+                                  {" · "}
+                                  <span>{createdAt}</span>
+                                </>
+                              )}
+                            </RuleMeta>
+                          </RuleMain>
+                          <RuleDelete
+                            type="button"
+                            onClick={() => setDeleteRule(rule)}
+                            aria-label={`Excluir regra de ${rule.pattern}`}
+                          >
+                            Excluir
+                          </RuleDelete>
+                        </RuleItem>
+                      );
+                    })}
+                  </LedgerList>
+                )}
+              </LedgerSection>
+            </div>
+          )}
+        </PageContent>
+      </Page>
+
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Nova categoria"
+      >
+        <CategoryForm
+          key={activeCategoryTab?.id ?? "outcome"}
+          defaultType={activeCategoryTab?.id ?? "outcome"}
+          onSubmit={handleCreateCategory}
+        />
       </Modal>
 
       <Modal
@@ -455,6 +452,7 @@ export default function CategoriesPage({
             initialValues={getCategoryFormValues(editingCategory)}
             submitLabel="Salvar alterações"
             onSubmit={handleUpdateCategory}
+            onDelete={() => setDeleteCategory(editingCategory)}
           />
         )}
       </Modal>
@@ -463,8 +461,8 @@ export default function CategoriesPage({
         isOpen={!!deleteCategory}
         onClose={() => setDeleteCategory(null)}
         title="Confirmar exclusão"
-        message={`Tem certeza que deseja excluir a categoria ${deleteCategory?.name ?? ""}?`}
-        confirmLabel="Confirmar exclusão"
+        message={`Excluir a categoria ${deleteCategory?.name ?? ""}? Os lançamentos já registrados continuam com esse nome.`}
+        confirmLabel="Excluir"
         onConfirm={handleDeleteCategory}
       />
 
@@ -472,8 +470,8 @@ export default function CategoriesPage({
         isOpen={!!deleteRule}
         onClose={() => setDeleteRule(null)}
         title="Confirmar exclusão"
-        message={`Tem certeza que deseja excluir a regra para o estabelecimento "${deleteRule?.pattern ?? ""}"?`}
-        confirmLabel="Confirmar exclusão"
+        message={`Excluir a regra de “${deleteRule?.pattern ?? ""}”? Nas próximas importações a categoria volta a ser escolhida à mão.`}
+        confirmLabel="Excluir"
         onConfirm={handleDeleteRule}
       />
     </AppShell>

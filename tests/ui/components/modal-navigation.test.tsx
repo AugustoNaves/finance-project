@@ -4,8 +4,9 @@ import { AppNavigation } from "@/components/AppNavigation";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Modal } from "@/components/CustomModal";
-import { Header } from "@/components/Header";
 import { PeriodFilter } from "@/components/PeriodFilter";
+import { EntrySheetContext } from "@/contexts/EntrySheetContext";
+import { mockApi } from "../helpers/api";
 import { navigationMock, setPathname } from "../helpers/navigation";
 import { getModalByTitle, getModalCloseButton, renderUi } from "../helpers/render";
 
@@ -243,133 +244,134 @@ describe("ConfirmDialog", () => {
 });
 
 describe("AppNavigation", () => {
-  const expectedLinks = [
-    ["Início", "/"],
-    ["Transações", "/transactions"],
-    ["Importar", "/import"],
-    ["Categorias", "/categories"],
+  const dailyLinks = [
+    ["Mês", "/"],
+    ["Lançamentos", "/transactions"],
+    ["Planejar", "/planning"],
+  ];
+  const organizeLinks = [
+    ["Importar fatura", "/import"],
+    ["Categorias e regras", "/categories"],
     ["Investimentos", "/investments"],
-    ["Planejamento", "/planning"],
     ["Relatórios", "/reports"],
     ["Configurações", "/settings"],
   ];
 
-  function desktopNav() {
-    return screen.getAllByRole("navigation", { name: "Navegação principal" })[0];
+  function renderNav() {
+    const entrySheet = { openNewEntry: vi.fn(), openEditEntry: vi.fn() };
+    const utils = renderUi(
+      <EntrySheetContext.Provider value={entrySheet}>
+        <AppNavigation />
+      </EntrySheetContext.Provider>,
+    );
+
+    return { entrySheet, ...utils };
   }
 
-  /** O item ativo só é distinguível pelo estilo (styled-components gera uma classe diferente). */
-  function activeLabels(nav: HTMLElement) {
-    const items = within(nav)
-      .getAllByRole("link")
-      .map((link) => link.parentElement as HTMLElement);
-    const count = new Map<string, number>();
+  // A coluna lateral só aparece a partir de 960px (display: none no jsdom).
+  const desktop = { hidden: true };
 
-    items.forEach((item) => count.set(item.className, (count.get(item.className) ?? 0) + 1));
-
-    return items
-      .filter((item) => count.get(item.className) === 1)
-      .map((item) => item.textContent);
+  function linksOf(element: HTMLElement) {
+    return within(element)
+      .getAllByRole("link", desktop)
+      .map((link) => [link.textContent?.replace("›", ""), link.getAttribute("href")]);
   }
 
-  it("exibe a marca e os 8 links na navegação desktop", () => {
-    render(<AppNavigation />);
+  function tabBar() {
+    return screen.getByRole("navigation", { name: "Navegação principal" });
+  }
 
-    expect(
-      within(desktopNav())
-        .getAllByRole("link")
-        .map((link) => [link.textContent, link.getAttribute("href")]),
-    ).toEqual(expectedLinks);
-    expect(screen.getAllByRole("link", { name: "Ir para o início" })[0]).toHaveAttribute("href", "/");
+  it("a coluna do desktop tem a marca, Registrar e os grupos Dia a dia e Organizar", () => {
+    renderNav();
+
+    expect(screen.getByRole("link", { name: "Finance-app, ir para o mês", ...desktop })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("button", { name: "+ Registrar", ...desktop })).toBeInTheDocument();
+    expect(linksOf(screen.getByRole("navigation", { name: "Dia a dia", ...desktop }))).toEqual(dailyLinks);
+    expect(linksOf(screen.getByRole("navigation", { name: "Organizar", ...desktop }))).toEqual(organizeLinks);
   });
 
-  it("repete os mesmos links no menu mobile (drawer)", () => {
-    render(<AppNavigation />);
+  it("a barra inferior tem Mês, Lançamentos, Registrar, Planejar e Mais", () => {
+    renderNav();
 
-    const drawer = screen.getByRole("dialog", { name: "Navegação principal", hidden: true });
-
+    expect(linksOf(tabBar())).toEqual([
+      ["Mês", "/"],
+      ["Lançamentos", "/transactions"],
+      ["Planejar", "/planning"],
+    ]);
     expect(
-      within(drawer)
-        .getAllByRole("link", { hidden: true })
-        .filter((link) => !link.getAttribute("aria-label"))
-        .map((link) => [link.textContent, link.getAttribute("href")]),
-    ).toEqual(expectedLinks);
+      within(tabBar())
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label") ?? button.textContent),
+    ).toEqual(["Registrar", "Mais"]);
+  });
+
+  it("Registrar (barra e coluna) abre a folha de novo lançamento", async () => {
+    const { entrySheet, user } = renderNav();
+
+    await user.click(within(tabBar()).getByRole("button", { name: "Registrar" }));
+    await user.click(screen.getByRole("button", { name: "+ Registrar", ...desktop }));
+
+    expect(entrySheet.openNewEntry).toHaveBeenCalledTimes(2);
   });
 
   it.each([
-    ["/", "Início"],
-    ["/transactions", "Transações"],
-    ["/import", "Importar"],
-    ["/categories", "Categorias"],
+    ["/", "Mês"],
+    ["/transactions", "Lançamentos"],
+    ["/planning", "Planejar"],
+    ["/budgets", "Planejar"],
+    ["/import", "Importar fatura"],
+    ["/categories", "Categorias e regras"],
     ["/investments", "Investimentos"],
-    ["/planning", "Planejamento"],
     ["/reports", "Relatórios"],
     ["/settings", "Configurações"],
-  ])("destaca o item da rota atual: %s -> %s", (pathname, label) => {
+  ])("marca o item da rota atual com aria-current: %s -> %s", (pathname, label) => {
     setPathname(pathname);
-    render(<AppNavigation />);
+    renderNav();
 
-    expect(activeLabels(desktopNav())).toEqual([label]);
+    const current = [
+      ...within(screen.getByRole("navigation", { name: "Dia a dia", ...desktop })).getAllByRole("link", desktop),
+      ...within(screen.getByRole("navigation", { name: "Organizar", ...desktop })).getAllByRole("link", desktop),
+    ].filter((link) => link.getAttribute("aria-current") === "page");
+
+    expect(current.map((link) => link.textContent)).toEqual([label]);
   });
 
-  it("mantém o item ativo em sub-rotas e 'Início' só casa com a raiz exata", () => {
+  it("mantém o item ativo em sub-rotas e 'Mês' só casa com a raiz exata", () => {
     setPathname("/transactions/123");
-    render(<AppNavigation />);
+    renderNav();
 
-    expect(activeLabels(desktopNav())).toEqual(["Transações"]);
+    expect(within(tabBar()).getByRole("link", { name: "Lançamentos" })).toHaveAttribute("aria-current", "page");
+    expect(within(tabBar()).getByRole("link", { name: "Mês" })).not.toHaveAttribute("aria-current");
   });
 
-  it("abre e fecha o menu mobile, refletindo em aria-expanded/aria-hidden", async () => {
-    const { user } = renderUi(<AppNavigation />);
-    const menuButton = screen.getByText("Menu", { selector: "button" });
-    const drawer = screen.getByRole("dialog", { hidden: true });
-    const overlay = drawer.parentElement as HTMLElement;
+  it("'Mais' abre a folha com as áreas de organizar e Sair; um link fecha a folha", async () => {
+    const { user } = renderNav();
+    const more = within(tabBar()).getByRole("button", { name: "Mais" });
 
-    expect(menuButton).toHaveAttribute("aria-expanded", "false");
-    expect(menuButton).toHaveAttribute("aria-controls", drawer.id);
-    expect(overlay).toHaveAttribute("aria-hidden", "true");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await user.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
 
-    await user.click(menuButton);
-    expect(menuButton).toHaveAttribute("aria-expanded", "true");
-    expect(overlay).toHaveAttribute("aria-hidden", "false");
+    const sheet = screen.getByRole("dialog", { name: "Mais" });
+    expect(linksOf(sheet)).toEqual(organizeLinks);
+    expect(within(sheet).getByRole("button", { name: "Sair" })).toBeInTheDocument();
 
-    await user.click(within(drawer).getByText("Fechar", { selector: "button" }));
-    expect(menuButton).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("fecha o menu mobile ao clicar em um link ou no fundo, mas não ao clicar no painel", async () => {
-    const { user } = renderUi(<AppNavigation />);
-    const menuButton = screen.getByText("Menu", { selector: "button" });
-    const drawer = screen.getByRole("dialog", { hidden: true });
-
-    await user.click(menuButton);
-    fireEvent.click(drawer);
-    expect(menuButton).toHaveAttribute("aria-expanded", "true");
-
-    await user.click(within(drawer).getByText("Relatórios", { selector: "a" }));
-    expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    await user.click(within(sheet).getByRole("link", { name: /Relatórios/ }));
     expect(navigationMock.linkClicks).toEqual(["/reports"]);
-
-    await user.click(menuButton);
-    fireEvent.click(drawer.parentElement as HTMLElement);
-    expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("dialog", { name: "Mais" })).toBeNull();
   });
 
-  it("[comportamento atual] não há opção de sair (logout) na navegação; só em Configurações", () => {
-    render(<AppNavigation />);
+  it("Sair chama o logout e recarrega em /login", async () => {
+    const api = mockApi({ "POST /api/logout": { message: "ok" } });
+    const location = { href: "/" };
+    vi.stubGlobal("location", location);
+    const { user } = renderNav();
 
-    expect(screen.queryByRole("button", { name: /sair/i, hidden: true })).toBeNull();
-    expect(screen.queryByRole("link", { name: /sair/i, hidden: true })).toBeNull();
-  });
+    await user.click(screen.getAllByRole("button", { name: "Sair", ...desktop })[0]);
 
-  it("[a11y] marca o link ativo com aria-current='page'", () => {
-    setPathname("/reports");
-    render(<AppNavigation />);
-
-    expect(within(desktopNav()).getByRole("link", { name: "Relatórios" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await waitFor(() => expect(location.href).toBe("/login"));
+    expect(api.callsTo("POST", "/api/logout")).toHaveLength(1);
+    vi.unstubAllGlobals();
   });
 });
 
@@ -382,26 +384,7 @@ describe("AppShell", () => {
     );
 
     expect(within(screen.getByRole("main")).getByText("conteúdo da página")).toBeInTheDocument();
-    expect(screen.getByRole("banner")).toBeInTheDocument();
-    expect(screen.getByText("Menu", { selector: "button" })).toBeInTheDocument();
-  });
-});
-
-describe("Header (componente legado, não usado por nenhuma página)", () => {
-  it("mostra a marca e aciona onNewTransaction no botão", async () => {
-    const onNewTransaction = vi.fn();
-    const { user } = renderUi(<Header onNewTransaction={onNewTransaction} />);
-
-    expect(screen.getByText("Finanças")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "+ Nova Transação" }));
-
-    expect(onNewTransaction).toHaveBeenCalledTimes(1);
-  });
-
-  it("[comportamento atual] não oferece logout", () => {
-    render(<Header />);
-
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("navigation", { name: "Navegação principal" })).toBeInTheDocument();
   });
 });
 
@@ -422,5 +405,19 @@ describe("PeriodFilter", () => {
 
     fireEvent.change(screen.getByLabelText("Período"), { target: { value: "" } });
     expect(onChange).toHaveBeenLastCalledWith("");
+  });
+
+  it("mostra o mês por extenso em português e as setas trocam de mês, virando o ano", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<PeriodFilter value="2026-01" onChange={onChange} />);
+
+    expect(screen.getByText("janeiro de 2026")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mês anterior" }));
+    expect(onChange).toHaveBeenLastCalledWith("2025-12");
+
+    rerender(<PeriodFilter value="2026-12" onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Próximo mês" }));
+    expect(onChange).toHaveBeenLastCalledWith("2027-01");
   });
 });

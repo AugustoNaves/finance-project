@@ -3,36 +3,23 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { FormError } from "@/components/FormError";
 import {
-  FormCard,
-  FormHeader,
-  FormMessage,
-  FormSubtitle,
-  FormTitle,
-  InputGroup,
-  InputLabel,
-  InputWrapper,
-  LogoMark,
-  StyledInput,
+  Brand,
+  BrandMark,
+  Column,
+  Field,
+  Footer,
+  Form,
+  Input,
+  Intro,
+  Label,
+  Notice,
+  Page,
+  SectionTitle,
   SubmitButton,
-  Wrapper,
+  TextLink,
 } from "./styles";
-
-const IconLock = () => (
-  <svg
-    className="input-icon"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -80,7 +67,7 @@ function ResetPasswordForm() {
 
       setMessage({
         type: "success",
-        text: "Senha redefinida com sucesso. Redirecionando para o login...",
+        text: "Senha redefinida. Redirecionando para o login...",
       });
 
       setTimeout(() => {
@@ -94,73 +81,71 @@ function ResetPasswordForm() {
   }
 
   return (
-    <Wrapper>
-      <FormCard>
-        <FormHeader>
-          <LogoMark>F</LogoMark>
-          <FormTitle>Nova senha</FormTitle>
-          <FormSubtitle>
-            Digite sua nova senha abaixo.
-          </FormSubtitle>
-        </FormHeader>
+    <Page>
+      <Column>
+        <Brand>
+          <BrandMark aria-hidden="true">F</BrandMark>
+          Finance-app
+        </Brand>
 
-        <form onSubmit={handleSubmit}>
-          <InputGroup>
-            <InputLabel htmlFor="password">Nova senha</InputLabel>
-            <InputWrapper>
-              <StyledInput
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                disabled={isSubmitting}
-                minLength={8}
-                required
-              />
-              <IconLock />
-            </InputWrapper>
-          </InputGroup>
+        <SectionTitle>Nova senha</SectionTitle>
+        <Intro>Escolha uma senha com pelo menos 8 caracteres.</Intro>
 
-          <InputGroup>
-            <InputLabel htmlFor="confirm-password">Confirmar senha</InputLabel>
-            <InputWrapper>
-              <StyledInput
-                id="confirm-password"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                disabled={isSubmitting}
-                minLength={8}
-                required
-              />
-              <IconLock />
-            </InputWrapper>
-          </InputGroup>
+        <Form onSubmit={handleSubmit}>
+          <Field>
+            <Label htmlFor="password">Nova senha</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="Mínimo de 8 caracteres"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              disabled={isSubmitting}
+              minLength={8}
+              required
+            />
+          </Field>
+
+          <Field>
+            <Label htmlFor="confirm-password">Confirmar senha</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="Repita a nova senha"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              disabled={isSubmitting}
+              minLength={8}
+              required
+            />
+          </Field>
 
           {!token && !message && (
-            <FormMessage role="alert" $variant="error">
+            <Notice role="alert" $tone="error">
               Link inválido ou incompleto.{" "}
               <Link href="/forgot-password">Solicite um novo link de redefinição</Link>.
-            </FormMessage>
+            </Notice>
           )}
 
-          {message && (
-            <FormMessage
-              role={message.type === "error" ? "alert" : "status"}
-              $variant={message.type}
-            >
+          {message?.type === "error" && <FormError message={message.text} />}
+          {message?.type === "success" && (
+            <Notice role="status" $tone="success">
               {message.text}
-            </FormMessage>
+            </Notice>
           )}
 
           <SubmitButton type="submit" disabled={isSubmitting || !token}>
             {isSubmitting ? "Redefinindo..." : "Redefinir senha"}
           </SubmitButton>
-        </form>
-      </FormCard>
-    </Wrapper>
+        </Form>
+
+        <Footer>
+          <TextLink href="/login">Voltar para o login</TextLink>
+        </Footer>
+      </Column>
+    </Page>
   );
 }
 

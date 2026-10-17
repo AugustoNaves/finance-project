@@ -1,37 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { FormError } from "@/components/FormError";
 import {
-  ForgotLink,
-  FormCard,
-  FormHeader,
-  FormMessage,
-  FormSubtitle,
-  FormTitle,
-  InputGroup,
-  InputLabel,
-  InputWrapper,
-  LogoMark,
-  StyledInput,
+  Brand,
+  BrandMark,
+  Column,
+  Field,
+  Footer,
+  Form,
+  Input,
+  Intro,
+  Label,
+  Notice,
+  Page,
+  SectionTitle,
   SubmitButton,
-  Wrapper,
+  TextLink,
 } from "./styles";
-
-const IconMail = () => (
-  <svg
-    className="input-icon"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="M2 7l10 7 10-7" />
-  </svg>
-);
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -59,7 +45,7 @@ export default function ForgotPasswordPage() {
 
       setMessage({
         type: "success",
-        text: "Se este email estiver cadastrado, você receberá um link de recuperação em breve.",
+        text: "Se este e-mail estiver cadastrado, você vai receber um link para redefinir a senha.",
       });
       setEmail("");
     } catch {
@@ -70,49 +56,48 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <Wrapper>
-      <FormCard>
-        <FormHeader>
-          <LogoMark>F</LogoMark>
-          <FormTitle>Recuperar senha</FormTitle>
-          <FormSubtitle>
-            Informe seu email e enviaremos um link para redefinir sua senha.
-          </FormSubtitle>
-        </FormHeader>
+    <Page>
+      <Column>
+        <Brand>
+          <BrandMark aria-hidden="true">F</BrandMark>
+          Finance-app
+        </Brand>
 
-        <form onSubmit={handleSubmit}>
-          <InputGroup>
-            <InputLabel htmlFor="email">E-mail</InputLabel>
-            <InputWrapper>
-              <StyledInput
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                disabled={isSubmitting}
-                required
-              />
-              <IconMail />
-            </InputWrapper>
-          </InputGroup>
+        <SectionTitle>Recuperar senha</SectionTitle>
+        <Intro>Informe seu e-mail e enviaremos um link para criar uma nova senha.</Intro>
 
-          {message && (
-            <FormMessage
-              role={message.type === "error" ? "alert" : "status"}
-              $variant={message.type}
-            >
+        <Form onSubmit={handleSubmit}>
+          <Field>
+            <Label htmlFor="email">E-mail</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              disabled={isSubmitting}
+              required
+            />
+          </Field>
+
+          {message?.type === "error" && <FormError message={message.text} />}
+          {message?.type === "success" && (
+            <Notice role="status" $tone="success">
               {message.text}
-            </FormMessage>
+            </Notice>
           )}
 
           <SubmitButton type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Enviando..." : "Enviar link"}
           </SubmitButton>
-        </form>
+        </Form>
 
-        <ForgotLink href="/login">Voltar para o login</ForgotLink>
-      </FormCard>
-    </Wrapper>
+        <Footer>
+          <TextLink href="/login">Voltar para o login</TextLink>
+        </Footer>
+      </Column>
+    </Page>
   );
 }

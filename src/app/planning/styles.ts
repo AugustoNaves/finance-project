@@ -1,150 +1,154 @@
 "use client";
 
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 
-const colors = {
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  green: "#00c48c",
-  greenGlow: "rgba(0, 196, 140, 0.25)",
-  border: "rgba(255, 255, 255, 0.07)",
-  navyLight: "#1e2535",
-};
+export const Page = styled.div`
+  max-width: 760px;
 
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
+  @media (min-width: 1180px) {
+    max-width: none;
+  }
 `;
 
-export const PageContent = styled.div`
+export const Columns = styled.div`
   display: grid;
-  gap: 24px;
-  animation: ${fadeUp} 0.6s ease both;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+
+  @media (min-width: 1180px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 48px;
+    align-items: start;
+  }
 `;
 
-export const Section = styled.section`
-  background: rgba(22, 27, 39, 0.72);
-  border: 1px solid ${colors.border};
-  border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
-  overflow: hidden;
+export const Column = styled.div`
+  min-width: 0;
+
+  @media (min-width: 1180px) {
+    & + & {
+      padding-top: 48px;
+    }
+  }
 `;
 
-export const SectionHeader = styled.header`
+export const MonthBar = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 22px 24px;
-  border-bottom: 1px solid ${colors.border};
+  gap: 8px;
+  margin-bottom: 4px;
 
-  h2 {
-    color: #ffffff;
-    font-family: var(--font-dm-sans), sans-serif;
-    font-size: 1.3rem;
-    font-weight: 700;
-    letter-spacing: -0.04em;
+  @media (min-width: 960px) {
+    justify-content: flex-start;
+  }
+`;
+
+export const MonthStep = styled.button`
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ink-soft);
+  font-size: 24px;
+  line-height: 1;
+
+  &:hover {
+    background: var(--green-wash);
+    color: var(--ink);
+  }
+`;
+
+export const MonthPicker = styled.div`
+  position: relative;
+  min-height: 44px;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  border-radius: 10px;
+
+  &:hover {
+    background: var(--green-wash);
   }
 
-  span {
-    color: ${colors.textMuted};
-    font-size: 0.88rem;
+  &:focus-within {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
   }
 
-  > div:last-child {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  label {
-    display: grid;
-    gap: 6px;
-    color: ${colors.textLight};
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  input {
-    min-height: 42px;
-    padding: 0 12px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
-      ${colors.navyLight};
-    border: 1px solid ${colors.border};
-    border-radius: 12px;
-    color: #ffffff;
-    color-scheme: dark;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  @media (min-width: 960px) {
+    order: -1;
+    padding-left: 0;
+    margin-right: 4px;
 
     &:hover {
-      border-color: rgba(255, 255, 255, 0.15);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.02)),
-        ${colors.navyLight};
-    }
-
-    &:focus {
-      border-color: ${colors.green};
-      box-shadow: 0 0 0 3px ${colors.greenGlow};
-    }
-
-    &::-webkit-calendar-picker-indicator {
-      width: 18px;
-      height: 18px;
-      border-radius: 6px;
-      padding: 4px;
-      background-color: rgba(0, 196, 140, 0.14);
-      cursor: pointer;
-      filter: invert(72%) sepia(56%) saturate(717%) hue-rotate(111deg) brightness(91%) contrast(92%);
-    }
-  }
-
-  button {
-    min-height: 42px;
-    padding: 0 16px;
-    border-radius: 12px;
-    background: linear-gradient(90deg, ${colors.green} 0%, #00b8d9 100%);
-    color: #ffffff;
-    font-size: 0.85rem;
-    font-weight: 600;
-    box-shadow: 0 4px 18px rgba(0, 196, 140, 0.28);
-    transition:
-      transform 0.15s,
-      box-shadow 0.2s;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(0, 196, 140, 0.42);
-    }
-  }
-
-  @media (max-width: 720px) {
-    align-items: stretch;
-    flex-direction: column;
-
-    > div:last-child {
-      flex-direction: column;
-      align-items: stretch;
+      background: none;
     }
   }
 `;
 
-export const SectionGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 18px;
+export const MonthName = styled.span`
+  font-family: var(--font-figures);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.2;
+  white-space: nowrap;
 
-  @media (max-width: 860px) {
-    grid-template-columns: 1fr;
+  &::first-letter {
+    text-transform: uppercase;
+  }
+`;
+
+export const MonthInput = styled.input`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: none;
+  }
+`;
+
+export const LedgerList = styled.ul`
+  list-style: none;
+`;
+
+export const TotalRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 0 0;
+
+  span {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
   }
 
-  @media (max-width: 640px) {
-    padding: 16px;
+  strong {
+    font-family: var(--font-figures);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    font-size: 16px;
+    padding-bottom: 2px;
+    border-bottom: 4px double var(--rule-strong);
+  }
+
+  small {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--ink-soft);
   }
 `;

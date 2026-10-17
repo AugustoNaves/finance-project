@@ -1,31 +1,36 @@
 import type { Page } from "@playwright/test";
 import { E2E_MONTH, E2E_MONTH_LABEL } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import {
-  card,
-  confirmDeletion,
-  formError,
-  gotoAndWaitForTransactions,
-  metric,
-  modal,
-  money,
-  section,
-} from "./support/ui";
+import { confirmDeletion, formError, gotoAndWaitForTransactions, modal, money, section } from "./support/ui";
 
 const day = (dayOfMonth: number) => `${E2E_MONTH}-${String(dayOfMonth).padStart(2, "0")}`;
 const budgetForm = (page: Page) => page.locator("form").filter({ has: page.getByLabel("Limite mensal") });
-const budgets = (page: Page) => section(page, /^Orçamentos/);
+const budgets = (page: Page) => section(page, "Orçamentos");
+const monthField = (page: Page) => page.getByRole("main").locator("#planning-month-filter");
+const emptyBudgets = (page: Page, monthLabel = E2E_MONTH_LABEL) =>
+  budgets(page).getByText(`Nenhum orçamento para ${monthLabel}.`, { exact: false });
 
-test.describe("Orçamentos (Planejamento)", () => {
+/** Linha de orçamento: o item da lista que contém o botão "Editar orçamento de X". */
+function budgetRow(page: Page, category: string) {
+  return budgets(page)
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("button", { name: `Editar orçamento de ${category}`, exact: true }) });
+}
+
+function budgetButtons(page: Page) {
+  return budgets(page).getByRole("button", { name: /^Editar orçamento de / });
+}
+
+test.describe("Orçamentos (Planejar)", () => {
   test("estado vazio do mês corrente", async ({ page, account }) => {
     void account;
     await page.goto("/planning");
 
-    await expect(page.getByRole("heading", { name: "Orçamentos e metas", level: 1 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: `Orçamentos — ${E2E_MONTH_LABEL}` })).toBeVisible();
-    await expect(budgets(page).getByText("0 orçamento(s) neste mês")).toBeVisible();
-    await expect(page.getByText("Nenhum orçamento cadastrado para este mês.")).toBeVisible();
-    await expect(budgets(page).getByLabel("Mês")).toHaveValue(E2E_MONTH);
+    await expect(page.getByRole("heading", { name: "Planejar", level: 1 })).toBeVisible();
+    await expect(page.getByRole("main").getByText(E2E_MONTH_LABEL, { exact: true })).toBeVisible();
+    await expect(emptyBudgets(page)).toBeVisible();
+    await expect(budgetButtons(page)).toHaveCount(0);
+    await expect(monthField(page)).toHaveValue(E2E_MONTH);
   });
 
   test("cria orçamento para categoria de despesa no mês e persiste", async ({ page, api }) => {
@@ -36,7 +41,7 @@ test.describe("Orçamentos (Planejamento)", () => {
     const form = budgetForm(page);
 
     await expect(dialog).toBeVisible();
-    // Só categorias de despesa podem ter orçamento.
+    // Só categorias de gasto podem ter orçamento.
     await expect(form.getByLabel("Categoria", { exact: true }).locator("option")).toHaveText([
       "Selecione uma categoria",
       "Alimentação",
@@ -56,19 +61,16 @@ test.describe("Orçamentos (Planejamento)", () => {
     await form.getByRole("button", { name: "Salvar orçamento" }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(budgets(page).getByText("1 orçamento(s) neste mês")).toBeVisible();
+    await expect(budgetButtons(page)).toHaveCount(1);
 
-    const budget = card(page, "Alimentação");
+    const budget = budgetRow(page, "Alimentação");
 
-    await expect(budget).toContainText(E2E_MONTH_LABEL);
+    await expect(budget).toContainText("0,00 de 500,50");
     await expect(budget).toContainText("0%");
-    await expect(metric(budget, "Limite")).toContainText(money(500.5));
-    await expect(metric(budget, "Gasto")).toContainText(money(0));
-    await expect(metric(budget, "Restante")).toContainText(money(500.5));
-    await expect(budget).toContainText("Dentro do previsto");
+    await expect(budget).toContainText(`Dentro do previsto · restam ${money(500.5)}`);
 
     await page.reload();
-    await expect(metric(card(page, "Alimentação"), "Limite")).toContainText(money(500.5));
+    await expect(budgetRow(page, "Alimentação")).toContainText("de 500,50");
     expect(await api.list("budgets")).toEqual([
       expect.objectContaining({ category: "Alimentação", amount: 500.5, month: E2E_MONTH }),
     ]);
@@ -89,36 +91,38 @@ test.describe("Orçamentos (Planejamento)", () => {
     await api.createTransaction({ description: "Aporte", value: 700, type: "investment", category: "Ações", date: day(6) });
 
     await gotoAndWaitForTransactions(page, "/planning");
-    await expect(budgets(page).getByText("3 orçamento(s) neste mês")).toBeVisible();
+    await expect(budgetButtons(page)).toHaveText(["Alimentação", "Lazer", "Transporte"]);
 
-    const food = card(page, "Alimentação");
+    const food = budgetRow(page, "Alimentação");
 
+    await expect(food).toContainText("300,00 de 500,00");
     await expect(food).toContainText("60%");
-    await expect(metric(food, "Gasto")).toContainText(money(300));
-    await expect(metric(food, "Restante")).toContainText(money(200));
-    await expect(food).toContainText("Dentro do previsto");
-    await expect(food.getByLabel("Progresso de 60%")).toBeVisible();
+    await expect(food).toContainText(`Dentro do previsto · restam ${money(200)}`);
+    await expect(food.getByRole("progressbar", { name: "Alimentação: 60%" })).toBeVisible();
 
-    const transport = card(page, "Transporte");
+    const transport = budgetRow(page, "Transporte");
 
     await expect(transport).toContainText("85%");
-    await expect(transport).toContainText("Atenção: acima de 80%");
+    await expect(transport).toContainText("Perto do limite");
 
-    const leisure = card(page, "Lazer");
+    const leisure = budgetRow(page, "Lazer");
 
     await expect(leisure).toContainText("150%");
-    await expect(metric(leisure, "Restante")).toContainText(money(-50));
-    await expect(leisure).toContainText("Limite ultrapassado");
-    await expect(leisure.getByLabel("Progresso de 100%")).toBeVisible();
+    await expect(leisure).toContainText(`Estourou ${money(50)}`);
+    await expect(leisure.getByRole("progressbar", { name: "Lazer: 100%" })).toBeVisible();
+
+    await expect(budgets(page).getByText("Total", { exact: true }).locator("xpath=..")).toContainText(
+      "1.300,00 de 1.600,00",
+    );
   });
 
-  test("edita limite e categoria de um orçamento", async ({ page, api }) => {
+  test("tocar no orçamento edita o limite", async ({ page, api }) => {
     await api.createBudget({ category: "Saúde", amount: 300, month: E2E_MONTH });
     await api.createTransaction({ description: "Farmácia", value: 150, type: "outcome", category: "Saúde", date: day(9) });
     await gotoAndWaitForTransactions(page, "/planning");
-    await expect(card(page, "Saúde")).toContainText("50%");
+    await expect(budgetRow(page, "Saúde")).toContainText("50%");
 
-    await card(page, "Saúde").getByRole("button", { name: "Editar" }).click();
+    await budgetRow(page, "Saúde").click();
 
     const dialog = modal(page, "Editar orçamento");
     const form = budgetForm(page);
@@ -130,40 +134,42 @@ test.describe("Orçamentos (Planejamento)", () => {
     await form.getByRole("button", { name: "Salvar alterações" }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(card(page, "Saúde")).toContainText("25%");
-    await expect(metric(card(page, "Saúde"), "Limite")).toContainText(money(600));
-    await expect(metric(card(page, "Saúde"), "Restante")).toContainText(money(450));
+    await expect(budgetRow(page, "Saúde")).toContainText("25%");
+    await expect(budgetRow(page, "Saúde")).toContainText("150,00 de 600,00");
+    await expect(budgetRow(page, "Saúde")).toContainText(`restam ${money(450)}`);
 
     await page.reload();
-    await expect(metric(card(page, "Saúde"), "Limite")).toContainText(money(600));
+    await expect(budgetRow(page, "Saúde")).toContainText("de 600,00");
     expect(await api.list("budgets")).toEqual([expect.objectContaining({ category: "Saúde", amount: 600 })]);
   });
 
-  test("exclui orçamento após confirmação", async ({ page, api }) => {
+  test("exclui orçamento pela edição após confirmação", async ({ page, api }) => {
     await api.createBudget({ category: "Vestuário", amount: 250, month: E2E_MONTH });
     await page.goto("/planning");
 
-    await card(page, "Vestuário").getByRole("button", { name: "Excluir" }).click();
+    await budgetRow(page, "Vestuário").click();
+    await modal(page, "Editar orçamento").getByRole("button", { name: "Excluir" }).click();
 
     const dialog = modal(page, "Confirmar exclusão");
 
-    await expect(dialog).toContainText("Tem certeza que deseja excluir o orçamento de Vestuário?");
+    await expect(dialog).toContainText("Excluir o orçamento de Vestuário?");
     await dialog.getByRole("button", { name: "Cancelar" }).click();
-    await expect(card(page, "Vestuário")).toBeVisible();
+    await expect(modal(page, "Editar orçamento")).toBeVisible();
 
-    await card(page, "Vestuário").getByRole("button", { name: "Excluir" }).click();
+    await modal(page, "Editar orçamento").getByRole("button", { name: "Excluir" }).click();
     await confirmDeletion(page);
 
-    await expect(page.getByText("Nenhum orçamento cadastrado para este mês.")).toBeVisible();
+    await expect(modal(page, "Editar orçamento")).toBeHidden();
+    await expect(emptyBudgets(page)).toBeVisible();
     await page.reload();
-    await expect(page.getByText("Nenhum orçamento cadastrado para este mês.")).toBeVisible();
+    await expect(emptyBudgets(page)).toBeVisible();
     expect(await api.list("budgets")).toHaveLength(0);
   });
 
   test("não duplica orçamento da mesma categoria no mesmo mês e avisa o usuário", async ({ page, api }) => {
     await api.createBudget({ category: "Moradia", amount: 1500, month: E2E_MONTH });
     await page.goto("/planning");
-    await expect(card(page, "Moradia")).toBeVisible();
+    await expect(budgetRow(page, "Moradia")).toBeVisible();
 
     await page.getByRole("button", { name: "+ Novo orçamento" }).click();
 
@@ -187,32 +193,38 @@ test.describe("Orçamentos (Planejamento)", () => {
     await form.getByRole("button", { name: "Salvar orçamento" }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole("heading", { name: "Orçamentos — novembro de 2026" })).toBeVisible();
-    await expect(metric(card(page, "Moradia"), "Limite")).toContainText(money(2000));
+    await expect(monthField(page)).toHaveValue("2026-11");
+    await expect(page.getByRole("main").getByText("novembro de 2026", { exact: true })).toBeVisible();
+    await expect(budgetRow(page, "Moradia")).toContainText("de 2.000,00");
     expect(await api.list("budgets")).toHaveLength(2);
   });
 
-  test("filtro de mês alterna os orçamentos exibidos", async ({ page, api }) => {
+  test("seletor de mês alterna os orçamentos exibidos", async ({ page, api }) => {
     await api.createBudget({ category: "Contas", amount: 400, month: E2E_MONTH });
     await api.createBudget({ category: "Educação", amount: 900, month: "2026-11" });
     await api.createTransaction({ description: "Curso novembro", value: 450, type: "outcome", category: "Educação", date: "2026-11-03" });
     await gotoAndWaitForTransactions(page, "/planning");
 
-    await expect(card(page, "Contas")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Educação" })).toHaveCount(0);
+    await expect(budgetButtons(page)).toHaveText(["Contas"]);
 
-    await budgets(page).getByLabel("Mês").fill("2026-11");
+    await page.getByRole("button", { name: "Próximo mês" }).click();
 
-    await expect(page.getByRole("heading", { name: "Orçamentos — novembro de 2026" })).toBeVisible();
-    await expect(card(page, "Educação")).toContainText("50%");
-    await expect(page.getByRole("heading", { name: "Contas" })).toHaveCount(0);
+    await expect(monthField(page)).toHaveValue("2026-11");
+    await expect(page.getByRole("main").getByText("novembro de 2026", { exact: true })).toBeVisible();
+    await expect(budgetButtons(page)).toHaveText(["Educação"]);
+    await expect(budgetRow(page, "Educação")).toContainText("50%");
 
-    await budgets(page).getByLabel("Mês").fill("2026-12");
-    await expect(page.getByText("Nenhum orçamento cadastrado para este mês.")).toBeVisible();
+    await monthField(page).fill("2026-12");
+    await expect(emptyBudgets(page, "dezembro de 2026")).toBeVisible();
 
     // O formulário de novo orçamento já vem no mês selecionado na página.
     await page.getByRole("button", { name: "+ Novo orçamento" }).click();
     await expect(budgetForm(page).getByLabel("Mês")).toHaveValue("2026-12");
+    await modal(page, "Novo orçamento").getByRole("button", { name: "Fechar" }).click();
+
+    await page.getByRole("button", { name: "Mês anterior" }).click();
+    await page.getByRole("button", { name: "Mês anterior" }).click();
+    await expect(budgetButtons(page)).toHaveText(["Contas"]);
   });
 
   test("valor inválido é barrado pelo formulário", async ({ page, api }) => {

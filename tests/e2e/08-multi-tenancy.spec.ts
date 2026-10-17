@@ -1,7 +1,17 @@
 import { createHmac } from "node:crypto";
 import { E2E_MONTH } from "./support/env";
 import { expect, newSession, test, type ApiRecord, type Session } from "./support/fixtures";
-import { gotoAndWaitForTransactions, metric, money, section } from "./support/ui";
+import type { Page } from "@playwright/test";
+import { E2E_MONTH_LABEL } from "./support/env";
+import { entryCount, gotoAndWaitForTransactions, money, transactionRow } from "./support/ui";
+
+/** Linha "rótulo → valor" de uma lista de definições (Mês, Relatórios, Configurações). */
+function line(page: Page, label: string) {
+  return page
+    .getByRole("main")
+    .locator("dl > div")
+    .filter({ has: page.locator("dt", { hasText: new RegExp(`^${label}$`) }) });
+}
 
 type Owned = { transaction: ApiRecord; category: ApiRecord; budget: ApiRecord; goal: ApiRecord };
 
@@ -33,37 +43,38 @@ test.describe("Isolamento entre usuários", () => {
     const { page } = other;
 
     await gotoAndWaitForTransactions(page, "/");
-    await expect(metric(page, "Saldo Total")).toContainText(money(0));
-    await expect(page.getByText("Nenhuma transação registrada ainda.")).toBeVisible();
-    await expect(metric(page, "Meta mais próxima")).toContainText("Sem metas");
+    await expect(page.getByRole("region", { name: "Sobra do mês" })).toContainText(money(0));
+    await expect(page.getByRole("region", { name: "Sobra do mês" }).getByText("Saldo acumulado")).toContainText(money(0));
+    await expect(page.getByText("Nada registrado em outubro.")).toBeVisible();
+    await expect(page.getByText("Nenhum orçamento para outubro.")).toBeVisible();
 
     await gotoAndWaitForTransactions(page, "/transactions");
-    await expect(page.getByText("0 registro(s) encontrado(s)")).toBeVisible();
+    await expect(entryCount(page, 0)).toBeVisible();
     await expect(page.getByText("Segredo da conta A")).toHaveCount(0);
 
     await page.goto("/categories");
-    await expect(section(page, "Despesas").getByText("9 categoria(s)")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Gastos 9" })).toBeVisible();
     await expect(page.getByText("Categoria privada A")).toHaveCount(0);
 
     await page.goto("/planning");
-    await expect(page.getByText("Nenhum orçamento cadastrado para este mês.")).toBeVisible();
-    await expect(page.getByText("Nenhuma meta cadastrada ainda.")).toBeVisible();
+    await expect(page.getByText(`Nenhum orçamento para ${E2E_MONTH_LABEL}.`, { exact: false })).toBeVisible();
+    await expect(page.getByText("Nenhuma meta ainda.", { exact: false })).toBeVisible();
     await expect(page.getByText("Meta privada A")).toHaveCount(0);
 
     await gotoAndWaitForTransactions(page, "/reports");
-    await expect(metric(page, "Maior despesa")).toContainText("Sem dados");
+    await expect(line(page, "Maior despesa")).toContainText("Sem dados");
 
     await gotoAndWaitForTransactions(page, "/settings");
-    await expect(metric(page, "E-mail")).toContainText(other.account.email);
-    await expect(metric(page, "Transações carregadas")).toContainText("0");
+    await expect(line(page, "E-mail")).toContainText(other.account.email);
+    await expect(line(page, "Lançamentos")).toContainText("0");
   });
 
   test("usuário A continua vendo os próprios dados", async ({ page, account }) => {
     await gotoAndWaitForTransactions(page, "/transactions");
-    await expect(page.getByRole("row").filter({ hasText: "Segredo da conta A" })).toBeVisible();
+    await expect(transactionRow(page, "Segredo da conta A")).toBeVisible();
 
     await page.goto("/settings");
-    await expect(metric(page, "E-mail")).toContainText(account.email);
+    await expect(line(page, "E-mail")).toContainText(account.email);
   });
 
   test("listagens da API do usuário B não incluem registros do usuário A", async () => {

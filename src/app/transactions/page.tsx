@@ -2,7 +2,6 @@
 
 import { useContext, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { NewTransactionModal } from "@/components/NewTransactionModal";
 import { PageHeader } from "@/components/PageHeader";
 import {
   TransactionFilters,
@@ -24,10 +23,8 @@ const initialFilters: TransactionFiltersState = {
 };
 
 export default function TransactionsPage() {
-  const [modalOpen, setModalOpen] = useState(false);
   const [filters, setFilters] = useState<TransactionFiltersState>(initialFilters);
-  const { transactions, deleteTransaction, updateTransaction } =
-    useContext(TransactionsContext);
+  const { transactions } = useContext(TransactionsContext);
 
   const categories = Array.from(
     new Set(transactions.map((transaction) => transaction.category).filter(Boolean)),
@@ -78,13 +75,7 @@ export default function TransactionsPage() {
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Transações"
-        title="Todas as movimentações"
-        subtitle="Busque, filtre e acompanhe todas as receitas, despesas e investimentos cadastrados."
-        actionLabel="+ Nova Transação"
-        onAction={() => setModalOpen(true)}
-      />
+      <PageHeader title="Lançamentos" />
 
       <PageContent>
         <TransactionFilters
@@ -96,15 +87,9 @@ export default function TransactionsPage() {
 
         <TransactionList
           transactions={filteredTransactions}
-          onDelete={deleteTransaction}
-          onUpdate={updateTransaction}
+          groupByDay={filters.sort === "dateDesc" || filters.sort === "dateAsc"}
         />
       </PageContent>
-
-      <NewTransactionModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
     </AppShell>
   );
 }

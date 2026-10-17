@@ -1,209 +1,74 @@
 "use client";
 
-import { useState } from "react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Modal } from "@/components/CustomModal";
-import { TransactionForm, TransactionFormData } from "@/components/TransactionForm";
+import { EntryRow } from "@/components/EntryRow";
 import { Transaction } from "@/types/transaction";
-import { getTransactionType } from "@/utils/finance";
-import { formatCurrency, formatDate } from "@/utils/formatters";
-import {
-  ActionButton,
-  Actions,
-  Amount,
-  Card,
-  CardActions,
-  CardAmount,
-  CardHeader,
-  CardMeta,
-  EmptyState,
-  ListHeader,
-  MobileList,
-  Section,
-  Table,
-  TableWrapper,
-  Tag,
-  Title,
-} from "./styles";
+import { getDateKey } from "@/utils/dates";
+import { formatDayHeading, formatSignedAmount } from "@/utils/formatters";
+import { Count, DayHead, DayTotal, Empty, List, Section } from "./styles";
 
 interface TransactionListProps {
   transactions: Transaction[];
-  onDelete: (id: string) => Promise<void>;
-  onUpdate: (id: string, data: TransactionFormData) => Promise<void>;
+  groupByDay?: boolean;
+  emptyText?: string;
 }
 
-function getTransactionFormValues(transaction: Transaction): TransactionFormData {
-  return {
-    description: transaction.description,
-    amount: transaction.amount,
-    category: transaction.category,
-    type: transaction.type ?? (transaction.amount > 0 ? "income" : "outcome"),
-    paymentMethod: transaction.paymentMethod ?? "Pix",
-    notes: transaction.notes ?? "",
-    date: transaction.date,
-  };
+type DayGroup = { day: string; items: Transaction[]; total: number };
+
+function groupTransactionsByDay(transactions: Transaction[]) {
+  return transactions.reduce<DayGroup[]>((groups, transaction) => {
+    const day = getDateKey(transaction.date);
+    const last = groups[groups.length - 1];
+
+    if (last && last.day === day) {
+      return [
+        ...groups.slice(0, -1),
+        { ...last, items: [...last.items, transaction], total: last.total + transaction.amount },
+      ];
+    }
+
+    return [...groups, { day, items: [transaction], total: transaction.amount }];
+  }, []);
 }
 
 export function TransactionList({
   transactions,
-  onDelete,
-  onUpdate,
+  groupByDay = true,
+  emptyText = "Nenhum lançamento encontrado com esses filtros.",
 }: TransactionListProps) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-
-  const deletingTransaction = transactions.find(
-    (transaction) => transaction.id === deleteId,
-  );
-
-  async function handleDelete() {
-    if (!deleteId) return;
-
-    await onDelete(deleteId);
-    setDeleteId(null);
-  }
-
-  async function handleUpdate(data: TransactionFormData) {
-    if (!editingTransaction) return;
-
-    await onUpdate(editingTransaction.id, data);
-    setEditingTransaction(null);
-  }
-
   return (
-    <Section>
-      <ListHeader>
-        <div>
-          <Title>Transações</Title>
-          <span>{transactions.length} registro(s) encontrado(s)</span>
-        </div>
-      </ListHeader>
+    <Section aria-labelledby="transaction-list-title">
+      <h2 id="transaction-list-title" className="sr-only">
+        Lançamentos
+      </h2>
+      <Count>
+        {transactions.length === 1 ? "1 lançamento" : `${transactions.length} lançamentos`}
+      </Count>
 
       {transactions.length === 0 ? (
-        <EmptyState>Nenhuma transação encontrada com os filtros atuais.</EmptyState>
+        <Empty>{emptyText}</Empty>
+      ) : groupByDay ? (
+        <List>
+          {groupTransactionsByDay(transactions).map((group) => (
+            <li key={group.day}>
+              <List aria-label={formatDayHeading(group.day)}>
+                <DayHead aria-hidden="true">
+                  <span>{formatDayHeading(group.day)}</span>
+                  <DayTotal>{formatSignedAmount(group.total)}</DayTotal>
+                </DayHead>
+                {group.items.map((transaction) => (
+                  <EntryRow key={transaction.id} transaction={transaction} />
+                ))}
+              </List>
+            </li>
+          ))}
+        </List>
       ) : (
-        <>
-          <TableWrapper>
-            <Table>
-              <thead>
-                <tr>
-                  <th>Descrição</th>
-                  <th>Valor</th>
-                  <th>Categoria</th>
-                  <th>Data</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((transaction) => {
-                  const transactionType = getTransactionType(transaction);
-
-                  return (
-                    <tr key={transaction.id}>
-                      <td>{transaction.description}</td>
-                      <td>
-                        <Amount $variant={transactionType}>
-                          {transactionType === "investment"
-                            ? formatCurrency(Math.abs(transaction.amount))
-                            : `${transaction.amount > 0 ? "+" : ""}${formatCurrency(transaction.amount)}`}
-                        </Amount>
-                      </td>
-                      <td>
-                        <Tag>{transaction.category}</Tag>
-                      </td>
-                      <td>{formatDate(transaction.date)}</td>
-                      <td>
-                        <Actions>
-                          <ActionButton
-                            type="button"
-                            onClick={() => setEditingTransaction(transaction)}
-                          >
-                            Editar
-                          </ActionButton>
-                          <ActionButton
-                            type="button"
-                            $danger
-                            onClick={() => setDeleteId(transaction.id)}
-                          >
-                            Excluir
-                          </ActionButton>
-                        </Actions>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          </TableWrapper>
-
-          <MobileList>
-            {transactions.map((transaction) => {
-              const transactionType = getTransactionType(transaction);
-
-              return (
-                <Card key={transaction.id}>
-                  <CardHeader>
-                    <div>
-                      <strong>{transaction.description}</strong>
-                      <CardMeta>
-                        {transaction.category} • {formatDate(transaction.date)}
-                      </CardMeta>
-                    </div>
-                    <CardAmount $variant={transactionType}>
-                      {transactionType === "investment"
-                        ? formatCurrency(Math.abs(transaction.amount))
-                        : `${transaction.amount > 0 ? "+" : ""}${formatCurrency(transaction.amount)}`}
-                    </CardAmount>
-                  </CardHeader>
-                  <CardActions>
-                    <ActionButton
-                      type="button"
-                      onClick={() => setEditingTransaction(transaction)}
-                    >
-                      Editar
-                    </ActionButton>
-                    <ActionButton
-                      type="button"
-                      $danger
-                      onClick={() => setDeleteId(transaction.id)}
-                    >
-                      Excluir
-                    </ActionButton>
-                  </CardActions>
-                </Card>
-              );
-            })}
-          </MobileList>
-        </>
+        <List>
+          {transactions.map((transaction) => (
+            <EntryRow key={transaction.id} transaction={transaction} showDate />
+          ))}
+        </List>
       )}
-
-      <ConfirmDialog
-        isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
-        title="Confirmar exclusão"
-        message={
-          deletingTransaction
-            ? `Tem certeza que deseja excluir a transação "${deletingTransaction.description}"?`
-            : "Tem certeza que deseja excluir esta transação?"
-        }
-        confirmLabel="Confirmar exclusão"
-        onConfirm={handleDelete}
-      />
-
-      <Modal
-        isOpen={!!editingTransaction}
-        onClose={() => setEditingTransaction(null)}
-        title="Editar transação"
-      >
-        {editingTransaction && (
-          <TransactionForm
-            key={editingTransaction.id}
-            initialValues={getTransactionFormValues(editingTransaction)}
-            submitLabel="Salvar alterações"
-            onSubmit={handleUpdate}
-          />
-        )}
-      </Modal>
     </Section>
   );
 }

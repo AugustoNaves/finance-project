@@ -130,3 +130,13 @@ Pendências da funcionalidade:
 | I5 | Sem limite de lotes por hora. | Depende do item P2 (armazenamento compartilhado). |
 | I6 | Tabela do preview rola na horizontal no celular. | Layout em cartões, como em `TransactionList`. |
 | I7 | Automatizar `prisma migrate deploy` no build. | `"build": "prisma migrate deploy && next build"`, depois de confirmar que `DIRECT_URL` existe na Vercel. |
+
+## 4. Redesign "Caderneta" e PWA (17/10/2026)
+
+Aplicado: nova interface (ver `docs/design/` e a seção 0 de `docs/FUNCIONALIDADES.md`), logout na navegação com recarga para `/login` (resolve o item 24 de FUNCIONALIDADES §5), perfil mostra "Indisponível" quando `/api/me` falha, erro visível quando categorias/orçamentos/metas não carregam, e PWA instalável (`docs/PWA.md`).
+
+Pendentes:
+
+- **Média:** `fetchImportBatches` (`src/services/imports.ts`) devolve `[]` quando a API responde com erro; o estado de erro do histórico em Importar só aparece em falha de rede, e o lembrete de fatura do Mês pode aparecer indevidamente. Fazer o serviço lançar `ApiError`.
+- **Baixa:** Relatórios e Planejar usam `<input type="month">` invisível sob o rótulo do mês; no Safari de desktop e Firefox antigo ele vira texto. As setas funcionam; um seletor próprio resolveria.
+- **Baixa:** ícones próprios por categoria (hoje só o ponto de cor).

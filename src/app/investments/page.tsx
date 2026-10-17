@@ -1,127 +1,118 @@
 "use client";
 
-import { useContext, useMemo, useState } from "react";
+import { useContext } from "react";
 import { AppShell } from "@/components/AppShell";
 import { BalanceLineChart } from "@/components/BalanceLineChart";
-import { NewTransactionModal } from "@/components/NewTransactionModal";
+import { CategoryBreakdown, CategoryBreakdownItem } from "@/components/CategoryBreakdown";
+import { LedgerSection } from "@/components/LedgerSection";
 import { PageHeader } from "@/components/PageHeader";
-import { SummaryCard } from "@/components/SummaryCard";
 import { TransactionList } from "@/components/TransactionList";
+import { EntrySheetContext } from "@/contexts/EntrySheetContext";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
-import { Transaction } from "@/types/transaction";
 import { getLocalMonthKey, getMonthKey } from "@/utils/dates";
 import { getTransactionType } from "@/utils/finance";
 import { formatCurrency } from "@/utils/formatters";
-import { ChartSection, InvestmentGrid, PageContent, Section } from "./styles";
+import { Caption, Cents, Figure, Grid, Hero, HeroLabel, MonthLine, Quiet } from "./styles";
 
-function getTransactionMonth(transaction: Transaction) {
-  return getMonthKey(transaction.date);
-}
-
-function formatMonthLabel(month: string) {
-  const [year, monthNumber] = month.split("-").map(Number);
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "numeric",
-  }).format(new Date(year, monthNumber - 1, 1));
-}
+const shortMonth = new Intl.DateTimeFormat("pt-BR", { month: "short" });
+const longMonth = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
 
 function getPreviousMonths(referenceMonth: string, quantity: number) {
   const [year, month] = referenceMonth.split("-").map(Number);
-  const referenceDate = new Date(year, month - 1, 1);
 
-  return Array.from({ length: quantity }, (_, index) => {
-    const date = new Date(referenceDate);
-    date.setMonth(referenceDate.getMonth() - (quantity - 1 - index));
-
-    return getLocalMonthKey(date);
-  });
+  return Array.from({ length: quantity }, (_, index) =>
+    new Date(year, month - 1 - (quantity - 1 - index), 1),
+  );
 }
 
 export default function InvestmentsPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const { transactions, deleteTransaction, updateTransaction } =
-    useContext(TransactionsContext);
+  const { transactions } = useContext(TransactionsContext);
+  const { openNewEntry } = useContext(EntrySheetContext);
 
-  const investments = useMemo(
-    () => transactions.filter((transaction) => getTransactionType(transaction) === "investment"),
-    [transactions],
-  );
+  const investments = transactions
+    .filter((transaction) => getTransactionType(transaction) === "investment")
+    .sort((transactionA, transactionB) => transactionB.date.localeCompare(transactionA.date));
+  const currentMonth = getLocalMonthKey();
 
   const totalInvested = investments.reduce(
     (acc, transaction) => acc + Math.abs(transaction.amount),
     0,
   );
+  const monthInvested = investments
+    .filter((transaction) => getMonthKey(transaction.date) === currentMonth)
+    .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0);
 
-  const currentMonth = getLocalMonthKey();
-  const evolution = getPreviousMonths(currentMonth, 6).map((month) => {
-    const monthInvestments = investments.filter(
-      (transaction) => getTransactionMonth(transaction) === month,
-    );
-    const monthTotal = monthInvestments.reduce(
-      (acc, transaction) => acc + Math.abs(transaction.amount),
-      0,
-    );
+  const byCategory = investments.reduce<Record<string, number>>((acc, transaction) => {
+    acc[transaction.category] = (acc[transaction.category] ?? 0) + Math.abs(transaction.amount);
+    return acc;
+  }, {});
+  const categoryItems: CategoryBreakdownItem[] = Object.entries(byCategory)
+    .sort(([, amountA], [, amountB]) => amountB - amountA)
+    .map(([category, amount]) => ({
+      category,
+      amount: formatCurrency(amount),
+      percentage: totalInvested > 0 ? (amount / totalInvested) * 100 : 0,
+    }));
+
+  const evolution = getPreviousMonths(currentMonth, 6).map((date) => {
+    const month = getLocalMonthKey(date);
 
     return {
-      label: formatMonthLabel(month),
-      balance: monthTotal,
+      label: shortMonth.format(date),
+      fullLabel: longMonth.format(date),
+      balance: investments
+        .filter((transaction) => getMonthKey(transaction.date) === month)
+        .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0),
     };
   });
+
+  const [whole, cents] = formatCurrency(totalInvested).split(",");
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Investimentos"
-        title="Aportes e patrimônio"
-        subtitle="Acompanhe para onde seus investimentos estão indo e a evolução dos aportes ao longo do tempo."
-        actionLabel="+ Novo Aporte"
-        onAction={() => setModalOpen(true)}
+        title="Investimentos"
+        actionLabel="Novo aporte"
+        onAction={() => openNewEntry("investment")}
       />
 
-      <PageContent>
-        <InvestmentGrid>
-          <SummaryCard
-            title="Total investido"
-            amount={formatCurrency(totalInvested)}
-            type="investment"
-          />
-          <SummaryCard
-            title="Aportes no mês"
-            amount={formatCurrency(
-              investments
-                .filter(
-                  (transaction) =>
-                    getTransactionMonth(transaction) === currentMonth,
-                )
-                .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0),
-            )}
-            type="investment"
-          />
-        </InvestmentGrid>
+      <Hero aria-labelledby="investments-total-label">
+        <div>
+          <HeroLabel id="investments-total-label">Total investido</HeroLabel>
+          <Figure>
+            {whole}
+            <Cents>,{cents}</Cents>
+          </Figure>
+        </div>
+        <MonthLine>
+          <span>Aportes no mês</span>
+          <b>{formatCurrency(monthInvested)}</b>
+        </MonthLine>
+      </Hero>
 
-        <ChartSection>
-          <h2>Evolução dos aportes</h2>
-          <span>Últimos 6 meses</span>
-          <BalanceLineChart data={evolution} />
-        </ChartSection>
-
-        <Section>
-          <TransactionList
-            transactions={investments}
-            onDelete={deleteTransaction}
-            onUpdate={updateTransaction}
+      <Grid>
+        <LedgerSection title="Por categoria">
+          <CategoryBreakdown
+            items={categoryItems}
+            tone="neutral"
+            shareLabel="do total"
+            emptyText="Nenhum aporte registrado."
           />
-        </Section>
-      </PageContent>
+        </LedgerSection>
 
-      <NewTransactionModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Novo Aporte"
-        defaultType="investment"
-      />
+        <LedgerSection title="Evolução dos aportes">
+          <Caption>Últimos 6 meses</Caption>
+          <BalanceLineChart data={evolution} seriesName="Aportes" />
+        </LedgerSection>
+      </Grid>
+
+      <LedgerSection title="Aportes">
+        {investments.length === 0 ? (
+          <Quiet>Nenhum aporte registrado ainda.</Quiet>
+        ) : (
+          <TransactionList transactions={investments} />
+        )}
+      </LedgerSection>
     </AppShell>
   );
 }

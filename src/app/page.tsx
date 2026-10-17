@@ -1,175 +1,153 @@
 "use client";
-import { useState, useContext, useEffect } from "react";
-import { TransactionsContext } from "@/contexts/TransactionsContenxt"; // <-- Importação do contexto
+
+import Link from "next/link";
+import { useContext, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { InsightCard } from "@/components/InsightCard";
-import { LatestTransactions } from "@/components/LatestTransactions";
+import { EntryRow } from "@/components/EntryRow";
+import { LedgerSection } from "@/components/LedgerSection";
 import { MonthSummary } from "@/components/MonthSummary";
-import { PageHeader } from "@/components/PageHeader";
-import { SummaryCard } from "@/components/SummaryCard";
-import { fetchGoals } from "@/services/goals";
-import { Goal } from "@/types/goal";
-import { NewTransactionModal } from "@/components/NewTransactionModal";
+import { MonthSwitcher } from "@/components/MonthSwitcher";
+import { ProgressBar } from "@/components/ProgressBar";
+import { EntrySheetContext } from "@/contexts/EntrySheetContext";
+import { TransactionsContext } from "@/contexts/TransactionsContenxt";
+import { ImportBatchSummary } from "@/features/invoice-import/types";
+import { fetchBudgets } from "@/services/budgets";
+import { fetchImportBatches } from "@/services/imports";
+import { Budget } from "@/types/budget";
+import { getLocalMonthKey } from "@/utils/dates";
+import { calculateSummary, getMonthlyTransactions, getTransactionType } from "@/utils/finance";
+import { formatMonthYear, formatPlainAmount } from "@/utils/formatters";
 import {
-  calculateInvestments,
-  calculateSavingsRate,
-  calculateSummary,
-  getMonthlyTransactions,
-  getTransactionType,
-} from "@/utils/finance";
-import { formatCurrency, formatMonthYear } from "@/utils/formatters";
-import { DashboardGrid, InsightsGrid, MainColumn, SummaryGrid } from "./styles";
+  BudgetItem,
+  BudgetList,
+  Column,
+  EmptyMonth,
+  EntryList,
+  Grid,
+  InvoiceNudge,
+  Quiet,
+  RegisterFirst,
+} from "./styles";
+
+function monthName(date: Date) {
+  return date.toLocaleDateString("pt-BR", { month: "long" });
+}
 
 export default function Home() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [goals, setGoals] = useState<Goal[]>([]);
   const { transactions } = useContext(TransactionsContext);
+  const { openNewEntry } = useContext(EntrySheetContext);
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [batches, setBatches] = useState<ImportBatchSummary[] | null>(null);
 
   useEffect(() => {
-    async function loadGoals() {
-      try {
-        const data = await fetchGoals();
-        setGoals(data);
-      } catch (error) {
-        console.error("Erro ao buscar metas:", error);
-      }
-    }
+    let active = true;
 
-    loadGoals();
+    Promise.all([fetchBudgets(), fetchImportBatches()])
+      .then(([budgetData, batchData]) => {
+        if (!active) return;
+        setBudgets(budgetData);
+        setBatches(batchData);
+      })
+      .catch((error) => console.error("Erro ao carregar o mês:", error));
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const now = new Date();
-  const summary = calculateSummary(transactions);
-  const currentMonthTransactions = getMonthlyTransactions(transactions, now);
-  const monthSummary = calculateSummary(currentMonthTransactions);
+  const reference = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const monthKey = getLocalMonthKey(reference);
+  const monthTransactions = getMonthlyTransactions(transactions, reference);
+  const month = calculateSummary(monthTransactions);
+  const overall = calculateSummary(transactions);
+  const latest = [...monthTransactions]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 7);
 
-  const biggestExpense = currentMonthTransactions
-    .filter((transaction) => getTransactionType(transaction) === "outcome")
-    .sort((a, b) => a.amount - b.amount)[0];
-
-  const categoryTotals = currentMonthTransactions
+  const spentByCategory = monthTransactions
     .filter((transaction) => getTransactionType(transaction) === "outcome")
     .reduce<Record<string, number>>((acc, transaction) => {
-      acc[transaction.category] =
-        (acc[transaction.category] ?? 0) + Math.abs(transaction.amount);
+      acc[transaction.category] = (acc[transaction.category] ?? 0) + Math.abs(transaction.amount);
       return acc;
     }, {});
 
-  const topCategory = Object.entries(categoryTotals).sort(
-    ([, amountA], [, amountB]) => amountB - amountA,
-  )[0];
+  const monthBudgets = budgets
+    .filter((budget) => budget.month === monthKey)
+    .map((budget) => {
+      const spent = spentByCategory[budget.category] ?? 0;
 
-  const savingsRate = calculateSavingsRate(monthSummary.income, monthSummary.total);
+      return { ...budget, spent, pct: budget.amount > 0 ? (spent / budget.amount) * 100 : 0 };
+    })
+    .sort((a, b) => b.pct - a.pct);
 
-  const closestGoal = goals
-    .filter((goal) => goal.targetAmount > 0 && goal.currentAmount < goal.targetAmount)
-    .sort((goalA, goalB) => {
-      const progressA = goalA.currentAmount / goalA.targetAmount;
-      const progressB = goalB.currentAmount / goalB.targetAmount;
-
-      return progressB - progressA;
-    })[0];
-
-  const sortedTransactions = [...transactions].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
-
-  const monthLabel = formatMonthYear(now);
+  const showInvoiceNudge =
+    monthOffset === 0 &&
+    batches !== null &&
+    !batches.some((batch) => batch.referenceMonth === monthKey);
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Visão geral"
-        title="Controle financeiro"
-        subtitle="Acompanhe receitas, despesas, investimentos e saldo total em um painel simples para o dia a dia."
-        actionLabel="+ Nova Transação"
-        onAction={() => setModalOpen(true)}
+      <MonthSwitcher
+        label={formatMonthYear(reference)}
+        onPrevious={() => setMonthOffset(monthOffset - 1)}
+        onNext={() => setMonthOffset(monthOffset + 1)}
       />
 
-      <SummaryGrid>
-        <SummaryCard
-          title="Receitas"
-          amount={formatCurrency(summary.income)}
-          type="income"
-        />
-        <SummaryCard
-          title="Despesas"
-          amount={formatCurrency(summary.outcome)}
-          type="outcome"
-        />
-        <SummaryCard
-          title="Investimentos"
-          amount={formatCurrency(calculateInvestments(transactions))}
-          type="investment"
-        />
-        <SummaryCard
-          title="Saldo Total"
-          amount={formatCurrency(summary.total)}
-          type="total"
-        />
-      </SummaryGrid>
+      <Grid>
+        <Column>
+          <MonthSummary
+            income={month.income}
+            outcome={month.outcome}
+            investment={month.investment}
+            balance={month.total}
+            accumulated={overall.total}
+          />
 
-      <DashboardGrid>
-        <MainColumn>
-          <LatestTransactions transactions={sortedTransactions} />
-        </MainColumn>
+          {showInvoiceNudge && (
+            <InvoiceNudge as={Link} href="/import">
+              <span>A fatura de {monthName(reference)} ainda não foi importada.</span>
+              <b>Importar →</b>
+            </InvoiceNudge>
+          )}
 
-        <MonthSummary
-          monthLabel={monthLabel}
-          income={formatCurrency(monthSummary.income)}
-          outcome={formatCurrency(monthSummary.outcome)}
-          balance={formatCurrency(monthSummary.total)}
-          savingsRate={savingsRate}
-        />
-      </DashboardGrid>
+          <LedgerSection title="Orçamentos" action={{ label: "Planejar", href: "/planning" }}>
+            {monthBudgets.length === 0 ? (
+              <Quiet>Nenhum orçamento para {monthName(reference)}.</Quiet>
+            ) : (
+              <BudgetList>
+                {monthBudgets.slice(0, 4).map((budget) => (
+                  <BudgetItem key={budget.id} $over={budget.pct > 100} $near={budget.pct >= 80}>
+                    <span>{budget.category}</span>
+                    <span>
+                      {formatPlainAmount(budget.spent)} de {formatPlainAmount(budget.amount)}
+                    </span>
+                    <ProgressBar value={budget.pct} label={budget.category} />
+                  </BudgetItem>
+                ))}
+              </BudgetList>
+            )}
+          </LedgerSection>
+        </Column>
 
-      <InsightsGrid>
-        <InsightCard
-          title="Maior despesa"
-          value={biggestExpense ? formatCurrency(biggestExpense.amount) : "Sem dados"}
-          description={
-            biggestExpense
-              ? `${biggestExpense.description} foi a maior saída deste mês.`
-              : "Cadastre despesas para visualizar este indicador."
-          }
-          variant="red"
-        />
-        <InsightCard
-          title="Categoria em destaque"
-          value={topCategory ? topCategory[0] : "Sem dados"}
-          description={
-            topCategory
-              ? `${formatCurrency(topCategory[1])} concentrados nesta categoria.`
-              : "As categorias aparecerão conforme você registrar transações."
-          }
-          variant="blue"
-        />
-        <InsightCard
-          title="Movimento do mês"
-          value={`${currentMonthTransactions.length}`}
-          description="Total de transações registradas no mês atual."
-          variant="green"
-        />
-        <InsightCard
-          title="Meta mais próxima"
-          value={
-            closestGoal
-              ? `${Math.round((closestGoal.currentAmount / closestGoal.targetAmount) * 100)}%`
-              : "Sem metas"
-          }
-          description={
-            closestGoal
-              ? `${closestGoal.name}: ${formatCurrency(closestGoal.currentAmount)} de ${formatCurrency(closestGoal.targetAmount)}.`
-              : "Cadastre metas em Planejamento para acompanhar o progresso."
-          }
-          variant="blue"
-        />
-      </InsightsGrid>
-
-      <NewTransactionModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
+        <LedgerSection title="Últimos lançamentos" action={{ label: "Ver todos", href: "/transactions" }}>
+          {latest.length === 0 ? (
+            <EmptyMonth>
+              <p>Nada registrado em {monthName(reference)}.</p>
+              <RegisterFirst type="button" onClick={() => openNewEntry()}>
+                Registrar o primeiro
+              </RegisterFirst>
+            </EmptyMonth>
+          ) : (
+            <EntryList>
+              {latest.map((transaction) => (
+                <EntryRow key={transaction.id} transaction={transaction} showDate />
+              ))}
+            </EntryList>
+          )}
+        </LedgerSection>
+      </Grid>
     </AppShell>
   );
 }

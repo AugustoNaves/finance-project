@@ -1,134 +1,111 @@
 "use client";
 
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 
-const colors = {
-  navyLight: "#1e2535",
-  green: "#00c48c",
-  blue: "#0ea5e9",
-  red: "#f75a68",
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  border: "rgba(255, 255, 255, 0.07)",
-};
+export const Details = styled.dl`
+  margin: 0;
 
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
-
-export const PageContent = styled.div`
-  animation: ${fadeUp} 0.6s ease both;
-`;
-
-export const SettingsGrid = styled.section`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-
-  article:first-child {
-    grid-column: 1 / -1;
+  div {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    align-items: baseline;
+    gap: 16px;
+    min-height: 48px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
   }
 
-  @media (max-width: 860px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-export const DataGrid = styled.div`
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-
-  @media (max-width: 980px) {
-    grid-template-columns: repeat(2, 1fr);
+  dt {
+    color: var(--ink-soft);
+    white-space: nowrap;
   }
 
-  @media (max-width: 560px) {
-    grid-template-columns: 1fr;
+  dd {
+    margin: 0;
+    min-width: 0;
+    text-align: right;
+    font-weight: 500;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  dd[data-figure] {
+    font-family: var(--font-figures);
+    font-variant-numeric: tabular-nums;
+    font-size: 16px;
   }
 `;
 
-export const DetailItem = styled.div`
-  padding: 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid ${colors.border};
-
-  span {
-    display: block;
-    margin-bottom: 8px;
-    color: ${colors.textMuted};
-    font-size: 0.78rem;
-  }
-
-  strong {
-    color: ${colors.textLight};
-    font-family: var(--font-dm-sans), sans-serif;
-    font-size: 0.98rem;
-  }
+export const Note = styled.p`
+  padding: 12px 0 0;
+  font-size: 14px;
+  color: var(--ink-soft);
 `;
 
 export const ExportActions = styled.div`
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-`;
+  padding: 12px 0 4px;
 
-export const ActionButton = styled.button`
-  min-height: 42px;
-  padding: 0 14px;
-  border-radius: 10px;
-  background: rgba(14, 165, 233, 0.1);
-  border: 1px solid rgba(14, 165, 233, 0.22);
-  color: ${colors.blue};
-  font-weight: 700;
-  transition:
-    background 0.2s,
-    border-color 0.2s,
-    transform 0.15s;
-
-  &:hover {
-    background: rgba(14, 165, 233, 0.16);
-    border-color: rgba(14, 165, 233, 0.36);
-    transform: translateY(-1px);
+  @media (min-width: 600px) {
+    display: flex;
   }
 `;
 
-export const SecurityList = styled.ul`
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 10px;
-  margin: 0 0 18px;
-  padding-left: 18px;
-  color: ${colors.textMuted};
-  font-size: 0.9rem;
-  line-height: 1.55;
-`;
-
-export const DangerButton = styled.button`
-  position: relative;
-  z-index: 1;
-  min-height: 42px;
-  padding: 0 14px;
+export const OutlineButton = styled.button`
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--rule-strong);
   border-radius: 10px;
-  background: rgba(247, 90, 104, 0.1);
-  border: 1px solid rgba(247, 90, 104, 0.22);
-  color: ${colors.red};
-  font-weight: 700;
-  transition:
-    background 0.2s,
-    border-color 0.2s,
-    transform 0.15s;
+  color: var(--ink);
+  font-weight: 500;
 
   &:hover {
-    background: rgba(247, 90, 104, 0.16);
-    border-color: rgba(247, 90, 104, 0.36);
-    transform: translateY(-1px);
+    background: var(--green-wash);
+    border-color: var(--green);
+  }
+`;
+
+export const InstallSteps = styled.ul`
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  b {
+    font-weight: 600;
+  }
+
+  span {
+    color: var(--ink-soft);
+  }
+`;
+
+export const LogoutButton = styled.button`
+  width: 100%;
+  min-height: 52px;
+  margin-top: 8px;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  color: var(--red);
+  font-weight: 600;
+  text-align: left;
+
+  &:hover {
+    background: var(--red-wash);
+  }
+
+  &:disabled {
+    opacity: 0.6;
   }
 `;

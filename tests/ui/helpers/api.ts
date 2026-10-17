@@ -77,6 +77,7 @@ const defaultRoutes: ApiRoutes = {
   "GET /api/category-rules": [],
   "GET /api/budgets": [],
   "GET /api/goals": [],
+  "GET /api/imports": [],
   "GET /api/me": { user: { name: "Maria Teste", email: "maria@teste.com" } },
 };
 

@@ -5,171 +5,66 @@ import {
   GoogleReCaptchaProvider,
   useGoogleReCaptcha,
 } from "react-google-recaptcha-v3";
+import { FormError } from "@/components/FormError";
+import { formatPlainAmount, formatSignedAmount } from "@/utils/formatters";
 import {
-  LoginGlobalStyle,
-  WrapperLogin,
-  LoginLayout,
-  DecorativePanel,
+  Brand,
   BrandMark,
-  DecorativeTitle,
-  DecorativeSubtitle,
-  FloatingCard,
-  BalanceWidget,
-  FloatingCalendar,
-  FormCard,
-  FormHeader,
-  LogoMark,
-  FormTitle,
-  FormSubtitle,
-  StyledForm,
-  InputGroup,
-  InputLabel,
-  InputWrapper,
-  StyledInput,
+  Column,
+  Field,
+  Fineprint,
+  Footer,
   ForgotLink,
+  Form,
+  Input,
+  Label,
+  Notebook,
+  NotebookAmount,
+  NotebookHeader,
+  NotebookItem,
+  NotebookRow,
+  NotebookTotal,
+  Notice,
+  Page,
+  SectionTitle,
   SubmitButton,
-  Divider,
-  FormFooter,
-  FooterButton,
-  FormMessage,
-  SecurityBadge,
+  Tagline,
+  TextButton,
 } from "./style";
 
-// ─── Inline SVG Icons (sem deps extras) ──────────────────────────────────────
-const IconMail = () => (
-  <svg
-    className="input-icon"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="M2 7l10 7 10-7" />
-  </svg>
-);
-
-const IconLock = () => (
-  <svg
-    className="input-icon"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-
-const IconUser = () => (
-  <svg
-    className="input-icon"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20 21a8 8 0 0 0-16 0" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const IconShield = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
-);
-
-// ─── Decorative floating widgets ──────────────────────────────────────────────
-const days = ["S", "T", "Q", "Q", "S", "S", "D"];
-const calNumbers = [
-  "",
-  "",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "11",
-  "12",
-  "13",
-  "14",
-  "15",
-  "16",
-  "17",
-  "18",
-  "19",
-  "20",
-  "21",
-  "22",
-  "23",
-  "24",
-  "25",
-  "26",
-  "27",
-  "28",
-  "29",
-  "30",
+const sampleEntries = [
+  { description: "Salário", detail: "Receita · 5 out", amount: 4200 },
+  { description: "Mercado", detail: "Alimentação · 7 out", amount: -312.4 },
+  { description: "Conta de luz", detail: "Moradia · 10 out", amount: -148.9 },
+  { description: "Farmácia", detail: "Saúde · 12 out", amount: -56.3 },
 ];
 
-function SideWidgets() {
+const sampleBalance = sampleEntries.reduce((total, entry) => total + entry.amount, 0);
+
+function NotebookSample() {
   return (
-    <>
-      <FloatingCalendar>
-        <div className="cal-month">Maio 2026</div>
-        <div className="cal-grid">
-          {days.map((d, i) => (
-            <span key={`h-${i}`} style={{ fontWeight: 600, color: "#5a6680" }}>
-              {d}
-            </span>
-          ))}
-          {calNumbers.map((n, i) => (
-            <span key={`d-${i}`} className={n === "4" ? "today" : ""}>
-              {n}
-            </span>
-          ))}
-        </div>
-      </FloatingCalendar>
-
-      <FloatingCard>
-        <div className="card-chip" />
-        <div className="card-number">•••• 4289</div>
-        <div className="card-label">Finanças Pro</div>
-      </FloatingCard>
-
-      <BalanceWidget>
-        <div className="balance-label">Saldo Total</div>
-        <div className="balance-value">R$ 4.850,00</div>
-        <div className="balance-trend">↑ +12% este mês</div>
-      </BalanceWidget>
-    </>
+    <Notebook aria-hidden="true">
+      <NotebookHeader>
+        <span>Outubro</span>
+        <span>Exemplo</span>
+      </NotebookHeader>
+      {sampleEntries.map((entry) => (
+        <NotebookRow key={entry.description}>
+          <NotebookItem>
+            {entry.description}
+            <small>{entry.detail}</small>
+          </NotebookItem>
+          <NotebookAmount $out={entry.amount < 0}>{formatSignedAmount(entry.amount)}</NotebookAmount>
+        </NotebookRow>
+      ))}
+      <NotebookTotal>
+        <span>Sobra do mês</span>
+        <strong>{formatPlainAmount(sampleBalance)}</strong>
+      </NotebookTotal>
+    </Notebook>
   );
 }
 
-// ─── Form (lógica preservada integralmente) ───────────────────────────────────
 function FormularioDeLogin() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState("");
@@ -179,6 +74,8 @@ function FormularioDeLogin() {
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   const { executeRecaptcha } = useGoogleReCaptcha();
+
+  const title = isRegisterMode ? "Criar conta" : "Entrar";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,7 +100,7 @@ function FormularioDeLogin() {
         setSenha("");
         setMessage({
           type: "success",
-          text: "Conta criada com sucesso. Agora entre com seu e-mail e senha.",
+          text: "Conta criada. Agora entre com seu e-mail e senha.",
         });
         return;
       }
@@ -237,84 +134,73 @@ function FormularioDeLogin() {
   };
 
   return (
-    <StyledForm onSubmit={handleSubmit}>
-      {isRegisterMode && (
-        <InputGroup>
-          <InputLabel htmlFor="name">Nome</InputLabel>
-          <InputWrapper>
-            <StyledInput
+    <>
+      <SectionTitle id="auth-title">{title}</SectionTitle>
+
+      <Form onSubmit={handleSubmit} aria-labelledby="auth-title">
+        {isRegisterMode && (
+          <Field>
+            <Label htmlFor="name">Nome</Label>
+            <Input
               id="name"
               type="text"
+              autoComplete="name"
               placeholder="Seu nome"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isSubmitting}
               required
             />
-            <IconUser />
-          </InputWrapper>
-        </InputGroup>
-      )}
+          </Field>
+        )}
 
-      <InputGroup>
-        <InputLabel htmlFor="email">E-mail</InputLabel>
-        <InputWrapper>
-          <StyledInput
+        <Field>
+          <Label htmlFor="email">E-mail</Label>
+          <Input
             id="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isSubmitting}
             required
           />
-          <IconMail />
-        </InputWrapper>
-      </InputGroup>
+        </Field>
 
-      <InputGroup>
-        <InputLabel htmlFor="senha">Senha</InputLabel>
-        <InputWrapper>
-          <StyledInput
+        <Field>
+          <Label htmlFor="senha">Senha</Label>
+          <Input
             id="senha"
             type="password"
-            placeholder="••••••••"
+            autoComplete={isRegisterMode ? "new-password" : "current-password"}
+            placeholder={isRegisterMode ? "Mínimo de 8 caracteres" : "Sua senha"}
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
             disabled={isSubmitting}
             minLength={isRegisterMode ? 8 : undefined}
             required
           />
-          <IconLock />
-        </InputWrapper>
-      </InputGroup>
+        </Field>
 
-      {!isRegisterMode && <ForgotLink href="/forgot-password">Esqueceu a senha?</ForgotLink>}
+        {!isRegisterMode && <ForgotLink href="/forgot-password">Esqueceu a senha?</ForgotLink>}
 
-      {message && (
-        <FormMessage
-          role={message.type === "error" ? "alert" : "status"}
-          $variant={message.type}
-        >
-          {message.text}
-        </FormMessage>
-      )}
+        {message?.type === "error" && <FormError message={message.text} />}
+        {message?.type === "success" && (
+          <Notice role="status" $tone="success">
+            {message.text}
+          </Notice>
+        )}
 
-      <SubmitButton type="submit" disabled={isSubmitting}>
-        {isSubmitting
-          ? "Aguarde..."
-          : isRegisterMode
-            ? "Criar conta"
-            : "Entrar na conta"}
-      </SubmitButton>
+        <SubmitButton type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Aguarde..." : title}
+        </SubmitButton>
+      </Form>
 
-      <Divider>
-        <span>protegido por reCAPTCHA</span>
-      </Divider>
-
-      <FormFooter>
-        {isRegisterMode ? "Já tem uma conta? " : "Não tem uma conta? "}
-        <FooterButton
+      <Footer>
+        <span>{isRegisterMode ? "Já tem conta?" : "Não tem conta?"}</span>
+        <TextButton
           type="button"
           onClick={() => {
             setIsRegisterMode((current) => !current);
@@ -322,55 +208,33 @@ function FormularioDeLogin() {
           }}
           disabled={isSubmitting}
         >
-          {isRegisterMode ? "Entrar" : "Cadastre-se"}
-        </FooterButton>
-      </FormFooter>
+          {isRegisterMode ? "Entrar" : "Criar conta"}
+        </TextButton>
+      </Footer>
 
-      <SecurityBadge>
-        <IconShield />
-        Conexão criptografada e segura
-      </SecurityBadge>
-    </StyledForm>
+      <Fineprint>Login protegido por reCAPTCHA.</Fineprint>
+    </>
   );
 }
 
-// ─── Page Root ────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
 
   return (
     <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
-      <LoginGlobalStyle />
-      <WrapperLogin>
-        <LoginLayout>
-          {/* Painel decorativo — oculto em mobile */}
-          <DecorativePanel>
-            <BrandMark>F</BrandMark>
-            <DecorativeTitle>
-              Suas finanças,
-              <br />
-              <span>sob controle.</span>
-            </DecorativeTitle>
-            <DecorativeSubtitle>
-              Gerencie receitas, despesas e saldo com clareza e segurança.
-            </DecorativeSubtitle>
-            <SideWidgets />
-          </DecorativePanel>
+      <Page>
+        <Column>
+          <Brand>
+            <BrandMark aria-hidden="true">F</BrandMark>
+            Finance-app
+          </Brand>
+          <Tagline>Suas contas do mês, num caderno que cabe no bolso.</Tagline>
 
-          {/* Card do formulário */}
-          <FormCard>
-            <FormHeader>
-              <LogoMark>F</LogoMark>
-              <FormTitle>Bem-vindo</FormTitle>
-              <FormSubtitle>
-                Acesse ou crie sua conta para gerenciar suas finanças com dados isolados.
-              </FormSubtitle>
-            </FormHeader>
+          <FormularioDeLogin />
+        </Column>
 
-            <FormularioDeLogin />
-          </FormCard>
-        </LoginLayout>
-      </WrapperLogin>
+        <NotebookSample />
+      </Page>
     </GoogleReCaptchaProvider>
   );
 }

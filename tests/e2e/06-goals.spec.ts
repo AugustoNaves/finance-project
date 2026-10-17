@@ -1,17 +1,28 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
-import { card, confirmDeletion, formError, metric, modal, money, section } from "./support/ui";
+import { confirmDeletion, formError, modal, money, section } from "./support/ui";
 
 const goalForm = (page: Page) => page.locator("form").filter({ has: page.getByLabel("Nome da meta") });
-const goals = (page: Page) => section(page, "Metas financeiras");
+const goals = (page: Page) => section(page, "Metas");
 
-test.describe("Metas financeiras (Planejamento)", () => {
+function goalButtons(page: Page) {
+  return goals(page).getByRole("button", { name: /^Editar meta / });
+}
+
+/** Linha de meta: o item da lista que contém o botão "Editar meta X". */
+function goalRow(page: Page, name: string) {
+  return goals(page)
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("button", { name: `Editar meta ${name}`, exact: true }) });
+}
+
+test.describe("Metas (Planejar)", () => {
   test("estado vazio", async ({ page, account }) => {
     void account;
     await page.goto("/planning");
 
-    await expect(goals(page).getByText("0 meta(s) em andamento")).toBeVisible();
-    await expect(page.getByText("Nenhuma meta cadastrada ainda.")).toBeVisible();
+    await expect(goals(page).getByText("Nenhuma meta ainda.", { exact: false })).toBeVisible();
+    await expect(goalButtons(page)).toHaveCount(0);
   });
 
   test("cria meta com valor atual e prazo, calcula o progresso e persiste", async ({ page, api }) => {
@@ -26,31 +37,43 @@ test.describe("Metas financeiras (Planejamento)", () => {
     await form.getByLabel("Valor alvo").fill("10000");
     await form.getByLabel("Valor atual").fill("2500");
     await form.getByLabel("Prazo (opcional)").fill("2026-12-20");
-    await form.getByLabel("Cor").fill("#0ea5e9");
+    await form.getByRole("radiogroup", { name: "Cor" }).getByRole("radio", { name: "Azul" }).check();
     await form.getByRole("button", { name: "Salvar meta" }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(goals(page).getByText("1 meta(s) em andamento")).toBeVisible();
+    await expect(goalButtons(page)).toHaveText(["Reserva de emergência"]);
 
-    const goal = card(page, "Reserva de emergência");
+    const goal = goalRow(page, "Reserva de emergência");
 
-    await expect(goal).toContainText("25%");
-    await expect(metric(goal, "Atual")).toContainText(money(2500));
-    await expect(metric(goal, "Alvo")).toContainText(money(10000));
-    await expect(metric(goal, "Restante")).toContainText(money(7500));
-    await expect(goal).toContainText("Prazo: 20/12/2026");
-    await expect(goal.getByLabel("Progresso de 25%")).toBeVisible();
+    await expect(goal).toContainText("2.500,00 de 10.000,00");
+    await expect(goal).toContainText(`25% · faltam ${money(7500)} · prazo 20/12/2026`);
+    await expect(goal.getByRole("progressbar", { name: "Reserva de emergência: 25%" })).toBeVisible();
 
     await page.reload();
-    await expect(card(page, "Reserva de emergência")).toContainText("25%");
+    await expect(goalRow(page, "Reserva de emergência")).toContainText("25%");
     expect(await api.list("goals")).toEqual([
       expect.objectContaining({
         name: "Reserva de emergência",
         targetAmount: 10000,
         currentAmount: 2500,
-        color: "#0ea5e9",
+        color: "#4a78ad",
       }),
     ]);
+  });
+
+  test("cor personalizada continua disponível", async ({ page, api }) => {
+    await page.goto("/planning");
+    await page.getByRole("button", { name: "+ Nova meta" }).click();
+
+    const form = goalForm(page);
+
+    await form.getByLabel("Nome da meta").fill("Bicicleta");
+    await form.getByLabel("Valor alvo").fill("2000");
+    await form.getByLabel("Cor personalizada").fill("#0ea5e9");
+    await form.getByRole("button", { name: "Salvar meta" }).click();
+    await expect(modal(page, "Nova meta")).toBeHidden();
+
+    expect(await api.list("goals")).toEqual([expect.objectContaining({ name: "Bicicleta", color: "#0ea5e9" })]);
   });
 
   test("meta sem valor atual e sem prazo começa em 0%", async ({ page, account }) => {
@@ -61,22 +84,21 @@ test.describe("Metas financeiras (Planejamento)", () => {
     await goalForm(page).getByLabel("Valor alvo").fill("7500.90");
     await goalForm(page).getByRole("button", { name: "Salvar meta" }).click();
 
-    const goal = card(page, "Notebook novo");
+    const goal = goalRow(page, "Notebook novo");
 
-    await expect(goal).toContainText("0%");
-    await expect(metric(goal, "Atual")).toContainText(money(0));
-    await expect(metric(goal, "Restante")).toContainText(money(7500.9));
-    await expect(goal.getByText(/Prazo:/)).toHaveCount(0);
+    await expect(goal).toContainText("0,00 de 7.500,90");
+    await expect(goal).toContainText(`0% · faltam ${money(7500.9)}`);
+    await expect(goal).not.toContainText("prazo");
   });
 
   test("atualiza o progresso e os dados da meta", async ({ page, api }) => {
     await api.createGoal({ name: "Viagem", targetAmount: 8000, currentAmount: 2000, deadline: "2027-01-10T00:00:00.000Z" });
     await page.goto("/planning");
-    await expect(card(page, "Viagem")).toContainText("25%");
+    await expect(goalRow(page, "Viagem")).toContainText("25%");
 
-    await card(page, "Viagem").getByRole("button", { name: "Atualizar progresso" }).click();
+    await goalRow(page, "Viagem").getByRole("button", { name: "Atualizar progresso de Viagem" }).click();
 
-    const dialog = modal(page, "Atualizar meta");
+    const dialog = modal(page, "Atualizar progresso");
     const form = goalForm(page);
 
     await expect(form.getByLabel("Nome da meta")).toHaveValue("Viagem");
@@ -90,53 +112,59 @@ test.describe("Metas financeiras (Planejamento)", () => {
 
     await expect(dialog).toBeHidden();
 
-    const goal = card(page, "Viagem ao Chile");
+    const goal = goalRow(page, "Viagem ao Chile");
 
-    await expect(goal).toContainText("75%");
-    await expect(metric(goal, "Restante")).toContainText(money(2000));
-    await expect(goal).toContainText("Prazo: 10/01/2027");
+    await expect(goal).toContainText(`75% · faltam ${money(2000)} · prazo 10/01/2027`);
 
     await page.reload();
-    await expect(card(page, "Viagem ao Chile")).toContainText("75%");
+    await expect(goalRow(page, "Viagem ao Chile")).toContainText("75%");
   });
 
-  test("meta ultrapassada mostra mais de 100% e restante zerado", async ({ page, api }) => {
+  test("tocar na meta abre a edição", async ({ page, api }) => {
+    await api.createGoal({ name: "Carro", targetAmount: 60000, currentAmount: 6000 });
+    await page.goto("/planning");
+
+    await goalRow(page, "Carro").click({ position: { x: 40, y: 12 } });
+
+    await expect(modal(page, "Editar meta")).toBeVisible();
+    await expect(goalForm(page).getByLabel("Nome da meta")).toHaveValue("Carro");
+  });
+
+  test("meta ultrapassada mostra mais de 100% e meta alcançada", async ({ page, api }) => {
     await api.createGoal({ name: "Bicicleta", targetAmount: 2000, currentAmount: 2500 });
     await page.goto("/planning");
 
-    const goal = card(page, "Bicicleta");
+    const goal = goalRow(page, "Bicicleta");
 
-    await expect(goal).toContainText("125%");
-    await expect(metric(goal, "Restante")).toContainText(money(0));
-    await expect(goal.getByLabel("Progresso de 100%")).toBeVisible();
+    await expect(goal).toContainText("125% · meta alcançada");
+    await expect(goal.getByRole("progressbar", { name: "Bicicleta: 100%" })).toBeVisible();
   });
 
   test("exclui meta após confirmação", async ({ page, api }) => {
     await api.createGoal({ name: "Curso de inglês", targetAmount: 3000 });
     await api.createGoal({ name: "Carro", targetAmount: 60000, currentAmount: 6000 });
     await page.goto("/planning");
-    await expect(goals(page).getByText("2 meta(s) em andamento")).toBeVisible();
+    await expect(goalButtons(page)).toHaveCount(2);
 
-    await card(page, "Curso de inglês").getByRole("button", { name: "Excluir" }).click();
+    await goalRow(page, "Curso de inglês").getByRole("button", { name: "Excluir meta Curso de inglês" }).click();
 
     const dialog = modal(page, "Confirmar exclusão");
 
-    await expect(dialog).toContainText("Tem certeza que deseja excluir a meta Curso de inglês?");
+    await expect(dialog).toContainText("Excluir a meta Curso de inglês?");
     await dialog.getByRole("button", { name: "Cancelar" }).click();
-    await expect(card(page, "Curso de inglês")).toBeVisible();
+    await expect(goalRow(page, "Curso de inglês")).toBeVisible();
 
-    await card(page, "Curso de inglês").getByRole("button", { name: "Excluir" }).click();
+    await goalRow(page, "Curso de inglês").getByRole("button", { name: "Excluir meta Curso de inglês" }).click();
     await confirmDeletion(page);
 
-    await expect(page.getByRole("heading", { name: "Curso de inglês" })).toHaveCount(0);
-    await expect(goals(page).getByText("1 meta(s) em andamento")).toBeVisible();
-    await expect(card(page, "Carro")).toContainText("10%");
+    await expect(goalRow(page, "Curso de inglês")).toHaveCount(0);
+    await expect(goalButtons(page)).toHaveText(["Carro"]);
+    await expect(goalRow(page, "Carro")).toContainText("10%");
 
     await page.reload();
-    await expect(goals(page).getByText("1 meta(s) em andamento")).toBeVisible();
+    await expect(goalButtons(page)).toHaveText(["Carro"]);
     expect(await api.list("goals")).toHaveLength(1);
   });
-
   test("formulário barra valor alvo zerado e nome vazio", async ({ page, api }) => {
     await page.goto("/planning");
     await page.getByRole("button", { name: "+ Nova meta" }).click();

@@ -11,6 +11,31 @@ Observações de escopo:
 
 ---
 
+## 0. Interface atual — redesign "Caderneta" (17/10/2026)
+
+A interface foi redesenhada e o app virou PWA (decisões em `docs/design/`, PWA em `docs/PWA.md`). **As regras de dados, cálculos, rotas e chamadas de API descritas nas seções 1 a 5 continuam valendo.** Textos de tela, estrutura visual e as referências `arquivo:linha` de páginas e componentes nessas seções descrevem a interface **anterior**; onde houver conflito, vale esta seção.
+
+**Visual.** Tokens CSS em `src/styles/global.ts` (claro e escuro via `prefers-color-scheme`), Public Sans na interface e Literata nos valores. Listas pautadas em vez de cards; valores com sinal tipográfico (`−45,70`, `+1.800,00`) e saídas em vermelho; totais com sublinhado duplo.
+
+**Navegação** (`src/components/AppNavigation`). Celular (< 960px): barra inferior fixa Mês · Lançamentos · (+) Registrar · Planejar · Mais. "Mais" abre uma folha com Importar fatura, Categorias e regras, Investimentos, Relatórios, Configurações e **Sair**. Desktop: coluna à esquerda com o nome, "+ Registrar" e os grupos "Dia a dia" (Mês, Lançamentos, Planejar) e "Organizar" (demais áreas) e Sair. Item ativo com `aria-current="page"`; `/budgets` marca Planejar. Sair faz `POST /api/logout` e recarrega em `/login` (limpa a lista em memória — resolve o item 24 da seção 5).
+
+**Folha Registrar/Editar** (`src/contexts/EntrySheetContext.tsx`, `src/components/TransactionForm`). Provider no layout raiz; `openNewEntry(tipo?)` e `openEditEntry(lançamento)` podem ser chamados de qualquer tela. `CustomModal` vira folha inferior no celular e diálogo no desktop. Formulário: tipo em rádios (Gasto · Receita · Investimento), valor grande que aceita `1.234,56` ou `1234.56`, categorias em chips ordenadas pelas mais usadas no tipo (a primeira já vem escolhida), descrição opcional (vazia usa o nome da categoria), data (hoje local), forma de pagamento e observação. Valor ≤ 0 ou inválido mostra "Informe um valor maior que zero."; sem categoria, "Escolha uma categoria.". Na edição, "Excluir" abre a confirmação.
+
+| Tela | O que mudou |
+|---|---|
+| Mês (`/`) | Seletor de mês com setas (h1 = "outubro de 2026"). "Sobra do mês" (saldo do mês) com Entrou/Saiu/Investiu e "Saldo acumulado" de todo o histórico em linha discreta. Lembrete âmbar quando a fatura do mês corrente ainda não foi importada (`GET /api/imports`). Orçamentos do mês ordenados por % usado (até 4). Últimos 7 lançamentos do mês; tocar edita. Os 4 cards de totais históricos e os 4 indicadores saíram (os indicadores estão em Relatórios). |
+| Lançamentos (`/transactions`) | Busca e chips de tipo sempre visíveis; "Filtros (n)" abre Categoria, De, Até, Ordenar e Limpar. Lista agrupada por dia com subtotal quando ordenada por data; por valor, a data vai na linha. Sem botões Editar/Excluir na linha. |
+| Importar fatura (`/import`) | Três passos numerados (enviar PDF com arrastar e soltar, conferir em lista pautada, importações anteriores). Valores editáveis aceitam vírgula. Mesma funcionalidade de antes. |
+| Categorias e regras (`/categories`) | Abas Gastos · Receitas · Investimentos · Regras com contagem (setas do teclado navegam). Categoria = linha com ponto de cor, total e nº de lançamentos do mês; tocar edita, excluir fica dentro da edição. Cor escolhida numa paleta acessível (`ColorSwatches`) ou personalizada. |
+| Planejar (`/planning`) | Seletor de mês próprio; orçamentos em linhas com "gasto de limite", barra (verde < 80%, âmbar 80–100%, vermelho > 100%), situação e linha de total; metas com atual/alvo, % · faltam · prazo, "Atualizar progresso" e "Excluir". Criação por links discretos nos cabeçalhos. |
+| Investimentos (`/investments`) | "Total investido" e "Aportes no mês", distribuição por categoria, evolução dos aportes e lista de aportes (agrupada por dia, edição pela folha). "Novo aporte" abre a folha já em Investimento. |
+| Relatórios (`/reports`) | Período com setas. "Balanço do período" em linhas (Receitas, Despesas, Investimentos, Saldo, Taxa de economia, Média diária, Maior despesa, Categoria líder, Movimento do período). Gráficos: receitas vs despesas e evolução do saldo (com lista mês → saldo). O donut por categoria foi substituído pela lista "Gastos por categoria". |
+| Configurações (`/settings`) | Perfil (nome, e-mail, moeda, lançamentos, saldo acumulado; "Indisponível" se `/api/me` falhar), exportar CSV/JSON, instruções de instalação do app e Sair. |
+| Login, esqueci e redefinir senha | Coluna estreita com a marca; no desktop, uma "página de caderno" ilustrativa. Mesmos fluxos e mensagens (sem "com sucesso"). |
+| Offline (`/offline`) | Página pública exibida pelo service worker quando a navegação falha sem internet. |
+
+Componentes removidos: SummaryCard, InsightCard, LatestTransactions, Dashboard, Header, TransactionTable, ExpenseDonutChart, ReportMetricCard, SettingsCard, CategoryCard, BudgetCard, GoalCard. Novos: MonthSwitcher, MonthSummary (reescrito), LedgerSection, EntryRow, CategoryRow, BudgetRow, GoalRow, ColorSwatches, ImportAmountInput, ServiceWorkerRegister.
+
 ## 1. Visão geral
 
 ### 1.1 O que é o sistema

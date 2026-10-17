@@ -60,11 +60,13 @@ O guarda de autenticação está em `src/proxy.ts` (convenção do Next 16). Se 
 - **Datas:** transações e prazos são datas sem horário, gravadas como meia-noite UTC. Use sempre `src/utils/dates.ts` e `formatDate`; nunca `new Date().toISOString().slice(...)` para "hoje" nem `toLocaleDateString` direto.
 - Regras de domínio que não são componente nem rota ficam em `src/features/<nome>/` (hoje: `invoice-import`).
 - Idioma: Textos de UI e documentação em português.
+- **Design "Caderneta":** cores só por tokens CSS de `src/styles/global.ts` (claro/escuro automáticos); listas pautadas, sem cards com sombra/gradiente. Regras em `docs/design/design-spec.md`.
+- **PWA:** `src/app/manifest.ts`, `public/sw.js` e `/offline`. O service worker nunca pode interceptar `/api/*` nem guardar páginas (`tests/unit/sw.test.ts`). Arquivos do PWA ficam fora do `matcher` do proxy. Ver `docs/PWA.md`.
 
 ## 6. Armadilhas (Leia antes de modificar)
 
 - `TransactionsContenxt.tsx` tem um erro de digitação no nome (faltou o 'x'). **Não renomeie**, ou quebrará todos os imports.
-- Os componentes `Dashboard`, `Header` e `TransactionTable` não estão sendo usados e devem ser ignorados. O dashboard real é montado direto em `src/app/page.tsx` com `SummaryCard`.
+- A tela inicial (Mês) é montada direto em `src/app/page.tsx` com `MonthSwitcher`, `MonthSummary`, `LedgerSection` e `EntryRow`. A folha Registrar/Editar lançamento vive em `src/contexts/EntrySheetContext.tsx` (provider no layout): use `openNewEntry`/`openEditEntry` em vez de modais próprios.
 - O corte por `score` do reCAPTCHA está comentado na rota de login. Se ativar, defina um threshold.
 - `/budgets` apenas redireciona para `/planning`; orçamentos e metas vivem na mesma tela.
 - Ao alterar regra de negócio, atualize o teste correspondente em `tests/` e a documentação em `docs/`.

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, useContext, useEffect, useState } from "react";
+import { ChangeEvent, DragEvent, useContext, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { CategoryForm } from "@/components/CategoryForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ImportAmountInput } from "@/components/ImportAmountInput";
 import { Modal } from "@/components/CustomModal";
 import { PageHeader } from "@/components/PageHeader";
 import { TransactionsContext } from "@/contexts/TransactionsContenxt";
@@ -33,25 +34,49 @@ import {
 } from "@/services/imports";
 import { Category, CategoryPayload } from "@/types/category";
 import { getLocalMonthKey } from "@/utils/dates";
-import { formatCurrency, formatDate } from "@/utils/formatters";
+import { formatCurrency, formatDate, formatMonthYear } from "@/utils/formatters";
 import {
-  Badge,
-  BatchList,
-  Button,
-  CheckLabel,
+  AmountCell,
+  Batch,
+  BatchMain,
+  Batches,
+  BatchTotal,
+  CategoryCell,
+  CategoryPick,
+  CategorySelect,
+  Check,
+  DateInput,
+  DescriptionInput,
+  Dot,
+  DropZone,
+  Extra,
   Field,
+  Flags,
   Footer,
-  InlineButton,
+  Hint,
+  Info,
   Input,
+  Line,
+  LineCheck,
+  Lines,
+  LinesHead,
+  LinkButton,
+  Meta,
+  MonthRow,
   Notice,
   PageContent,
-  Row,
-  Section,
-  Select,
-  SummaryGrid,
-  Table,
-  TableWrapper,
-  UploadArea,
+  Parcel,
+  PasswordRow,
+  PrimaryButton,
+  Quiet,
+  QuietButton,
+  Step,
+  StepHead,
+  StepNumber,
+  Tag,
+  Totals,
+  TypeSelect,
+  UndoButton,
 } from "./styles";
 
 interface PreviewRow extends ImportPreviewItem {
@@ -64,6 +89,8 @@ interface LoadedFile {
   hash: string;
   invoice: ParsedInvoice;
 }
+
+type BatchesState = "loading" | "ready" | "error";
 
 const SOURCE_LABELS = {
   rule: "regra sua",
@@ -82,12 +109,14 @@ function roundCents(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function plural(count: number, singular: string, pluralForm: string) {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
 function formatMonth(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
 
-  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
-    new Date(year, monthNumber - 1, 1),
-  );
+  return formatMonthYear(new Date(year, monthNumber - 1, 1));
 }
 
 function isRowPending(row: PreviewRow) {
@@ -104,9 +133,11 @@ export default function ImportPage() {
   const { refreshTransactions } = useContext(TransactionsContext);
   const [categories, setCategories] = useState<Category[]>([]);
   const [batches, setBatches] = useState<ImportBatchSummary[]>([]);
+  const [batchesState, setBatchesState] = useState<BatchesState>("loading");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [needsPassword, setNeedsPassword] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [referenceMonth, setReferenceMonth] = useState(getLocalMonthKey());
   const [useInvoiceMonth, setUseInvoiceMonth] = useState(false);
@@ -130,12 +161,13 @@ export default function ImportPage() {
     async function loadData() {
       const [categoryData, batchData] = await Promise.all([
         fetchCategories().catch(() => []),
-        fetchImportBatches().catch(() => []),
+        fetchImportBatches().catch(() => null),
       ]);
 
       if (active) {
         setCategories(categoryData);
-        setBatches(batchData);
+        setBatches(batchData ?? []);
+        setBatchesState(batchData ? "ready" : "error");
       }
     }
 
@@ -250,6 +282,22 @@ export default function ImportPage() {
     event.target.value = "";
 
     if (file) {
+      processFile(file);
+    }
+  }
+
+  function handleDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    if (!busy) setDragging(true);
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setDragging(false);
+
+    const file = event.dataTransfer.files?.[0];
+
+    if (file && !busy) {
       processFile(file);
     }
   }
@@ -376,9 +424,10 @@ export default function ImportPage() {
 
       await refreshTransactions();
       setBatches(await fetchImportBatches());
+      setBatchesState("ready");
       resetPreview();
       setSuccess(
-        `${result.created} transação(ões) registrada(s) a partir de ${result.batch.fileName}.`,
+        `${plural(result.created, "lançamento importado", "lançamentos importados")} de ${result.batch.fileName}.`,
       );
     } catch (confirmError) {
       setError(getErrorMessage(confirmError, "Não foi possível importar a fatura."));
@@ -398,7 +447,9 @@ export default function ImportPage() {
     );
     setBatchToUndo(null);
     setError("");
-    setSuccess(`Importação desfeita: ${result.removed} transação(ões) removida(s).`);
+    setSuccess(
+      `Importação desfeita: ${plural(result.removed, "lançamento removido", "lançamentos removidos")}.`,
+    );
   }
 
   const includedRows = rows.filter((row) => row.include);
@@ -414,38 +465,46 @@ export default function ImportPage() {
   const pendingCount = rows.filter(isRowPending).length;
   const canConfirm =
     includedRows.length > 0 && pendingCount === 0 && (!hasDifference || acceptDifference) && !busy;
+  const categoryColors = new Map(
+    categories.map((category) => [`${category.type}:${category.name}`, category.color ?? null]),
+  );
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Importar"
-        title="Fatura por PDF"
-        subtitle="Envie a fatura do cartão, confira os lançamentos e as categorias sugeridas e registre tudo de uma vez."
-      />
+      <PageHeader title="Importar fatura" />
 
       <PageContent>
         {error && (
-          <Notice $variant="error" role="alert">
+          <Notice $tone="error" role="alert">
             {error}
           </Notice>
         )}
 
         {success && (
-          <Notice $variant="success" role="status">
-            {success} <Link href="/transactions">Ver transações</Link>
+          <Notice $tone="success" role="status">
+            <span>
+              {success} <Link href="/transactions">Ver lançamentos</Link>
+            </span>
           </Notice>
         )}
 
         {!loaded && (
-          <Section>
-            <h2>1. Enviar fatura</h2>
-            <p>
-              O arquivo é lido no seu navegador e não é enviado nem armazenado; só os
-              lançamentos que você confirmar são gravados.
-            </p>
+          <Step>
+            <StepHead>
+              <StepNumber aria-hidden="true">1</StepNumber>
+              Enviar o PDF
+            </StepHead>
 
-            <UploadArea>
-              <strong>{busy ? "Lendo o PDF..." : "Selecionar PDF da fatura"}</strong>
+            <DropZone
+              $active={dragging}
+              $busy={busy}
+              onDragOver={handleDragOver}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+            >
+              <strong aria-live="polite">
+                {busy ? "Lendo o PDF…" : "Selecionar ou soltar o PDF da fatura"}
+              </strong>
               <span>PDF com texto selecionável, até 10 MB</span>
               <input
                 type="file"
@@ -454,12 +513,17 @@ export default function ImportPage() {
                 disabled={busy}
                 onChange={handleFileChange}
               />
-            </UploadArea>
+            </DropZone>
+
+            <Hint>
+              O PDF é lido neste aparelho e não é enviado. Só os lançamentos que você
+              confirmar são gravados.
+            </Hint>
 
             {needsPassword && pendingFile && (
-              <Row>
+              <PasswordRow>
                 <Field>
-                  Senha do PDF
+                  <span>Senha do PDF</span>
                   <Input
                     type="password"
                     value={password}
@@ -467,32 +531,26 @@ export default function ImportPage() {
                     onChange={(event) => setPassword(event.target.value)}
                   />
                 </Field>
-                <Button
+                <PrimaryButton
                   type="button"
                   disabled={busy || !password}
                   onClick={() => processFile(pendingFile, password)}
                 >
                   Abrir PDF
-                </Button>
-              </Row>
+                </PrimaryButton>
+              </PasswordRow>
             )}
-          </Section>
+          </Step>
         )}
 
         {loaded && preview && (
-          <Section>
-            <h2>2. Conferir lançamentos</h2>
-            <p>
-              Ajuste o que for preciso. Só as linhas marcadas em &quot;Incluir&quot; serão
-              registradas, como {" "}
-              <strong>Cartão de crédito</strong>.
-            </p>
+          <Step>
+            <StepHead>
+              <StepNumber aria-hidden="true">2</StepNumber>
+              Conferir os lançamentos
+            </StepHead>
 
-            <SummaryGrid>
-              <div>
-                <dt>Arquivo</dt>
-                <dd>{loaded.name}</dd>
-              </div>
+            <Meta>
               <div>
                 <dt>Emissor</dt>
                 <dd>{loaded.invoice.issuer ?? "Não identificado"}</dd>
@@ -502,18 +560,18 @@ export default function ImportPage() {
                 <dd>{loaded.invoice.dueDate ? formatDate(loaded.invoice.dueDate) : "—"}</dd>
               </div>
               <div>
-                <dt>Total impresso na fatura</dt>
-                <dd>{statedTotal === null ? "Não encontrado" : formatCurrency(statedTotal)}</dd>
-              </div>
-              <div>
                 <dt>Lançamentos lidos</dt>
                 <dd>{rows.length}</dd>
               </div>
-            </SummaryGrid>
+              <div>
+                <dt>Arquivo</dt>
+                <dd>{loaded.name}</dd>
+              </div>
+            </Meta>
 
-            <Row>
+            <MonthRow>
               <Field>
-                Mês de referência
+                <span>Mês de referência</span>
                 <Input
                   type="month"
                   value={referenceMonth}
@@ -524,7 +582,7 @@ export default function ImportPage() {
                   }}
                 />
               </Field>
-              <CheckLabel>
+              <Check>
                 <input
                   type="checkbox"
                   checked={useInvoiceMonth}
@@ -535,269 +593,314 @@ export default function ImportPage() {
                   }}
                 />
                 Lançar tudo no mês da fatura ({formatMonth(referenceMonth)})
-              </CheckLabel>
-            </Row>
+              </Check>
+            </MonthRow>
 
             {loaded.invoice.warnings.map((warning) => (
-              <Notice key={warning} $variant="warning">
+              <Notice key={warning} $tone="warning">
                 {warning}
               </Notice>
             ))}
 
             {preview.alreadyImported && (
-              <Notice $variant="warning" role="alert">
-                Esta fatura já foi importada em{" "}
-                {new Date(preview.alreadyImported.createdAt).toLocaleDateString("pt-BR")}. As
-                linhas iguais às já registradas vêm desmarcadas.
+              <Notice $tone="warning" role="alert">
+                Esta fatura já foi importada em {formatDate(preview.alreadyImported.createdAt)}.
+                As linhas iguais às já registradas vêm desmarcadas.
               </Notice>
             )}
 
             {preview.lumpCandidate && (
-              <Notice $variant="info">
-                Você já registrou esta fatura como um lançamento único: &quot;
-                {preview.lumpCandidate.description}&quot; (
-                {formatCurrency(Math.abs(preview.lumpCandidate.amount))}, em{" "}
-                {formatDate(preview.lumpCandidate.date)}). Sem substituir, o gasto será contado
-                duas vezes.
-                <label>
+              <Notice $tone="info">
+                <span>
+                  Você já registrou esta fatura como um lançamento único: &quot;
+                  {preview.lumpCandidate.description}&quot; (
+                  {formatCurrency(Math.abs(preview.lumpCandidate.amount))}, em{" "}
+                  {formatDate(preview.lumpCandidate.date)}). Sem substituir, o gasto conta duas
+                  vezes.
+                </span>
+                <Check>
                   <input
                     type="checkbox"
                     checked={replaceLump}
                     onChange={(event) => setReplaceLump(event.target.checked)}
                   />
                   Substituir esse lançamento pelo detalhamento
-                </label>
+                </Check>
               </Notice>
             )}
 
-            <TableWrapper>
-              <Table>
-                <thead>
-                  <tr>
-                    <th>Incluir</th>
-                    <th>Data</th>
-                    <th>Descrição</th>
-                    <th>Parcela</th>
-                    <th>Valor</th>
-                    <th>Tipo</th>
-                    <th>Categoria</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => {
-                    const options = categories.filter(
-                      (category) => category.type === row.type,
-                    );
-                    const sameMerchant = rows.filter(
-                      (otherRow) =>
-                        otherRow.index !== row.index &&
-                        otherRow.merchant === row.merchant &&
-                        otherRow.type === row.type &&
-                        otherRow.category !== row.category,
-                    ).length;
-                    const categoryChanged =
-                      !!row.category && row.category !== row.suggestedCategory;
-                    const label = `linha ${row.index + 1}`;
+            {categories.length === 0 && (
+              <Notice $tone="warning">
+                <span>
+                  Você ainda não tem categorias.{" "}
+                  <Link href="/categories">Criar categorias</Link> antes de importar.
+                </span>
+              </Notice>
+            )}
 
-                    return (
-                      <tr key={row.index} data-excluded={!row.include}>
-                        <td>
+            <Hint>
+              Desmarque o que não quer importar. Tudo entra como Cartão de crédito.
+            </Hint>
+
+            <Lines>
+              <LinesHead aria-hidden="true">
+                <span />
+                <span>Data</span>
+                <span>Descrição</span>
+                <span>Parc.</span>
+                <span>Tipo</span>
+                <span>Categoria</span>
+                <span>Valor</span>
+              </LinesHead>
+
+              {rows.map((row) => {
+                const options = categories.filter((category) => category.type === row.type);
+                const sameMerchant = rows.filter(
+                  (otherRow) =>
+                    otherRow.index !== row.index &&
+                    otherRow.merchant === row.merchant &&
+                    otherRow.type === row.type &&
+                    otherRow.category !== row.category,
+                ).length;
+                const categoryChanged = !!row.category && row.category !== row.suggestedCategory;
+                const missingCategory = row.include && !row.category;
+                const installment = formatInstallment(row.installment);
+                const label = `linha ${row.index + 1}`;
+                const outcome = row.type === "outcome";
+
+                return (
+                  <Line key={row.index} $excluded={!row.include} data-excluded={!row.include}>
+                    <LineCheck>
+                      <input
+                        type="checkbox"
+                        aria-label={`Incluir ${label}`}
+                        checked={row.include}
+                        onChange={(event) =>
+                          updateRow(row.index, { include: event.target.checked })
+                        }
+                      />
+                    </LineCheck>
+
+                    <DescriptionInput
+                      type="text"
+                      aria-label={`Descrição da ${label}`}
+                      value={row.description}
+                      onChange={(event) =>
+                        updateRow(row.index, { description: event.target.value })
+                      }
+                    />
+
+                    <AmountCell $outcome={outcome}>
+                      <span aria-hidden="true">{outcome ? "−" : "+"}</span>
+                      <ImportAmountInput
+                        label={`Valor da ${label}`}
+                        value={row.amount}
+                        onChange={(amount) => updateRow(row.index, { amount })}
+                      />
+                    </AmountCell>
+
+                    <Info>
+                      <DateInput
+                        type="date"
+                        aria-label={`Data da ${label}`}
+                        value={row.date}
+                        onChange={(event) => updateRow(row.index, { date: event.target.value })}
+                      />
+                      <Parcel data-empty={!installment}>{installment || "—"}</Parcel>
+                      <Flags>
+                        {KIND_LABELS[row.kind] && <Tag $tone="muted">{KIND_LABELS[row.kind]}</Tag>}
+                        {row.duplicateOf && (
+                          <Tag $tone="amber">
+                            possível duplicata de {formatDate(row.duplicateOf.date)}
+                          </Tag>
+                        )}
+                        {row.suggestionSource && (
+                          <Tag $tone="green">{SOURCE_LABELS[row.suggestionSource]}</Tag>
+                        )}
+                        {missingCategory && <Tag $tone="red">sem categoria</Tag>}
+                      </Flags>
+                    </Info>
+
+                    <CategoryCell>
+                      <CategoryPick>
+                        <Dot
+                          aria-hidden="true"
+                          $color={
+                            row.category
+                              ? (categoryColors.get(`${row.type}:${row.category}`) ?? null)
+                              : null
+                          }
+                        />
+                        <CategorySelect
+                          aria-label={`Categoria da ${label}`}
+                          $missing={missingCategory}
+                          value={
+                            categoryModal?.rowIndex === row.index ? "__new__" : (row.category ?? "")
+                          }
+                          onChange={(event) => handleCategoryChange(row, event.target.value)}
+                        >
+                          <option value="">Selecione uma categoria</option>
+                          {row.category &&
+                            !options.some((category) => category.name === row.category) && (
+                              <option value={row.category}>{row.category}</option>
+                            )}
+                          {options.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.name}
+                            </option>
+                          ))}
+                          <option value="__new__">+ Nova categoria...</option>
+                        </CategorySelect>
+                      </CategoryPick>
+                      <TypeSelect
+                        aria-label={`Tipo da ${label}`}
+                        value={row.type}
+                        onChange={(event) =>
+                          handleTypeChange(row, event.target.value as ImportEntryType)
+                        }
+                      >
+                        <option value="outcome">Gasto</option>
+                        <option value="income">Receita</option>
+                      </TypeSelect>
+                    </CategoryCell>
+
+                    <Extra>
+                      {row.category && sameMerchant > 0 && (
+                        <LinkButton type="button" onClick={() => applyCategoryToMerchant(row)}>
+                          Aplicar às outras {sameMerchant} de {row.merchant}
+                        </LinkButton>
+                      )}
+                      {categoryChanged && (
+                        <Check>
                           <input
                             type="checkbox"
-                            aria-label={`Incluir ${label}`}
-                            checked={row.include}
+                            checked={row.remember}
                             onChange={(event) =>
-                              updateRow(row.index, { include: event.target.checked })
+                              updateRow(row.index, { remember: event.target.checked })
                             }
                           />
-                        </td>
-                        <td>
-                          <Input
-                            type="date"
-                            aria-label={`Data da ${label}`}
-                            value={row.date}
-                            onChange={(event) =>
-                              updateRow(row.index, { date: event.target.value })
-                            }
-                          />
-                        </td>
-                        <td>
-                          <Input
-                            type="text"
-                            aria-label={`Descrição da ${label}`}
-                            value={row.description}
-                            onChange={(event) =>
-                              updateRow(row.index, { description: event.target.value })
-                            }
-                          />
-                          {KIND_LABELS[row.kind] && (
-                            <Badge $tone="muted">{KIND_LABELS[row.kind]}</Badge>
-                          )}
-                          {row.duplicateOf && (
-                            <Badge $tone="yellow">
-                              possível duplicata de {formatDate(row.duplicateOf.date)}
-                            </Badge>
-                          )}
-                        </td>
-                        <td>{formatInstallment(row.installment) || "—"}</td>
-                        <td>
-                          <Input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            aria-label={`Valor da ${label}`}
-                            value={row.amount}
-                            onChange={(event) =>
-                              updateRow(row.index, { amount: Number(event.target.value) })
-                            }
-                          />
-                        </td>
-                        <td>
-                          <Select
-                            aria-label={`Tipo da ${label}`}
-                            value={row.type}
-                            onChange={(event) =>
-                              handleTypeChange(row, event.target.value as ImportEntryType)
-                            }
-                          >
-                            <option value="outcome">Despesa</option>
-                            <option value="income">Receita</option>
-                          </Select>
-                        </td>
-                        <td>
-                          <Select
-                            aria-label={`Categoria da ${label}`}
-                            value={
-                              categoryModal?.rowIndex === row.index
-                                ? "__new__"
-                                : (row.category ?? "")
-                            }
-                            onChange={(event) =>
-                              handleCategoryChange(row, event.target.value)
-                            }
-                          >
-                            <option value="">Selecione uma categoria</option>
-                            {row.category &&
-                              !options.some(
-                                (category) => category.name === row.category,
-                              ) && (
-                                <option value={row.category}>{row.category}</option>
-                              )}
-                            {options.map((category) => (
-                              <option key={category.id} value={category.name}>
-                                {category.name}
-                              </option>
-                            ))}
-                            <option value="__new__">+ Nova categoria...</option>
-                          </Select>
-                          {row.suggestionSource && (
-                            <Badge $tone="green">{SOURCE_LABELS[row.suggestionSource]}</Badge>
-                          )}
-                          {row.include && !row.category && (
-                            <Badge $tone="red">sem categoria</Badge>
-                          )}
-                          {row.category && sameMerchant > 0 && (
-                            <InlineButton
-                              type="button"
-                              onClick={() => applyCategoryToMerchant(row)}
-                            >
-                              Aplicar às outras {sameMerchant} de {row.merchant}
-                            </InlineButton>
-                          )}
-                          {categoryChanged && (
-                            <CheckLabel>
-                              <input
-                                type="checkbox"
-                                checked={row.remember}
-                                onChange={(event) =>
-                                  updateRow(row.index, { remember: event.target.checked })
-                                }
-                              />
-                              Lembrar para as próximas faturas
-                            </CheckLabel>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </TableWrapper>
+                          Lembrar para as próximas faturas
+                        </Check>
+                      )}
+                    </Extra>
+                  </Line>
+                );
+              })}
+            </Lines>
+
+            <Totals aria-label="Totais">
+              <div>
+                <dt>Total da fatura</dt>
+                <dd>{statedTotal === null ? "Não encontrado" : formatCurrency(statedTotal)}</dd>
+              </div>
+              {hasDifference && (
+                <div>
+                  <dt>Diferença</dt>
+                  <dd data-tone="red">{formatCurrency(Math.abs(difference ?? 0))}</dd>
+                </div>
+              )}
+              <div data-total>
+                <dt>
+                  Selecionados ({includedRows.length} de {rows.length})
+                </dt>
+                <dd>{formatCurrency(includedTotal)}</dd>
+              </div>
+            </Totals>
 
             {hasDifference && (
-              <Notice $variant="warning" role="alert">
-                A soma das linhas incluídas ({formatCurrency(includedTotal)}) difere do total
-                impresso na fatura ({formatCurrency(statedTotal ?? 0)}) em{" "}
-                {formatCurrency(Math.abs(difference ?? 0))}. Confira se o PDF foi lido por
-                inteiro.
-                <label>
+              <Notice $tone="warning" role="alert">
+                <span>
+                  A soma das linhas incluídas ({formatCurrency(includedTotal)}) difere do total
+                  impresso na fatura ({formatCurrency(statedTotal ?? 0)}) em{" "}
+                  {formatCurrency(Math.abs(difference ?? 0))}. Confira se o PDF foi lido por
+                  inteiro.
+                </span>
+                <Check>
                   <input
                     type="checkbox"
                     checked={acceptDifference}
                     onChange={(event) => setAcceptDifference(event.target.checked)}
                   />
-                  Registrar mesmo com a diferença
-                </label>
+                  Importar mesmo com a diferença
+                </Check>
               </Notice>
             )}
 
             {difference === 0 && (
-              <Notice $variant="success">
+              <Notice $tone="success">
                 A soma das linhas incluídas confere com o total da fatura.
               </Notice>
             )}
 
-            {categories.length === 0 && (
-              <Notice $variant="warning">
-                Você ainda não tem categorias. <Link href="/categories">Crie categorias</Link>{" "}
-                antes de importar.
-              </Notice>
-            )}
-
             <Footer>
-              <p>
-                {includedRows.length} de {rows.length} linha(s) incluída(s) •{" "}
-                {formatCurrency(includedTotal)}
-                {pendingCount > 0 && ` • ${pendingCount} pendência(s) para resolver`}
-              </p>
+              {pendingCount > 0 ? (
+                <p data-pending>
+                  {plural(pendingCount, "pendência", "pendências")} para resolver antes de
+                  importar
+                </p>
+              ) : (
+                <p>
+                  {plural(includedRows.length, "lançamento selecionado", "lançamentos selecionados")}
+                </p>
+              )}
               <div>
-                <Button type="button" $variant="ghost" disabled={busy} onClick={resetPreview}>
+                <QuietButton type="button" disabled={busy} onClick={resetPreview}>
                   Cancelar
-                </Button>
-                <Button type="button" disabled={!canConfirm} onClick={handleConfirm}>
-                  Registrar {includedRows.length} transação(ões)
-                </Button>
+                </QuietButton>
+                <PrimaryButton type="button" disabled={!canConfirm} onClick={handleConfirm}>
+                  {busy
+                    ? "Importando…"
+                    : `Importar ${plural(includedRows.length, "lançamento", "lançamentos")}`}
+                </PrimaryButton>
               </div>
             </Footer>
-          </Section>
+          </Step>
         )}
 
-        <Section>
-          <h2>Importações anteriores</h2>
-          {batches.length === 0 ? (
-            <p>Nenhuma fatura importada ainda.</p>
-          ) : (
-            <BatchList>
+        <Step>
+          <StepHead>
+            <StepNumber aria-hidden="true">{loaded ? 3 : 2}</StepNumber>
+            Importações anteriores
+          </StepHead>
+
+          {batchesState === "loading" && <Quiet>Carregando importações…</Quiet>}
+
+          {batchesState === "error" && (
+            <Notice $tone="error" role="alert">
+              Não foi possível carregar as importações anteriores.
+            </Notice>
+          )}
+
+          {batchesState === "ready" && batches.length === 0 && (
+            <Quiet>Nenhuma fatura importada ainda.</Quiet>
+          )}
+
+          {batches.length > 0 && (
+            <Batches>
               {batches.map((batch) => (
-                <li key={batch.id}>
-                  <div>
+                <Batch key={batch.id}>
+                  <BatchMain>
                     <strong>
-                      {batch.issuer ?? "Fatura"} • {formatMonth(batch.referenceMonth)}
+                      {formatMonth(batch.referenceMonth)} · {batch.issuer ?? "Fatura"}
                     </strong>
                     <span>
-                      {batch.fileName} • {batch.itemCount} lançamento(s) •{" "}
-                      {formatCurrency(batch.importedTotal)} • importada em{" "}
-                      {new Date(batch.createdAt).toLocaleDateString("pt-BR")}
+                      {batch.fileName} · {plural(batch.itemCount, "lançamento", "lançamentos")} ·
+                      importada em {formatDate(batch.createdAt)}
                     </span>
-                  </div>
-                  <Button type="button" $variant="ghost" onClick={() => setBatchToUndo(batch)}>
-                    Desfazer importação
-                  </Button>
-                </li>
+                  </BatchMain>
+                  <BatchTotal>{formatCurrency(batch.importedTotal)}</BatchTotal>
+                  <UndoButton
+                    type="button"
+                    aria-label={`Desfazer importação de ${batch.fileName}`}
+                    onClick={() => setBatchToUndo(batch)}
+                  >
+                    Desfazer
+                  </UndoButton>
+                </Batch>
               ))}
-            </BatchList>
+            </Batches>
           )}
-        </Section>
+        </Step>
       </PageContent>
 
       <ConfirmDialog
@@ -806,7 +909,7 @@ export default function ImportPage() {
         title="Desfazer importação"
         message={
           batchToUndo
-            ? `Todas as ${batchToUndo.itemCount} transações importadas de ${batchToUndo.fileName} serão excluídas. Deseja continuar?`
+            ? `${plural(batchToUndo.itemCount, "lançamento importado", "lançamentos importados")} de ${batchToUndo.fileName} ${batchToUndo.itemCount === 1 ? "será excluído" : "serão excluídos"}.`
             : ""
         }
         confirmLabel="Desfazer importação"
@@ -823,12 +926,7 @@ export default function ImportPage() {
           <CategoryForm
             key={`inline-category-${categoryModal.rowIndex}`}
             submitLabel="Criar categoria"
-            initialValues={{
-              name: "",
-              type: categoryModal.type,
-              color: "#00c48c",
-              icon: "",
-            }}
+            defaultType={categoryModal.type}
             onSubmit={handleCreateInlineCategory}
           />
         )}

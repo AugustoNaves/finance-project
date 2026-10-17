@@ -1,95 +1,89 @@
 "use client";
-import styled from "styled-components";
 
-const colors = {
-  navyMid: "#161b27",
-  navyLight: "#1e2535",
-  green: "#00c48c",
-  textMuted: "#8892a4",
-  textLight: "#c9d1e0",
-  border: "rgba(255, 255, 255, 0.07)",
-};
+import styled from "styled-components";
 
 export const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(6, 9, 15, 0.78);
+  z-index: 100;
+  background: var(--scrim);
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: center;
-  z-index: 9999;
-  padding: 32px 20px;
-  overflow-y: auto;
-  backdrop-filter: blur(10px);
 
-  @media (max-width: 768px) {
-    padding: 18px 12px;
+  @media (min-width: 960px) {
+    align-items: center;
+    padding: 24px;
   }
 `;
 
 export const ModalContainer = styled.div<{ $maxWidth?: string }>`
-  position: relative;
-  overflow: visible;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(0, 196, 140, 0.1), transparent 34%),
-    radial-gradient(circle at 0% 100%, rgba(14, 165, 233, 0.08), transparent 34%),
-    ${colors.navyMid};
-  border: 1px solid ${colors.border};
-  border-radius: 24px;
-  padding: 32px;
   width: 100%;
-  max-width: ${({ $maxWidth }) => $maxWidth ?? "480px"};
-  color: ${colors.textLight};
-  box-shadow:
-    0 0 0 1px ${colors.border},
-    0 40px 90px rgba(0, 0, 0, 0.52);
+  max-width: ${({ $maxWidth }) => $maxWidth ?? "560px"};
+  max-height: 92vh;
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--sheet);
+  color: var(--ink);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
 
-  p {
-    color: ${colors.textMuted};
-    line-height: 1.6;
+  &::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 10px;
+    border-radius: 2px;
+    background: var(--rule-strong);
   }
 
-  @media (max-width: 768px) {
-    padding: 24px;
+  @media (min-width: 960px) {
+    border-radius: 16px;
+    padding: 24px 28px 28px;
+
+    &::before {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: modal-rise 0.22s ease-out;
+
+    @keyframes modal-rise {
+      from {
+        transform: translateY(24px);
+        opacity: 0;
+      }
+    }
   }
 `;
 
 export const ModalHeader = styled.div`
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 `;
 
 export const ModalTitle = styled.h2`
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.03em;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
 `;
 
 export const CloseButton = styled.button`
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: ${colors.navyLight};
-  border: 1px solid ${colors.border};
+  min-width: 44px;
+  min-height: 44px;
+  margin-right: -10px;
   border-radius: 10px;
+  color: var(--ink-soft);
   font-size: 16px;
-  color: ${colors.textMuted};
-  cursor: pointer;
-  line-height: 1;
-  transition:
-    color 0.2s,
-    border-color 0.2s,
-    background 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: ${colors.green};
+    background: var(--green-wash);
+    color: var(--ink);
   }
 `;

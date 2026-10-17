@@ -61,7 +61,18 @@ describe("proxy", () => {
       expect(isPassThrough(response)).toBe(true);
     });
 
-    it.each(["/forgot-password", "/reset-password", "/api/transactions"])(
+    it.each([
+      "/forgot-password",
+      "/reset-password",
+      "/api/transactions",
+      "/offline",
+      "/manifest.webmanifest",
+      "/sw.js",
+      "/icons/icon-192.png",
+      "/apple-icon.png",
+      "/splash/splash-1170x2532-light.png",
+      "/pdf.worker.min.mjs",
+    ])(
       "não interfere em rota fora da lista protegida (%s)",
       async (route) => {
         const response = await proxy(buildRequest(route));
@@ -90,6 +101,12 @@ describe("proxy", () => {
   describe("config.matcher", () => {
     it("cobre todas as rotas protegidas e a página de login", () => {
       expect(config.matcher).toEqual([...protectedRoutes, "/login"]);
+    });
+
+    it("deixa de fora os arquivos do PWA e a página offline", () => {
+      for (const publicPath of ["/offline", "/manifest.webmanifest", "/sw.js", "/icons/icon-512.png"]) {
+        expect(config.matcher).not.toContain(publicPath);
+      }
     });
   });
 });

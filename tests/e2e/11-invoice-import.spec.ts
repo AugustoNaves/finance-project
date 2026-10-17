@@ -20,9 +20,9 @@ function invoiceFile(name = "fatura-outubro.pdf", lines = INVOICE_LINES) {
 
 async function uploadInvoice(page: Page, file = invoiceFile()) {
   await page.goto("/import");
-  await expect(page.getByRole("heading", { name: "Fatura por PDF", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Importar fatura", level: 1 })).toBeVisible();
   await page.getByLabel("Arquivo PDF da fatura").setInputFiles(file);
-  await expect(page.getByRole("heading", { name: "2. Conferir lançamentos" })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "Conferir os lançamentos" })).toBeVisible({
     timeout: 30_000,
   });
 }
@@ -43,17 +43,17 @@ test.describe("Importação de fatura por PDF", () => {
     await expect(page.getByText("2/5")).toBeVisible();
     await expect(page.getByLabel("Incluir linha 4")).not.toBeChecked();
     await expect(page.getByText("A soma das linhas incluídas confere com o total da fatura.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Registrar 3 transação(ões)" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Importar 3 lançamentos" })).toBeDisabled();
   });
 
   test("registra os lançamentos, lembra a categoria, detecta reenvio e desfaz", async ({ page, api }) => {
     await uploadInvoice(page);
     await page.getByLabel("Categoria da linha 3").selectOption("Lazer");
     await page.getByLabel("Lembrar para as próximas faturas").check();
-    await page.getByRole("button", { name: "Registrar 3 transação(ões)" }).click();
+    await page.getByRole("button", { name: "Importar 3 lançamentos" }).click();
 
-    await expect(page.getByRole("status")).toContainText("3 transação(ões) registrada(s)");
-    await expect(page.getByText(/fatura-outubro\.pdf • 3 lançamento\(s\)/)).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("3 lançamentos importados");
+    await expect(page.getByText(/fatura-outubro\.pdf · 3 lançamentos/)).toBeVisible();
 
     const created = (await api.list("transactions")).filter((transaction) =>
       String(transaction.notes ?? "").startsWith("Importado da fatura"),
@@ -64,7 +64,7 @@ test.describe("Importação de fatura por PDF", () => {
     expect(created.every((transaction) => transaction.paymentMethod === "Cartão de crédito")).toBe(true);
 
     await page.goto("/transactions");
-    await expect(transactionRow(page, "LOJA XPTO")).toContainText("20/10/2026");
+    await expect(page.getByRole("list", { name: "ter., 20 de out." })).toContainText("LOJA XPTO");
     await expect(transactionRow(page, "LOJA XPTO")).toContainText("Lazer");
 
     await uploadInvoice(page);
@@ -75,13 +75,13 @@ test.describe("Importação de fatura por PDF", () => {
     await expect(page.getByText("regra sua")).toBeVisible();
     await page.getByRole("button", { name: "Cancelar" }).click();
 
-    await page.getByRole("button", { name: "Desfazer importação" }).click();
+    await page.getByRole("button", { name: "Desfazer importação de fatura-outubro.pdf" }).click();
     await page
       .getByRole("dialog", { name: "Desfazer importação" })
       .getByRole("button", { name: "Desfazer importação" })
       .click();
 
-    await expect(page.getByRole("status")).toContainText("3 transação(ões) removida(s)");
+    await expect(page.getByRole("status")).toContainText("3 lançamentos removidos");
     await expect(page.getByText("Nenhuma fatura importada ainda.")).toBeVisible();
     expect(
       (await api.list("transactions")).filter((transaction) =>
@@ -103,8 +103,8 @@ test.describe("Importação de fatura por PDF", () => {
     await expect(page.getByText(/Você já registrou esta fatura como um lançamento único/)).toBeVisible();
     await page.getByLabel("Substituir esse lançamento pelo detalhamento").check();
     await page.getByLabel("Categoria da linha 3").selectOption("Lazer");
-    await page.getByRole("button", { name: "Registrar 3 transação(ões)" }).click();
-    await expect(page.getByRole("status")).toContainText("3 transação(ões) registrada(s)");
+    await page.getByRole("button", { name: "Importar 3 lançamentos" }).click();
+    await expect(page.getByRole("status")).toContainText("3 lançamentos importados");
 
     const transactions = await api.list("transactions");
 
@@ -128,8 +128,8 @@ test.describe("Importação de fatura por PDF", () => {
     void account;
     await uploadInvoice(page);
     await page.getByLabel("Categoria da linha 3").selectOption("Lazer");
-    await page.getByRole("button", { name: "Registrar 3 transação(ões)" }).click();
-    await expect(page.getByRole("status")).toContainText("registrada(s)");
+    await page.getByRole("button", { name: "Importar 3 lançamentos" }).click();
+    await expect(page.getByRole("status")).toContainText("importados");
 
     const anonymous = await playwright.request.newContext({ baseURL });
 

@@ -1,55 +1,88 @@
-// src/app/styles.ts
 "use client";
-import styled, { keyframes } from "styled-components";
 
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
+import styled from "styled-components";
 
-export const SummaryGrid = styled.div`
+export const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 32px;
-  animation: ${fadeUp} 0.6s ease both;
 
-  @media (max-width: 1080px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 560px) {
-    grid-template-columns: 1fr;
+  @media (min-width: 1180px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 48px;
+    align-items: start;
   }
 `;
 
-export const DashboardGrid = styled.section`
-  display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
-  gap: 18px;
-  margin-bottom: 18px;
-  animation: ${fadeUp} 0.65s 0.08s ease both;
-
-  @media (max-width: 920px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-export const MainColumn = styled.div`
+export const Column = styled.div`
   min-width: 0;
 `;
 
-export const InsightsGrid = styled.section`
+export const InvoiceNudge = styled.a`
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--amber-wash);
+  color: var(--ink);
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  b {
+    color: var(--amber);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+`;
+
+export const Quiet = styled.p`
+  padding: 14px 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+`;
+
+export const BudgetList = styled.ul`
+  list-style: none;
+`;
+
+export const BudgetItem = styled.li<{ $over: boolean; $near: boolean }>`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  animation: ${fadeUp} 0.7s 0.12s ease both;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 14px;
 
-  @media (max-width: 1080px) {
-    grid-template-columns: repeat(2, 1fr);
+  span:nth-child(2) {
+    font-family: var(--font-figures);
+    font-variant-numeric: tabular-nums;
+    color: ${({ $over, $near }) => ($over ? "var(--red)" : $near ? "var(--amber)" : "var(--ink-soft)")};
   }
 
-  @media (max-width: 560px) {
-    grid-template-columns: 1fr;
+  > div {
+    grid-column: 1 / -1;
   }
+`;
+
+export const EntryList = styled.ul`
+  list-style: none;
+`;
+
+export const EmptyMonth = styled.div`
+  padding: 28px 0;
+  text-align: center;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+`;
+
+export const RegisterFirst = styled.button`
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--green);
+  color: var(--on-green);
+  font-weight: 600;
 `;

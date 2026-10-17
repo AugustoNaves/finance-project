@@ -15,7 +15,7 @@ interface NewTransactionModalProps {
 export const NewTransactionModal = ({
   isOpen,
   onClose,
-  title = "Nova Transação",
+  title = "Registrar",
   defaultType,
 }: NewTransactionModalProps) => {
   const { addTransaction } = useContext(TransactionsContext);

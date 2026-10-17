@@ -25,23 +25,32 @@ async function renderPage(routes: ApiRoutes = {}, defaultTab?: "categories" | "r
   return { api, ...utils };
 }
 
+function rulesTab() {
+  return screen.getByRole("tab", { name: /^Regras \d+$/ });
+}
+
+function rulesList() {
+  return screen.getByRole("list", { name: "Regras de importação" });
+}
+
 describe("Página de categorias - Aba de regras de categorização", () => {
   beforeEach(() => {
     freezeDate();
   });
 
-  it("navega para a aba de Regras de Importação e lista as regras do usuário", async () => {
+  it("navega para a aba Regras e lista as regras do usuário", async () => {
     const { user } = await renderPage();
 
-    const rulesTab = screen.getByRole("tab", { name: /Regras de Importação/i });
-    await user.click(rulesTab);
+    await user.click(rulesTab());
 
+    expect(rulesTab()).toHaveAttribute("aria-selected", "true");
     expect(
-      screen.getByRole("heading", { name: "Regras de Importação", level: 2 }),
+      screen.getByRole("heading", { name: "Regras de importação", level: 2 }),
     ).toBeInTheDocument();
-    expect(screen.getByText("3 regra(s) cadastrada(s)")).toBeInTheDocument();
+    expect(rulesTab()).toHaveTextContent("Regras 3");
 
-    const table = screen.getByRole("table");
+    const table = rulesList();
+    expect(within(table).getAllByRole("listitem")).toHaveLength(3);
 
     // Estabelecimentos
     expect(within(table).getByText("NETFLIX")).toBeInTheDocument();
@@ -54,7 +63,7 @@ describe("Página de categorias - Aba de regras de categorização", () => {
     expect(within(table).getByText("Salário")).toBeInTheDocument();
 
     // Tipos
-    expect(within(table).getAllByText("Despesa")).toHaveLength(2);
+    expect(within(table).getAllByText("Gasto")).toHaveLength(2);
     expect(within(table).getByText("Receita")).toBeInTheDocument();
 
     // Datas formatadas
@@ -66,25 +75,26 @@ describe("Página de categorias - Aba de regras de categorização", () => {
   it("exibe estado vazio quando não há regras cadastradas", async () => {
     const { user } = await renderPage({ "GET /api/category-rules": [] });
 
-    await user.click(screen.getByRole("tab", { name: /Regras de Importação/i }));
+    await user.click(rulesTab());
 
     expect(
       screen.getByText(
-        "Nenhuma regra cadastrada. Ao importar faturas e marcar 'Lembrar', as regras aparecerão aqui",
+        "Nenhuma regra ainda. Ao importar uma fatura e marcar “Lembrar”, a regra aparece aqui.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("0 regra(s) cadastrada(s)")).toBeInTheDocument();
+    expect(rulesTab()).toHaveTextContent("Regras 0");
+    expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
   it("filtra as regras pelo nome do estabelecimento no campo de busca", async () => {
     const { user } = await renderPage();
 
-    await user.click(screen.getByRole("tab", { name: /Regras de Importação/i }));
+    await user.click(rulesTab());
 
-    const searchInput = screen.getByPlaceholderText("Buscar por estabelecimento...");
+    const searchInput = screen.getByRole("searchbox", { name: "Buscar regra por estabelecimento" });
     await user.type(searchInput, "uber");
 
-    const table = screen.getByRole("table");
+    const table = rulesList();
     expect(within(table).getByText("UBER")).toBeInTheDocument();
     expect(within(table).queryByText("NETFLIX")).toBeNull();
     expect(within(table).queryByText("EMPRESA XYZ")).toBeNull();
@@ -94,12 +104,12 @@ describe("Página de categorias - Aba de regras de categorização", () => {
     await user.type(searchInput, "farmacia inexistente");
 
     expect(
-      screen.getByText("Nenhuma regra encontrada para a busca."),
+      screen.getByText("Nenhuma regra para essa busca."),
     ).toBeInTheDocument();
 
     // Limpar busca restaura todas
     await user.clear(searchInput);
-    const restoredTable = screen.getByRole("table");
+    const restoredTable = rulesList();
     expect(within(restoredTable).getByText("NETFLIX")).toBeInTheDocument();
     expect(within(restoredTable).getByText("UBER")).toBeInTheDocument();
     expect(within(restoredTable).getByText("EMPRESA XYZ")).toBeInTheDocument();
@@ -110,38 +120,36 @@ describe("Página de categorias - Aba de regras de categorização", () => {
       "DELETE /api/category-rules/cr1": { message: "ok" },
     });
 
-    await user.click(screen.getByRole("tab", { name: /Regras de Importação/i }));
+    await user.click(rulesTab());
 
-    const deleteBtn = screen.getAllByRole("button", { name: "Excluir regra de NETFLIX" })[0];
-    await user.click(deleteBtn);
+    await user.click(screen.getByRole("button", { name: "Excluir regra de NETFLIX" }));
 
     const dialog = getModalByTitle("Confirmar exclusão");
-    expect(dialog).toHaveTextContent(
-      'Tem certeza que deseja excluir a regra para o estabelecimento "NETFLIX"?',
-    );
+    expect(dialog).toHaveTextContent("Excluir a regra de “NETFLIX”?");
     expect(api.mutations()).toHaveLength(0);
 
-    await user.click(within(dialog).getByRole("button", { name: "Confirmar exclusão" }));
+    await user.click(within(dialog).getByRole("button", { name: "Excluir" }));
 
     await waitFor(() => expect(screen.queryAllByText("NETFLIX")).toHaveLength(0));
     expect(api.callsTo("DELETE", "/api/category-rules/cr1")).toHaveLength(1);
-    expect(screen.getByText("2 regra(s) cadastrada(s)")).toBeInTheDocument();
+    expect(rulesTab()).toHaveTextContent("Regras 2");
+    expect(within(rulesList()).getAllByRole("listitem")).toHaveLength(2);
     expect(queryModalByTitle("Confirmar exclusão")).toBeNull();
   });
 
   it("cancelar a exclusão mantém a regra", async () => {
     const { api, user } = await renderPage();
 
-    await user.click(screen.getByRole("tab", { name: /Regras de Importação/i }));
+    await user.click(rulesTab());
 
-    await user.click(screen.getAllByRole("button", { name: "Excluir regra de NETFLIX" })[0]);
+    await user.click(screen.getByRole("button", { name: "Excluir regra de NETFLIX" }));
     await user.click(
       within(getModalByTitle("Confirmar exclusão")).getByRole("button", { name: "Cancelar" }),
     );
 
     expect(queryModalByTitle("Confirmar exclusão")).toBeNull();
     expect(api.mutations()).toHaveLength(0);
-    const table = screen.getByRole("table");
+    const table = rulesList();
     expect(within(table).getByText("NETFLIX")).toBeInTheDocument();
   });
 
@@ -150,18 +158,16 @@ describe("Página de categorias - Aba de regras de categorização", () => {
       "DELETE /api/category-rules/cr1": reply(500, { error: "Erro ao deletar regra." }),
     });
 
-    await user.click(screen.getByRole("tab", { name: /Regras de Importação/i }));
+    await user.click(rulesTab());
 
-    await user.click(screen.getAllByRole("button", { name: "Excluir regra de NETFLIX" })[0]);
+    await user.click(screen.getByRole("button", { name: "Excluir regra de NETFLIX" }));
     await user.click(
-      within(getModalByTitle("Confirmar exclusão")).getByRole("button", {
-        name: "Confirmar exclusão",
-      }),
+      within(getModalByTitle("Confirmar exclusão")).getByRole("button", { name: "Excluir" }),
     );
 
     await waitFor(() => expect(api.callsTo("DELETE", "/api/category-rules/cr1")).toHaveLength(1));
     expect(queryModalByTitle("Confirmar exclusão")).not.toBeNull();
-    const table = screen.getByRole("table");
+    const table = rulesList();
     expect(within(table).getByText("NETFLIX")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Erro ao deletar regra.");
   });
@@ -171,7 +177,7 @@ describe("Página de categorias - Aba de regras de categorização", () => {
       "GET /api/category-rules": reply(500, { error: "Erro ao carregar do servidor." }),
     });
 
-    await user.click(screen.getByRole("tab", { name: /Regras de Importação/i }));
+    await user.click(rulesTab());
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Erro ao carregar do servidor.");
   });
@@ -179,9 +185,10 @@ describe("Página de categorias - Aba de regras de categorização", () => {
   it("inicia na aba de regras quando defaultTab='rules'", async () => {
     await renderPage({}, "rules");
 
+    expect(rulesTab()).toHaveAttribute("aria-selected", "true");
     expect(
-      screen.getByRole("heading", { name: "Regras de Importação", level: 2 }),
+      screen.getByRole("heading", { name: "Regras de importação", level: 2 }),
     ).toBeInTheDocument();
-    expect(screen.getByText("3 regra(s) cadastrada(s)")).toBeInTheDocument();
+    expect(within(rulesList()).getAllByRole("listitem")).toHaveLength(3);
   });
 });

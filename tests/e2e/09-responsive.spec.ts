@@ -1,61 +1,81 @@
-import { E2E_MONTH } from "./support/env";
+import { E2E_MONTH, E2E_MONTH_LABEL } from "./support/env";
 import { expect, test } from "./support/fixtures";
-import { fillTransactionForm, gotoAndWaitForTransactions, metric, modal, money, transactionForm } from "./support/ui";
+import {
+  confirmDeletion,
+  entryCount,
+  fillTransactionForm,
+  gotoAndWaitForTransactions,
+  ledger,
+  modal,
+  money,
+  openTransaction,
+  transactionForm,
+  transactionRow,
+} from "./support/ui";
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
 const PAGES = ["/", "/transactions", "/import", "/categories", "/investments", "/planning", "/reports", "/settings"];
 
 test.describe("Responsivo (celular 390×844)", () => {
-  test("menu lateral abre, navega por todas as páginas e fecha", async ({ page, account }) => {
+  test("barra inferior navega pelas áreas do dia a dia e 'Mais' pelas demais", async ({ page, account }) => {
     void account;
     await page.goto("/");
 
-    const menuButton = page.getByRole("button", { name: "Menu" });
-    const drawer = page.getByRole("dialog", { name: "Navegação principal" });
+    const tabBar = page.getByRole("navigation", { name: "Navegação principal" });
 
-    await expect(menuButton).toBeVisible();
-    await expect(menuButton).toHaveAttribute("aria-expanded", "false");
-    // A navegação de desktop some no celular.
-    await expect(page.getByRole("navigation", { name: "Navegação principal" })).toBeHidden();
+    await expect(tabBar).toBeVisible();
+    await expect(tabBar).toBeInViewport();
+    // A coluna lateral do desktop some no celular.
+    await expect(page.getByRole("navigation", { name: "Dia a dia" })).toBeHidden();
 
-    const destinations: Array<[string, RegExp, string]> = [
-      ["Transações", /\/transactions$/, "Todas as movimentações"],
-      ["Importar", /\/import$/, "Fatura por PDF"],
-      ["Categorias", /\/categories$/, "Organize seus grupos"],
-      ["Investimentos", /\/investments$/, "Aportes e patrimônio"],
-      ["Planejamento", /\/planning$/, "Orçamentos e metas"],
-      ["Relatórios", /\/reports$/, "Análise do período"],
-      ["Configurações", /\/settings$/, "Conta e dados"],
-      ["Início", /localhost:\d+\/$/, "Controle financeiro"],
-    ];
+    for (const [label, url, heading] of [
+      ["Lançamentos", /\/transactions$/, "Lançamentos"],
+      ["Planejar", /\/planning$/, "Planejar"],
+      ["Mês", /localhost:\d+\/$/, E2E_MONTH_LABEL],
+    ] as const) {
+      await tabBar.getByRole("link", { name: label, exact: true }).click();
+      await expect(page).toHaveURL(url);
+      await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
+      await expect(tabBar.getByRole("link", { name: label, exact: true })).toHaveAttribute("aria-current", "page");
+    }
 
-    for (const [label, url, heading] of destinations) {
-      await menuButton.click();
-      await expect(menuButton).toHaveAttribute("aria-expanded", "true");
-      await drawer.getByRole("link", { name: label, exact: true }).click();
+    const more = tabBar.getByRole("button", { name: "Mais" });
+    const sheet = page.getByRole("dialog", { name: "Mais" });
+
+    for (const [label, url, heading] of [
+      ["Importar fatura", /\/import$/, "Importar fatura"],
+      ["Categorias e regras", /\/categories$/, "Categorias e regras"],
+      ["Investimentos", /\/investments$/, "Investimentos"],
+      ["Relatórios", /\/reports$/, "Relatórios"],
+      ["Configurações", /\/settings$/, "Configurações"],
+    ] as const) {
+      await more.click();
+      await expect(more).toHaveAttribute("aria-expanded", "true");
+      await sheet.getByRole("link", { name: new RegExp(`^${label}`) }).click();
 
       await expect(page).toHaveURL(url);
       await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
-      await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+      await expect(sheet).toBeHidden();
     }
   });
 
-  test("menu lateral fecha pelo botão Fechar", async ({ page, account }) => {
+  test("folha 'Mais' fecha pelo botão Fechar e oferece Sair", async ({ page, account }) => {
     void account;
     await page.goto("/transactions");
 
-    const menuButton = page.getByRole("button", { name: "Menu" });
+    await page.getByRole("button", { name: "Mais" }).click();
 
-    await menuButton.click();
-    await expect(page.getByRole("dialog", { name: "Navegação principal" })).toBeVisible();
-    await page.getByRole("dialog", { name: "Navegação principal" }).getByRole("button", { name: "Fechar" }).click();
+    const sheet = page.getByRole("dialog", { name: "Mais" });
 
-    await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    await expect(sheet.getByRole("button", { name: "Sair" })).toBeVisible();
+    await sheet.getByRole("button", { name: "Fechar" }).click();
+
+    await expect(sheet).toBeHidden();
     await expect(page).toHaveURL(/\/transactions$/);
   });
 
-  test("transações usam cartões no celular: criar, editar e excluir", async ({ page, api }) => {
+  test("lançamentos em linhas no celular: registrar pela barra, editar e excluir tocando na linha", async ({ page, api }) => {
     await api.createTransaction({
       description: "Café da manhã",
       value: 25,
@@ -65,15 +85,14 @@ test.describe("Responsivo (celular 390×844)", () => {
     });
     await gotoAndWaitForTransactions(page, "/transactions");
 
-    await expect(page.getByRole("table")).toBeHidden();
-
-    const coffee = page.getByRole("article").filter({ hasText: "Café da manhã" });
+    const coffee = transactionRow(page, "Café da manhã");
 
     await expect(coffee).toBeVisible();
-    await expect(coffee).toContainText(money(-25));
-    await expect(coffee).toContainText("Alimentação • 09/10/2026");
+    await expect(coffee).toContainText(ledger(-25));
+    await expect(page.getByRole("list", { name: "sex., 9 de out." })).toContainText("Café da manhã");
 
-    await page.getByRole("button", { name: "+ Nova Transação" }).click();
+    await page.getByRole("navigation", { name: "Navegação principal" }).getByRole("button", { name: "Registrar" }).click();
+    await expect(modal(page, "Registrar")).toBeInViewport();
     await fillTransactionForm(page, {
       description: "Pix recebido",
       amount: "300",
@@ -81,43 +100,45 @@ test.describe("Responsivo (celular 390×844)", () => {
       category: "Outros",
       date: `${E2E_MONTH}-11`,
     });
-    await transactionForm(page).getByRole("button", { name: "Salvar Transação" }).click();
-    await expect(modal(page, "Nova Transação")).toBeHidden();
+    await transactionForm(page).getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(modal(page, "Registrar")).toBeHidden();
 
-    const pix = page.getByRole("article").filter({ hasText: "Pix recebido" });
+    const pix = transactionRow(page, "Pix recebido");
 
-    await expect(pix).toContainText(`+${money(300)}`);
+    await expect(pix).toContainText(ledger(300));
 
-    await pix.getByRole("button", { name: "Editar" }).click();
+    await openTransaction(page, "Pix recebido");
     await transactionForm(page).getByLabel("Valor").fill("350");
     await transactionForm(page).getByRole("button", { name: "Salvar alterações" }).click();
-    await expect(pix).toContainText(`+${money(350)}`);
+    await expect(pix).toContainText(ledger(350));
 
-    await coffee.getByRole("button", { name: "Excluir" }).click();
-    await modal(page, "Confirmar exclusão").getByRole("button", { name: "Confirmar exclusão" }).click();
+    const edit = await openTransaction(page, "Café da manhã");
+    await edit.getByRole("button", { name: "Excluir" }).click();
+    await confirmDeletion(page);
 
     await expect(coffee).toHaveCount(0);
-    await expect(page.getByText("1 registro(s) encontrado(s)")).toBeVisible();
+    await expect(entryCount(page, 1)).toBeVisible();
     expect(await api.list("transactions")).toHaveLength(1);
   });
 
-  test("painel mostra cartões e últimas transações no celular", async ({ page, api }) => {
+  test("mês cabe no celular com a sobra no topo", async ({ page, api }) => {
     await api.createTransaction({ description: "Salário", value: 2500, type: "income", category: "Salário", date: `${E2E_MONTH}-05` });
     await gotoAndWaitForTransactions(page, "/");
 
-    await expect(metric(page, "Saldo Total")).toContainText(money(2500));
-    await expect(page.getByRole("table")).toBeHidden();
-    await expect(page.getByRole("article").filter({ hasText: "Salário • 05/10/2026" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Resumo do mês" })).toBeVisible();
+    const summary = page.getByRole("region", { name: "Sobra do mês" });
+
+    await expect(summary).toContainText(money(2500));
+    await expect(summary).toBeInViewport();
+    await expect(transactionRow(page, "Salário")).toContainText("Salário · seg., 5 de out.");
   });
 
-  test("tela de login cabe no celular e esconde o painel decorativo", async ({ page }) => {
+  test("tela de login cabe no celular e esconde a página de caderno decorativa", async ({ page }) => {
     await page.goto("/login");
 
-    await expect(page.getByRole("heading", { name: "Bem-vindo" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Entrar", level: 1 })).toBeVisible();
     await expect(page.getByLabel("E-mail")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Entrar na conta" })).toBeInViewport();
-    await expect(page.getByText("Gerencie receitas, despesas e saldo com clareza e segurança.")).toBeHidden();
+    await expect(page.locator("form").getByRole("button", { name: "Entrar" })).toBeInViewport();
+    await expect(page.getByText("3.682,40")).toBeHidden();
   });
 
   for (const route of PAGES) {
