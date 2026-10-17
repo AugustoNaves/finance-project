@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { invalidBodyResponse, readJsonBody } from "@/lib/http";
-import { validateImportConfirmInput } from "@/lib/importValidators";
+import { type ImportConfirmItemInput, validateImportConfirmInput } from "@/lib/importValidators";
 import { formatInstallment, normalizeMerchant } from "@/features/invoice-import/normalize";
+import { formatDate } from "@/utils/formatters";
 
 const IMPORT_PAYMENT_METHOD = "Cartão de crédito";
 const TRANSACTION_TIMEOUT_MS = 30000;
@@ -47,6 +48,20 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+function buildImportNotes(baseNotes: string, item: ImportConfirmItemInput) {
+  const parts = [baseNotes];
+
+  if (item.installment) {
+    parts.push(`parcela ${formatInstallment(item.installment)}`);
+  }
+
+  if (item.purchaseDate && item.purchaseDate !== item.date) {
+    parts.push(`compra em ${formatDate(`${item.purchaseDate}T00:00:00.000Z`)}`);
+  }
+
+  return parts.join(" — ");
 }
 
 export async function POST(request: NextRequest) {
@@ -116,9 +131,7 @@ export async function POST(request: NextRequest) {
               type: item.type,
               date: toUtcDate(item.date),
               paymentMethod: IMPORT_PAYMENT_METHOD,
-              notes: item.installment
-                ? `${baseNotes} — parcela ${formatInstallment(item.installment)}`
-                : baseNotes,
+              notes: buildImportNotes(baseNotes, item),
               userId: user.id,
             },
           });

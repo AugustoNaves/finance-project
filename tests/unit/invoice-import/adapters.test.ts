@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { genericAdapter, itauAdapter, nubankAdapter, parseWithAdapters } from "@/features/invoice-import/adapters";
+import {
+  genericAdapter,
+  interAdapter,
+  itauAdapter,
+  nubankAdapter,
+  parseWithAdapters,
+} from "@/features/invoice-import/adapters";
 import { parseInvoice } from "@/features/invoice-import/parseInvoice";
 
 const referenceToday = new Date(2026, 9, 12, 12, 0);
@@ -219,6 +225,110 @@ describe("invoice-import/adapters/itau", () => {
     expect(parsed?.items).toHaveLength(1);
     expect(parsed?.items[0].description).toBe("UBER");
     expect(parsed?.items[0].amount).toBe(100);
+  });
+});
+
+describe("invoice-import/adapters/inter", () => {
+  const rawInter = [
+    "Resumo da fatura",
+    "Olá, Maria ! A sua fatura chegou!",
+    "Limite de crédito total",
+    "Total da sua fatura",
+    "R$ 2.000,00",
+    "R$ 297,10",
+    "Data de Vencimento",
+    "Este é o valor que você precisa pagar nesse mês 07/10/2026",
+    "Pagamento mínimo: R$ 44,56",
+    "Encargos rotativos 16,60 % am Valor total financiado R$ 252,54",
+    "Faça o pagamento pela conta do Inter ou via Pix.",
+    "Você pode acessar sua fatura no Super App.",
+    "Despesas do mês R$ 297,10",
+    "Fatura atual R$ 297,10",
+    "Despesas da fatura",
+    "CARTÃO 1234****9876",
+    "Data Movimentação Beneficiário Valor",
+    "03 de jul. 2026 LOJA EXEMPLO (Parcela 03 de 04) - R$ 57,25",
+    "30 de ago. 2026 PADARIA CENTRAL - R$ 24,40",
+    "05 de set. 2026 P AGAMENTO ON LINE - + R$ 399,65",
+    "06 de set. 2026 Cidade - MG 05 - P - R$ 36,73",
+    "12 de set. 2026 ESTORNO LOJA EXEMPLO - + R$ 10,00",
+    "26 de set. 2026 RESTAURANTE BOM - R$ 188,72",
+    "Total CARTÃO 1234****9876 R$ 297,10",
+    "Próxima fatura",
+    "Movimentação Valor",
+    "LOJA EXEMPLO (Parcela 04 de 04) R$ 57,25",
+  ].join("\n");
+
+  it("detecta a fatura do Inter pelo título da seção e pela marca", () => {
+    expect(interAdapter.detect(rawInter)).toBe(true);
+    expect(interAdapter.detect("Despesas da fatura\n12/09 PADARIA 10,00")).toBe(false);
+    expect(interAdapter.detect("Nu Pagamentos S.A.\nFatura do cartão")).toBe(false);
+  });
+
+  it("lê o \" - \" antes do valor como separador: compras viram gasto, não crédito", () => {
+    const parsed = interAdapter.parse(rawInter, { today: referenceToday });
+
+    expect(parsed?.issuer).toBe("Inter");
+    expect(parsed?.items.filter((item) => item.kind === "purchase").map((item) => item.description)).toEqual([
+      "LOJA EXEMPLO",
+      "PADARIA CENTRAL",
+      "Cidade - MG 05 - P",
+      "RESTAURANTE BOM",
+    ]);
+    expect(parsed?.items.find((item) => item.description === "PADARIA CENTRAL")).toMatchObject({
+      amount: 24.4,
+      date: "2026-08-30",
+    });
+  });
+
+  it("\"+\" marca crédito: pagamento da fatura é pagamento e estorno é crédito", () => {
+    const parsed = interAdapter.parse(rawInter, { today: referenceToday });
+
+    expect(parsed?.items.find((item) => item.description === "PAGAMENTO ON LINE")?.kind).toBe("payment");
+    expect(parsed?.items.find((item) => item.description === "ESTORNO LOJA EXEMPLO")?.kind).toBe("credit");
+  });
+
+  it("usa o ano impresso na data, lê a parcela e ignora a seção Próxima fatura", () => {
+    const parsed = interAdapter.parse(rawInter, { today: referenceToday });
+    const installment = parsed?.items.find((item) => item.description === "LOJA EXEMPLO");
+
+    expect(installment?.installment).toEqual({ current: 3, total: 4 });
+    expect(parsed?.items).toHaveLength(6);
+    expect(parsed?.items.some((item) => item.installment?.current === 4)).toBe(false);
+  });
+
+  it("lê vencimento e o total de \"Fatura atual\", não o valor financiado do rotativo", () => {
+    const parsed = interAdapter.parse(rawInter, { today: referenceToday });
+
+    expect(parsed?.dueDate).toBe("2026-10-07");
+    expect(parsed?.referenceMonth).toBe("2026-10");
+    expect(parsed?.statedTotal).toBe(297.1);
+  });
+
+  it("parseWithAdapters escolhe o adaptador do Inter", () => {
+    const parsed = parseWithAdapters(rawInter, { today: referenceToday });
+
+    expect(parsed.issuer).toBe("Inter");
+    expect(parsed.items.filter((item) => item.kind === "credit")).toHaveLength(1);
+  });
+});
+
+describe("invoice-import/adapters/classify", () => {
+  it("\"CREDITO\" só indica crédito no início ou como \"crédito de/em/ref\"; compra com a palavra no nome segue gasto", () => {
+    const parsed = parseInvoice([
+      [
+        "Vencimento 10/10/2026",
+        "12/09 SEGURO CREDITO E CIA 80,00",
+        "13/09 CREDITO DE ANUIDADE 30,00",
+        "14/09 CREDITO 15,00",
+      ],
+    ]);
+
+    expect(parsed.items.map((item) => [item.description, item.kind])).toEqual([
+      ["SEGURO CREDITO E CIA", "purchase"],
+      ["CREDITO DE ANUIDADE", "credit"],
+      ["CREDITO", "credit"],
+    ]);
   });
 });
 

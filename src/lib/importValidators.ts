@@ -42,6 +42,7 @@ export type ImportPreviewInput = ImportHeader & {
 
 export type ImportConfirmItemInput = {
   date: string;
+  purchaseDate: string | null;
   description: string;
   amount: number;
   type: ImportEntryType;
@@ -224,6 +225,12 @@ function parseConfirmItem(
     return { reason: "data inválida" };
   }
 
+  const { purchaseDate } = item;
+
+  if (purchaseDate !== undefined && purchaseDate !== null && !isValidDateString(purchaseDate)) {
+    return { reason: "data da compra inválida" };
+  }
+
   if (typeof type !== "string" || !IMPORT_ENTRY_TYPES.includes(type as ImportEntryType)) {
     return { reason: "tipo inválido" };
   }
@@ -241,6 +248,7 @@ function parseConfirmItem(
   return {
     item: {
       date,
+      purchaseDate: typeof purchaseDate === "string" ? purchaseDate : null,
       description: description.trim(),
       amount,
       type: type as ImportEntryType,

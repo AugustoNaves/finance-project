@@ -47,10 +47,10 @@ export const BARE_INSTALLMENT = /(?:^|\s)\(?(\d{1,2})\/(\d{1,2})\)?(?=\s|$)/g;
 
 export const IGNORED_ROW =
   /\b(?:SALDO (?:ANTERIOR|ATUAL|DEVEDOR|FINANCIADO|DA|DE|DO|EM)|TOTAL (?:DA|DE|DO|DESTA|DOS|DAS|A|PARA|GERAL|NACIONAL|INTERNACIONAL|PARCELADO)|SUB-?TOTAL|LIMITE|PAGAMENTO MINIMO|VALOR MINIMO|VALOR TOTAL|VENCIMENTO|FECHAMENTO)\b/;
-export const PAYMENT_ROW = /\bPAGAMENTO (?:RECEBIDO|EFETUADO|DE FATURA|DA FATURA|FATURA|EM)\b|\bPAGTO\b/;
+export const PAYMENT_ROW = /\bPAGAMENTO (?:RECEBIDO|EFETUADO|DE FATURA|DA FATURA|FATURA|EM|ON ?LINE|VIA)\b|\bPAGTO\b/;
 export const REFUND_ROW = /\b(?:ESTORNO|DEVOLUCAO|CASHBACK|REEMBOLSO)\b/;
 export const FEE_ROW = /\b(?:IOF|JUROS|MULTA|ANUIDADE|ENCARGOS?|TARIFA)\b/;
-export const CREDIT_ROW = /\bCREDITO\b/;
+export const CREDIT_ROW = /^CREDITO\b|\bCREDITO (?:DE|EM|REF|POR|NA|NO)\b/;
 
 export const DUE_DATE_LABEL = /VENCIMENTO/;
 export const DUE_DATE_EXCLUDED = /PROXIM|ANTERIOR/;
@@ -249,15 +249,11 @@ export function classify(description: string, negative: boolean): InvoiceItemKin
     return "payment";
   }
 
-  if (negative || REFUND_ROW.test(folded)) {
+  if (negative || REFUND_ROW.test(folded) || CREDIT_ROW.test(folded)) {
     return "credit";
   }
 
-  if (FEE_ROW.test(folded)) {
-    return "fee";
-  }
-
-  return CREDIT_ROW.test(folded) ? "credit" : "purchase";
+  return FEE_ROW.test(folded) ? "fee" : "purchase";
 }
 
 export function inferYear(month: number, referenceMonth: string) {

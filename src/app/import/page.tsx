@@ -62,6 +62,7 @@ import {
   LinesHead,
   LinkButton,
   Meta,
+  MonthHint,
   MonthRow,
   Notice,
   PageContent,
@@ -140,7 +141,7 @@ export default function ImportPage() {
   const [dragging, setDragging] = useState(false);
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [referenceMonth, setReferenceMonth] = useState(getLocalMonthKey());
-  const [useInvoiceMonth, setUseInvoiceMonth] = useState(false);
+  const [useInvoiceMonth, setUseInvoiceMonth] = useState(true);
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [replaceLump, setReplaceLump] = useState(false);
@@ -187,7 +188,7 @@ export default function ImportPage() {
     setNeedsPassword(false);
     setReplaceLump(false);
     setAcceptDifference(false);
-    setUseInvoiceMonth(false);
+    setUseInvoiceMonth(true);
     setCategoryModal(null);
   }
 
@@ -256,10 +257,10 @@ export default function ImportPage() {
       const month = invoice.referenceMonth ?? getLocalMonthKey();
       const nextLoaded = { name: file.name, hash, invoice };
 
-      await loadPreview(nextLoaded, month, false);
+      await loadPreview(nextLoaded, month, true);
       setLoaded(nextLoaded);
       setReferenceMonth(month);
-      setUseInvoiceMonth(false);
+      setUseInvoiceMonth(true);
       setPendingFile(null);
       setNeedsPassword(false);
       setPassword("");
@@ -414,6 +415,7 @@ export default function ImportPage() {
         rules: Array.from(rules.values()),
         items: included.map((row) => ({
           date: row.date,
+          purchaseDate: row.purchaseDate,
           description: row.description.trim(),
           amount: row.amount,
           type: row.type,
@@ -571,7 +573,7 @@ export default function ImportPage() {
 
             <MonthRow>
               <Field>
-                <span>Mês de referência</span>
+                <span>Mês da fatura (vencimento)</span>
                 <Input
                   type="month"
                   value={referenceMonth}
@@ -585,16 +587,24 @@ export default function ImportPage() {
               <Check>
                 <input
                   type="checkbox"
-                  checked={useInvoiceMonth}
+                  checked={!useInvoiceMonth}
                   disabled={busy}
                   onChange={(event) => {
-                    setUseInvoiceMonth(event.target.checked);
-                    refreshPreview(referenceMonth, event.target.checked);
+                    const invoiceMonth = !event.target.checked;
+
+                    setUseInvoiceMonth(invoiceMonth);
+                    refreshPreview(referenceMonth, invoiceMonth);
                   }}
                 />
-                Lançar tudo no mês da fatura ({formatMonth(referenceMonth)})
+                Usar a data de cada compra
               </Check>
             </MonthRow>
+
+            <MonthHint>
+              {useInvoiceMonth
+                ? `Tudo entra em ${formatMonth(referenceMonth)}, o mês em que a fatura vence e o dinheiro sai da sua conta. A data de cada compra fica guardada na observação do lançamento.`
+                : `Cada compra entra no mês em que foi feita; parcelas a partir da 2ª entram em ${formatMonth(referenceMonth)}. Assim o mês mostra quando você gastou, não quando pagou.`}
+            </MonthHint>
 
             {loaded.invoice.warnings.map((warning) => (
               <Notice key={warning} $tone="warning">
@@ -709,6 +719,9 @@ export default function ImportPage() {
                       <Parcel data-empty={!installment}>{installment || "—"}</Parcel>
                       <Flags>
                         {KIND_LABELS[row.kind] && <Tag $tone="muted">{KIND_LABELS[row.kind]}</Tag>}
+                        {row.purchaseDate && row.purchaseDate !== row.date && (
+                          <Tag $tone="muted">compra em {formatDate(`${row.purchaseDate}T00:00:00.000Z`)}</Tag>
+                        )}
                         {row.duplicateOf && (
                           <Tag $tone="amber">
                             possível duplicata de {formatDate(row.duplicateOf.date)}

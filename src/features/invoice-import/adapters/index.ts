@@ -1,16 +1,18 @@
 import type { ParsedInvoice } from "../types";
 import { toText } from "./common";
 import { genericAdapter } from "./generic";
+import { interAdapter } from "./inter";
 import { itauAdapter } from "./itau";
 import { nubankAdapter } from "./nubank";
 import type { InvoiceAdapter, ParseInvoiceOptions } from "./types";
 
 export * from "./types";
 export { genericAdapter } from "./generic";
+export { interAdapter } from "./inter";
 export { itauAdapter } from "./itau";
 export { nubankAdapter } from "./nubank";
 
-export const ADAPTERS: InvoiceAdapter[] = [nubankAdapter, itauAdapter];
+export const ADAPTERS: InvoiceAdapter[] = [nubankAdapter, itauAdapter, interAdapter];
 
 export function parseWithAdapters(
   input: string | string[] | string[][],
