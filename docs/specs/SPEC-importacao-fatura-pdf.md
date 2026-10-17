@@ -2,10 +2,45 @@
 
 | | |
 |---|---|
-| Status | Proposta (não implementada) |
+| Status | **Implementada (MVP)** em 12/10/2026 — ver seção 0 |
 | Data | 12/10/2026 |
 | Origem | Pedido do usuário: "uma seção capaz de verificar uma fatura vindo pelo PDF e registrar os devidos pagamentos, com um preview para o usuário verificar se está tudo correto e se as contas vão para as categorias certas" |
 | Telas afetadas | Nova tela `/import`; Transações; Categorias; navegação |
+
+## 0. Situação da implementação
+
+Implementado na branch `feat/importacao-fatura-pdf`. As decisões em aberto foram resolvidas pelas recomendações desta spec: fatura de cartão detalhada por compra (P1, P2), PDF não armazenado (P3), extração determinística no navegador (P4), parcelas 2+ no mês da fatura.
+
+| Item da spec | Situação |
+|---|---|
+| Upload, leitura no navegador (`pdfjs-dist`), limite de 10 MB e 50 páginas, PDF com senha | Feito |
+| Parser genérico por heurística (datas `dd/mm`, `dd/mm/aaaa`, `dd MMM`; valores; parcelas; estornos; encargos; pagamento da fatura) e detecção do emissor | Feito |
+| Preview editável: incluir, data, descrição, valor, tipo, categoria; selos de origem da sugestão e de duplicata | Feito |
+| Conferência de total com aceite explícito da diferença | Feito |
+| Sugestão de categoria: regra do usuário -> histórico -> palavras-chave | Feito |
+| "Aplicar às outras linhas do estabelecimento" e "Lembrar para as próximas faturas" | Feito |
+| Regra de data das parcelas e opção "Lançar tudo no mês da fatura" | Feito |
+| Duplicidade: mesmo arquivo (hash), mesmo lançamento, fatura lançada como valor único (substituição) | Feito |
+| Gravação atômica, histórico de importações e "Desfazer importação" | Feito |
+| Testes unitários, de API, de UI e E2E com PDF sintético | Feito |
+| Criar categoria dentro do preview (5.2) | **Não feito** — a tela aponta para Categorias |
+| Adaptadores específicos por emissor (9) | **Não feito** — só o genérico; nenhum PDF real foi testado |
+| Tela para listar/excluir regras de categorização | **Não feito** — a API existe (`/api/category-rules`) |
+| Limite de 10 lotes/hora (10) | **Não feito** |
+| Layout em cartões no mobile (5.3) | **Não feito** — a tabela rola na horizontal |
+| OCR e fallback por LLM | Fora de escopo |
+
+Diferenças em relação ao desenho original:
+
+- **Modelo de dados (seção 7):** a tabela `transactions` **não** foi alterada. O vínculo transação-lote fica em `import_batch_items`, e a impressão digital é calculada na hora, sem coluna. Motivo: o deploy na Vercel não roda migrations; se a coluna nova fosse exigida, todas as telas quebrariam até a migration ser aplicada. Assim, sem a migration só a tela de importação falha.
+- **Normalização de estabelecimento (6.2):** remove acentos, prefixo de adquirente, sufixo de parcela e o país no final (`BR`/`BRA`). Cidade e UF são mantidas, porque não há como separá-las do nome com segurança.
+- **Palavras-chave:** casam no início de palavra (`POSTO` não casa com `IMPOSTO`).
+
+Limitações conhecidas do parser genérico:
+
+- Faturas com **duas colunas de data** (compra e lançamento) podem ter a segunda data lida como parcela.
+- Seções de **parcelas futuras** ("próximas faturas") são lidas como lançamentos normais; a conferência de total acusa a diferença.
+- Só foi validado com PDFs sintéticos. O primeiro teste com uma fatura real deve ser acompanhado.
 
 ## 1. Problema
 

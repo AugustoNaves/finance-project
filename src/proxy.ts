@@ -9,6 +9,7 @@ export async function proxy(request: NextRequest) {
   const rotasProtegidas = [
     "/",
     "/transactions",
+    "/import",
     "/investments",
     "/planning",
     "/categories",
@@ -32,6 +33,7 @@ export const config = {
   matcher: [
     "/",
     "/transactions",
+    "/import",
     "/investments",
     "/planning",
     "/categories",

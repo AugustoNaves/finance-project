@@ -13,6 +13,7 @@ export type { Transaction } from "@/types/transaction";
 
 interface TransactionsContextType {
   transactions: Transaction[];
+  refreshTransactions: () => Promise<void>;
   addTransaction: (transaction: TransactionPayload) => Promise<void>;
   updateTransaction: (id: string, transaction: TransactionPayload) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -24,6 +25,16 @@ export const TransactionsContext = createContext<TransactionsContextType>(
 
 export function TransactionsProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  async function refreshTransactions() {
+    try {
+      const data = await fetchTransactions();
+      setTransactions(data);
+    } catch (error) {
+      console.error("Erro ao buscar transações:", error);
+      setTransactions([]);
+    }
+  }
 
   useEffect(() => {
     async function loadTransactions() {
@@ -68,7 +79,13 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
 
   return (
     <TransactionsContext.Provider
-      value={{ transactions, addTransaction, updateTransaction, deleteTransaction }}
+      value={{
+        transactions,
+        refreshTransactions,
+        addTransaction,
+        updateTransaction,
+        deleteTransaction,
+      }}
     >
       {children}
     </TransactionsContext.Provider>

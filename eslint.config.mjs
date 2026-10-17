@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     ".e2e-pg/**",
+    "public/pdf.worker.min.mjs",
   ]),
 ]);
 

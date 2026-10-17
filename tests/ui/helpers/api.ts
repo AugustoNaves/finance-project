@@ -74,6 +74,7 @@ function toResponse(value: unknown): Response {
 const defaultRoutes: ApiRoutes = {
   "GET /api/transactions": [],
   "GET /api/categories": [],
+  "GET /api/category-rules": [],
   "GET /api/budgets": [],
   "GET /api/goals": [],
   "GET /api/me": { user: { name: "Maria Teste", email: "maria@teste.com" } },

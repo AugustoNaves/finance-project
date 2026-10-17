@@ -246,6 +246,7 @@ describe("AppNavigation", () => {
   const expectedLinks = [
     ["Início", "/"],
     ["Transações", "/transactions"],
+    ["Importar", "/import"],
     ["Categorias", "/categories"],
     ["Investimentos", "/investments"],
     ["Planejamento", "/planning"],
@@ -271,7 +272,7 @@ describe("AppNavigation", () => {
       .map((item) => item.textContent);
   }
 
-  it("exibe a marca e os 7 links na navegação desktop", () => {
+  it("exibe a marca e os 8 links na navegação desktop", () => {
     render(<AppNavigation />);
 
     expect(
@@ -298,6 +299,7 @@ describe("AppNavigation", () => {
   it.each([
     ["/", "Início"],
     ["/transactions", "Transações"],
+    ["/import", "Importar"],
     ["/categories", "Categorias"],
     ["/investments", "Investimentos"],
     ["/planning", "Planejamento"],

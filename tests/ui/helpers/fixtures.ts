@@ -1,5 +1,6 @@
 import type { Budget } from "@/types/budget";
 import type { Category } from "@/types/category";
+import type { CategoryRule } from "@/types/categoryRule";
 import type { Goal } from "@/types/goal";
 import type { Transaction } from "@/types/transaction";
 
@@ -85,3 +86,28 @@ export const goals: Goal[] = [
     color: null,
   },
 ];
+
+export const categoryRules: CategoryRule[] = [
+  {
+    id: "cr1",
+    pattern: "NETFLIX",
+    category: "Lazer",
+    type: "outcome",
+    createdAt: "2026-10-10T12:00:00.000Z",
+  },
+  {
+    id: "cr2",
+    pattern: "UBER",
+    category: "Transporte",
+    type: "outcome",
+    createdAt: "2026-10-11T12:00:00.000Z",
+  },
+  {
+    id: "cr3",
+    pattern: "EMPRESA XYZ",
+    category: "Salário",
+    type: "income",
+    createdAt: "2026-10-12T12:00:00.000Z",
+  },
+];
+
