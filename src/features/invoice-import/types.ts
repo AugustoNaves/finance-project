@@ -40,6 +40,7 @@ export interface ImportPreviewRequest {
 export interface ImportPreviewItem {
   index: number;
   date: string;
+  purchaseDate: string | null;
   description: string;
   merchant: string;
   amount: number;
@@ -60,6 +61,7 @@ export interface ImportPreviewResponse {
 
 export interface ImportConfirmItem {
   date: string;
+  purchaseDate?: string | null;
   description: string;
   amount: number;
   type: ImportEntryType;

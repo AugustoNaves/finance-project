@@ -559,7 +559,7 @@ Adicionada depois do mapeamento original; fica entre Transações e Categorias n
 
 1. **Enviar fatura.** Campo de arquivo "Arquivo PDF da fatura" (aceita `application/pdf`). Recusa arquivo que não é PDF ("Envie um arquivo PDF.") ou maior que 10 MB ("O arquivo é maior que 10 MB."). O PDF é lido no navegador com `pdfjs-dist` (`src/features/invoice-import/pdfText.ts`) e não é enviado ao servidor; calcula-se o SHA-256 do arquivo. PDF com senha: aparece o campo "Senha do PDF" e o botão "Abrir PDF".
 2. **Extração.** `parseInvoice` (`src/features/invoice-import/parseInvoice.ts`) reconhece emissor, vencimento, total impresso, mês de referência e as linhas (data, descrição, valor, parcela, tipo de linha). Sem linhas reconhecidas: "Nenhum lançamento reconhecido. O PDF pode ser digitalizado (imagem) ou de um layout não suportado."
-3. **Conferir lançamentos.** Cabeçalho com arquivo, emissor, vencimento, total impresso e quantidade de linhas; campo "Mês de referência" e a opção "Lançar tudo no mês da fatura" (ambos refazem o preview). Tabela com uma linha por lançamento: Incluir, Data, Descrição, Parcela, Valor, Tipo (Despesa/Receita) e Categoria (categorias do usuário do tipo da linha).
+3. **Conferir lançamentos.** Cabeçalho com arquivo, emissor, vencimento, total impresso e quantidade de linhas; campo "Mês da fatura (vencimento)" e a opção "Usar a data de cada compra" (ambos refazem o preview). Por padrão tudo entra no mês do vencimento, com a data de cada compra guardada na observação; uma frase abaixo explica o modo atual. Tabela com uma linha por lançamento: Incluir, Data, Descrição, Parcela, Valor, Tipo (Despesa/Receita) e Categoria (categorias do usuário do tipo da linha).
 4. **Registrar.** Botão "Registrar N transação(ões)"; mensagem de sucesso com link para Transações. O contexto de transações é recarregado.
 5. **Importações anteriores.** Lista dos lotes com "Desfazer importação" (diálogo de confirmação), que exclui todas as transações do lote.
 
@@ -802,7 +802,7 @@ Os IDs F-01 a F-131 são os da primeira versão (regras atualizadas onde o compo
 | F-158 | Sugestão de categoria | Importar | Regra do usuário, depois histórico, depois palavra-chave |
 | F-159 | Pagamento da fatura desmarcado | Importar | Linha de pagamento não é incluída por padrão |
 | F-160 | Estorno como receita | Importar | Linha de crédito entra como Receita |
-| F-161 | Data das parcelas | Importar | Parcela 2+ no mês de referência; opção de lançar tudo no mês da fatura |
+| F-161 | Data dos lançamentos importados | Importar | Padrão: tudo no mês do vencimento, com "compra em dd/mm/aaaa" na observação; opção "Usar a data de cada compra" (à vista/parcela 1 na data da compra, parcela 2+ no mês da fatura) |
 | F-162 | Possível duplicata | Importar | Linha igual a transação existente vem desmarcada e sinalizada |
 | F-163 | Fatura já importada | Importar | Aviso pelo hash do arquivo |
 | F-164 | Substituir lançamento único | Importar | Oferece trocar a "fatura" lançada como total pelo detalhamento |

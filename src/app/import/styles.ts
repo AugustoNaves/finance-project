@@ -241,6 +241,13 @@ export const MonthRow = styled.div`
   }
 `;
 
+export const MonthHint = styled.p`
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 62ch;
+`;
+
 export const Check = styled.label`
   display: flex;
   align-items: center;

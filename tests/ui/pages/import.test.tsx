@@ -50,6 +50,7 @@ function previewItem(index: number, overrides: Partial<ImportPreviewItem>): Impo
   return {
     index,
     date: "2026-09-12",
+    purchaseDate: null,
     description: "ITEM",
     merchant: "ITEM",
     amount: 10,
@@ -86,6 +87,7 @@ function previewResponse(overrides: Partial<ImportPreviewResponse> = {}): Import
       }),
       previewItem(2, {
         date: "2026-10-20",
+        purchaseDate: "2026-08-20",
         description: "LOJA XPTO",
         merchant: "LOJA XPTO",
         amount: 70,
@@ -221,10 +223,29 @@ describe("Página de importação de fatura", () => {
       referenceMonth: "2026-10",
       dueDate: "2026-10-10",
       statedTotal: 150,
-      useInvoiceMonth: false,
+      useInvoiceMonth: true,
     });
     expect((call.body as { items: unknown[] }).items).toHaveLength(4);
     expect((call.body as { items: object[] }).items[0]).not.toHaveProperty("raw");
+  });
+
+  it("por padrão lança tudo no mês do vencimento e explica; 'Usar a data de cada compra' refaz o preview", async () => {
+    const { user, api } = await renderPage();
+
+    await upload(user);
+    await screen.findByRole("heading", { name: "Conferir os lançamentos" });
+
+    const option = screen.getByRole("checkbox", { name: "Usar a data de cada compra" });
+
+    expect(option).not.toBeChecked();
+    expect(screen.getByText(/^Tudo entra em outubro de 2026, o mês em que a fatura vence/)).toBeInTheDocument();
+    expect(screen.getByText("compra em 20/08/2026")).toBeInTheDocument();
+
+    await user.click(option);
+
+    await waitFor(() => expect(api.callsTo("POST", "/api/imports/preview")).toHaveLength(2));
+    expect(api.callsTo("POST", "/api/imports/preview")[1].body).toMatchObject({ useInvoiceMonth: false });
+    expect(screen.getByText(/^Cada compra entra no mês em que foi feita/)).toBeInTheDocument();
   });
 
   it("mostra o cabeçalho da fatura, as sugestões e deixa o pagamento desmarcado", async () => {
@@ -330,9 +351,9 @@ describe("Página de importação de fatura", () => {
       replaceTransactionId: null,
       rules: [{ pattern: "LOJA XPTO", category: "Transporte", type: "outcome" }],
       items: [
-        { date: "2026-09-12", description: "IFOOD *RESTAURANTE", amount: 50, type: "outcome", category: "Alimentação", installment: null },
-        { date: "2026-09-13", description: "UBER *TRIP", amount: 30, type: "outcome", category: "Transporte", installment: null },
-        { date: "2026-10-20", description: "LOJA XPTO", amount: 70, type: "outcome", category: "Transporte", installment: { current: 2, total: 5 } },
+        { date: "2026-09-12", purchaseDate: null, description: "IFOOD *RESTAURANTE", amount: 50, type: "outcome", category: "Alimentação", installment: null },
+        { date: "2026-09-13", purchaseDate: null, description: "UBER *TRIP", amount: 30, type: "outcome", category: "Transporte", installment: null },
+        { date: "2026-10-20", purchaseDate: "2026-08-20", description: "LOJA XPTO", amount: 70, type: "outcome", category: "Transporte", installment: { current: 2, total: 5 } },
       ],
     });
     expect(screen.queryByRole("heading", { name: "Conferir os lançamentos" })).toBeNull();

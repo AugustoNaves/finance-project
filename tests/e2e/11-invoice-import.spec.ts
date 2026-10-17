@@ -63,6 +63,11 @@ test.describe("Importação de fatura por PDF", () => {
     expect(created.map((transaction) => transaction.amount).sort()).toEqual([-150, -30.4, -50].sort());
     expect(created.every((transaction) => transaction.paymentMethod === "Cartão de crédito")).toBe(true);
 
+    const ifood = created.find((transaction) => String(transaction.description).startsWith("IFOOD"));
+
+    expect(String(ifood?.date)).toContain("2026-10-12");
+    expect(String(ifood?.notes)).toMatch(/^Importado da fatura .*10\/2026 — compra em 12\/09\/2026$/);
+
     await page.goto("/transactions");
     await expect(page.getByRole("list", { name: "ter., 20 de out." })).toContainText("LOJA XPTO");
     await expect(transactionRow(page, "LOJA XPTO")).toContainText("Lazer");

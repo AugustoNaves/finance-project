@@ -101,9 +101,9 @@ export async function POST(request: NextRequest) {
       const merchant = normalizeMerchant(item.description);
       const type: ImportEntryType = item.kind === "credit" ? "income" : "outcome";
       const suggestion = suggestCategory({ merchant, type, rules, history, categories });
-      const duplicate = existingByFingerprint.get(
-        buildFingerprint(date, item.description, item.amount),
-      );
+      const duplicate =
+        existingByFingerprint.get(buildFingerprint(date, item.description, item.amount)) ??
+        (item.date ? existingByFingerprint.get(buildFingerprint(item.date, item.description, item.amount)) : undefined);
       const duplicateOf = duplicate
         ? {
             id: duplicate.id,
@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
       return {
         index,
         date,
+        purchaseDate: item.date,
         description: item.description,
         merchant,
         amount: item.amount,

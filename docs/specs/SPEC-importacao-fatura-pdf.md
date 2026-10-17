@@ -19,7 +19,8 @@ Implementado na branch `feat/importacao-fatura-pdf`. As decisões em aberto fora
 | Conferência de total com aceite explícito da diferença | Feito |
 | Sugestão de categoria: regra do usuário -> histórico -> palavras-chave | Feito |
 | "Aplicar às outras linhas do estabelecimento" e "Lembrar para as próximas faturas" | Feito |
-| Regra de data das parcelas e opção "Lançar tudo no mês da fatura" | Feito |
+| Regra de data: mês da fatura por padrão, opção "Usar a data de cada compra" e data da compra na observação | Feito |
+| Adaptador do Inter (" - " antes do valor é separador; "+" marca crédito; total em "Fatura atual") | Feito |
 | Duplicidade: mesmo arquivo (hash), mesmo lançamento, fatura lançada como valor único (substituição) | Feito |
 | Gravação atômica, histórico de importações e "Desfazer importação" | Feito |
 | Testes unitários, de API, de UI e E2E com PDF sintético | Feito |
@@ -130,9 +131,14 @@ Normalização de estabelecimento: maiúsculas, sem acentos, sem sufixos de parc
 
 Compras parceladas aparecem na fatura com a data da compra original, que pode ser de meses atrás. Gravar com essa data jogaria a despesa para um mês já fechado.
 
+**Desde 17/10/2026 o padrão é o mês da fatura (vencimento)**: todas as linhas entram no mês em que a fatura vence — quando o dinheiro sai da conta —, mantendo o dia da compra (ou o último dia do mês, se o dia não existir). Assim a "sobra do mês" bate com o saldo da conta. A data original da compra fica na observação do lançamento ("— compra em dd/mm/aaaa") e aparece no preview.
+
+Opção no preview **"Usar a data de cada compra"** (regra anterior, para quem controla pelo mês em que gastou):
+
 - Compra à vista ou parcela 1: **data da compra**.
-- Parcela 2 em diante: **mês de referência da fatura**, mantendo o dia da compra (ou o último dia do mês, se o dia não existir).
-- Opção global no preview: "Lançar tudo no mês da fatura" (para quem controla por mês de pagamento).
+- Parcela 2 em diante: **mês de referência da fatura**, mantendo o dia da compra.
+
+A detecção de duplicatas compara tanto a data efetiva quanto a data da compra, para que reimportar em outro modo não duplique lançamentos.
 
 Datas devem ser tratadas como **data local sem horário**. O sistema atual tem um bug de fuso (ver `docs/MELHORIAS.md`, item de data) que precisa estar corrigido antes desta feature, senão todo lançamento importado aparece um dia antes.
 

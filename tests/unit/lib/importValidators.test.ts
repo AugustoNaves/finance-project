@@ -168,6 +168,7 @@ describe("validateImportConfirmInput", () => {
         items: [
           {
             date: "2026-03-05",
+            purchaseDate: null,
             description: "NETFLIX.COM",
             amount: 39.9,
             type: "outcome",
@@ -176,6 +177,7 @@ describe("validateImportConfirmInput", () => {
           },
           {
             date: "2026-03-05",
+            purchaseDate: null,
             description: "NETFLIX.COM",
             amount: 39.9,
             type: "outcome",

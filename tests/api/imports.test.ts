@@ -279,6 +279,7 @@ describe("POST /api/imports/preview", () => {
         {
           index: 0,
           date: "2026-03-05",
+          purchaseDate: "2026-03-05",
           description: "NETFLIX.COM",
           merchant: "NETFLIX COM",
           amount: 39.9,
@@ -369,6 +370,23 @@ describe("POST /api/imports/preview", () => {
     expect(body.items[0]).toMatchObject({ include: true, duplicateOf: null });
   });
 
+  it("reconhece duplicata pela data da compra quando a fatura anterior foi lançada no modo 'data de cada compra'", async () => {
+    existingTransactions = [existing({ id: "old-1", date: new Date("2026-02-20T00:00:00.000Z") })];
+
+    const body = await previewItems({
+      ...previewPayload,
+      useInvoiceMonth: true,
+      items: [{ ...previewItem, date: "2026-02-20" }],
+    });
+
+    expect(body.items[0]).toMatchObject({
+      date: "2026-03-20",
+      purchaseDate: "2026-02-20",
+      include: false,
+      duplicateOf: { id: "old-1" },
+    });
+  });
+
   it("não inclui pagamentos de fatura e trata créditos como receita", async () => {
     const body = await previewItems({
       ...previewPayload,
@@ -420,7 +438,7 @@ describe("POST /api/imports/preview", () => {
       items: [{ ...previewItem, date: "2026-02-20" }],
     });
 
-    expect(body.items[0]).toMatchObject({ date: "2026-03-20" });
+    expect(body.items[0]).toMatchObject({ date: "2026-03-20", purchaseDate: "2026-02-20" });
   });
 
   it("sugere a categoria pela regra do usuário antes do histórico e do dicionário", async () => {
@@ -727,6 +745,37 @@ describe("POST /api/imports", () => {
     expect(txMock.transaction.create.mock.calls[0][0].data.notes).toBe(
       "Importado da fatura de cartão 03/2026",
     );
+  });
+
+  it("guarda a data da compra na observação quando o lançamento foi para o mês da fatura", async () => {
+    const response = await confirm(
+      {
+        ...confirmPayload,
+        items: [
+          { ...confirmItem, date: "2026-03-20", purchaseDate: "2026-02-20" },
+          { ...confirmItem, date: "2026-03-20", purchaseDate: "2026-01-20", installment: { current: 3, total: 4 } },
+          { ...confirmItem, date: "2026-03-05", purchaseDate: "2026-03-05" },
+        ],
+      },
+      { cookie },
+    );
+
+    expect(response.status).toBe(201);
+    expect(txMock.transaction.create.mock.calls.map((call) => call[0].data.notes)).toEqual([
+      "Importado da fatura Nubank 03/2026 — compra em 20/02/2026",
+      "Importado da fatura Nubank 03/2026 — parcela 3/4 — compra em 20/01/2026",
+      "Importado da fatura Nubank 03/2026",
+    ]);
+    expect(txMock.transaction.create.mock.calls[0][0].data.date).toEqual(new Date("2026-03-20T00:00:00.000Z"));
+  });
+
+  it("recusa data da compra inválida", async () => {
+    const response = await confirm(
+      { ...confirmPayload, items: [{ ...confirmItem, purchaseDate: "2026-02-30" }] },
+      { cookie },
+    );
+
+    expect(response.status).toBe(400);
   });
 
   it("substitui o lançamento único filtrando pelo usuário da sessão", async () => {
