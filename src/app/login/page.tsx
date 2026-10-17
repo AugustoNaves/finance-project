@@ -16,6 +16,7 @@ import {
   Footer,
   ForgotLink,
   Form,
+  HelpLink,
   Input,
   Label,
   Notebook,
@@ -213,6 +214,7 @@ function FormularioDeLogin() {
       </Footer>
 
       <Fineprint>Login protegido por reCAPTCHA.</Fineprint>
+      <HelpLink href="/ajuda">Como funciona o Finance-app?</HelpLink>
     </>
   );
 }
