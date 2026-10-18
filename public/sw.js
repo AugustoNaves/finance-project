@@ -1,4 +1,4 @@
-const VERSION = "finance-app-v3";
+const VERSION = "finance-app-v4";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline";
 const PRECACHE = [

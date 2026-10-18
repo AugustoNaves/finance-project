@@ -161,7 +161,7 @@ export default function SettingsPage() {
         </ExportActions>
       </LedgerSection>
 
-      <LedgerSection title="Instalar o app" action={{ label: "Como usar o app", href: "/ajuda" }}>
+      <LedgerSection title="Instalar o app" action={{ label: "Como usar o app", href: "/ajuda", newTab: true }}>
         <InstallSteps>
           <li>
             <b>iPhone</b>

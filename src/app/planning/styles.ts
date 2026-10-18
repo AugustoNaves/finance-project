@@ -33,14 +33,15 @@ export const Column = styled.div`
 `;
 
 export const MonthBar = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
 
   @media (min-width: 960px) {
-    justify-content: flex-start;
+    grid-template-columns: 44px 240px 44px;
+    justify-content: start;
   }
 `;
 
@@ -79,15 +80,6 @@ export const MonthPicker = styled.div`
     outline-offset: 2px;
   }
 
-  @media (min-width: 960px) {
-    order: -1;
-    padding-left: 0;
-    margin-right: 4px;
-
-    &:hover {
-      background: none;
-    }
-  }
 `;
 
 export const MonthName = styled.span`

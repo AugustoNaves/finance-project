@@ -35,12 +35,12 @@ const publicSans = Public_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Finance-app",
+  title: "Finance App",
   description: "Suas contas do mês, num caderno que cabe no bolso.",
-  applicationName: "Finance-app",
+  applicationName: "Finance App",
   appleWebApp: {
     capable: true,
-    title: "Finance-app",
+    title: "Finance App",
     statusBarStyle: "default",
     startupImage,
   },

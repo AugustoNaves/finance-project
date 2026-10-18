@@ -1,4 +1,4 @@
-# Revisão visual e funcional — Finance-app "Caderneta" (17/10/2026)
+# Revisão visual e funcional — Finance App "Caderneta" (17/10/2026)
 
 Comparação da implementação com a direção e o protótipo aprovados (`visual-directions.md`, `design-spec.md`).
 

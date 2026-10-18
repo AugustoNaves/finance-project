@@ -27,13 +27,13 @@ const dailyItems = [
   { label: "Planejar", href: "/planning", icon: "plan" },
 ] as const;
 
-const organizeItems = [
+const organizeItems: { label: string; href: string; newTab?: boolean }[] = [
   { label: "Importar fatura", href: "/import" },
   { label: "Categorias e regras", href: "/categories" },
   { label: "Investimentos", href: "/investments" },
   { label: "Relatórios", href: "/reports" },
   { label: "Configurações", href: "/settings" },
-  { label: "Como usar", href: "/ajuda" },
+  { label: "Como usar", href: "/ajuda", newTab: true },
 ];
 
 const iconPaths = {
@@ -61,6 +61,12 @@ function Icon({ name }: { name: keyof typeof iconPaths }) {
   );
 }
 
+const NEW_TAB_HINT = <>{" "}<span className="sr-only">(abre em nova aba)</span></>;
+
+function newTabProps(newTab?: boolean) {
+  return newTab ? { target: "_blank", rel: "noopener noreferrer" } : {};
+}
+
 function isActivePath(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   if (href === "/planning") return pathname.startsWith("/planning") || pathname.startsWith("/budgets");
@@ -84,9 +90,9 @@ export function AppNavigation() {
   return (
     <>
       <Side>
-        <Brand href="/" aria-label="Finance-app, ir para o mês">
+        <Brand href="/" aria-label="Finance App, ir para o mês">
           <BrandMark aria-hidden="true">F</BrandMark>
-          <span>Finance-app</span>
+          <span>Finance App</span>
         </Brand>
 
         <RegisterButton type="button" onClick={() => openNewEntry()}>
@@ -112,8 +118,15 @@ export function AppNavigation() {
             const active = isActivePath(pathname, item.href);
 
             return (
-              <SideItem key={item.href} href={item.href} $active={active} aria-current={active ? "page" : undefined}>
+              <SideItem
+                key={item.href}
+                href={item.href}
+                $active={active}
+                aria-current={active ? "page" : undefined}
+                {...newTabProps(item.newTab)}
+              >
                 {item.label}
+                {item.newTab && NEW_TAB_HINT}
               </SideItem>
             );
           })}
@@ -170,9 +183,11 @@ export function AppNavigation() {
                   $active={active}
                   aria-current={active ? "page" : undefined}
                   onClick={() => setMoreOpen(false)}
+                  {...newTabProps(item.newTab)}
                 >
                   {item.label}
-                  <span aria-hidden="true">›</span>
+                  {item.newTab && NEW_TAB_HINT}
+                  <span aria-hidden="true">{item.newTab ? "↗" : "›"}</span>
                 </MoreLink>
               </li>
             );

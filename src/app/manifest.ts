@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Finance-app",
-    short_name: "Finance-app",
+    name: "Finance App",
+    short_name: "Finance App",
     description: "Suas contas do mês, num caderno que cabe no bolso.",
     lang: "pt-BR",
     start_url: "/",

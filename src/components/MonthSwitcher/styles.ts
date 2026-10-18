@@ -3,14 +3,15 @@
 import styled from "styled-components";
 
 export const Bar = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   padding: 4px 0;
 
   @media (min-width: 960px) {
-    justify-content: flex-start;
+    grid-template-columns: 44px 300px 44px;
+    justify-content: start;
   }
 `;
 
@@ -27,8 +28,6 @@ export const Title = styled.h1`
 
   @media (min-width: 960px) {
     font-size: 28px;
-    order: -1;
-    margin-right: 12px;
   }
 `;
 

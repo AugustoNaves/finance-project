@@ -34,7 +34,7 @@ const sections: GuideSection[] = [
     title: "Instale no celular",
     body: (
       <>
-        <p>O Finance-app funciona no navegador, mas fica melhor instalado: abre em tela cheia, com ícone na tela inicial.</p>
+        <p>O Finance App funciona no navegador, mas fica melhor instalado: abre em tela cheia, com ícone na tela inicial.</p>
         <Steps>
           <li>
             <strong>iPhone:</strong> abra o app no Safari, toque em Compartilhar e depois em <em>Adicionar à Tela de Início</em>.
@@ -269,15 +269,15 @@ export default function HelpPage() {
   return (
     <Page>
       <Header>
-        <Brand href="/" aria-label="Finance-app, abrir o app">
+        <Brand href="/" aria-label="Finance App, abrir o app">
           <BrandMark aria-hidden="true">F</BrandMark>
-          <span>Finance-app</span>
+          <span>Finance App</span>
         </Brand>
         <HeaderLink href="/">Abrir o app</HeaderLink>
       </Header>
 
       <Wrap>
-        <Title>Como usar o Finance-app</Title>
+        <Title>Como usar o Finance App</Title>
         <Lead>Registre o que gasta, confira o mês e importe a fatura do cartão. Cada parte abaixo leva menos de um minuto para ler.</Lead>
 
         <Index aria-label="Nesta página">
@@ -320,7 +320,7 @@ export default function HelpPage() {
               ))}
             </Faq>
             <Note>
-              Pronto para começar? <Link href="/">Abrir o Finance-app</Link>
+              Pronto para começar? <Link href="/">Abrir o Finance App</Link>
             </Note>
           </SectionBody>
         </Section>

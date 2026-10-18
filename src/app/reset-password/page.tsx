@@ -85,7 +85,7 @@ function ResetPasswordForm() {
       <Column>
         <Brand>
           <BrandMark aria-hidden="true">F</BrandMark>
-          Finance-app
+          Finance App
         </Brand>
 
         <SectionTitle>Nova senha</SectionTitle>
