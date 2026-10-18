@@ -71,6 +71,7 @@ O guarda de autenticação está em `src/proxy.ts` (convenção do Next 16). Se 
 - O corte por `score` do reCAPTCHA está comentado na rota de login. Se ativar, defina um threshold.
 - `/budgets` apenas redireciona para `/planning`; orçamentos e metas vivem na mesma tela.
 - Ao alterar regra de negócio, atualize o teste correspondente em `tests/` e a documentação em `docs/`.
+- **Próximas melhorias** estão especificadas em `docs/specs/` (método spec-hill: spec → tasks → uphill → downhill). Antes de implementar qualquer uma, leia `docs/specs/README.md`, siga a ordem das ondas e os contratos de `docs/specs/contratos.md`.
 - O **React Compiler** está ativo: Evite mutação direta de estado.
 
 ## 7. Princípios e Checklist de Entrega

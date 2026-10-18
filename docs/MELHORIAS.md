@@ -58,34 +58,36 @@ Tudo abaixo está na branch `docs-testes-melhorias`, **sem commit e sem deploy**
 
 ## 2. Pendentes, por prioridade
 
+> **18/10/2026:** os itens marcados com 🗂️ viraram specs do próximo ciclo em [`specs/`](specs/README.md) (spec e tasks prontas, aguardando uphill). Mapa: P1 → [003](specs/003-categoria-por-id/spec.md) · P2–P5, P12 → [002](specs/002-autenticacao-reforcada/spec.md) · P6, P8 → [004](specs/004-valores-em-centavos/spec.md) · P10, P11, P17 → [001](specs/001-carga-erros-sessao/spec.md) · P16 → [010](specs/010-acessibilidade-folhas-mes/spec.md) · P19 → [009](specs/009-busca-e-ordem/spec.md). P13 (paginação) ficou fora do ciclo; ver [`specs/visao-geral.md`](specs/visao-geral.md).
+
 ### Alta
 
 | # | Item | Por quê | Sugestão |
 |---|---|---|---|
-| P1 | **Categoria referenciada por nome** em transações e orçamentos. | Renomear zera as métricas da categoria e o gasto do orçamento; excluir deixa lançamentos órfãos. A API não verifica se a categoria existe. | Migrar para `categoryId` (FK). Paliativo: ao renomear, atualizar transações e orçamentos na mesma transação de banco, e bloquear exclusão de categoria em uso. |
-| P2 | **Limite de tentativas de login em memória.** | Na Vercel cada instância tem seu próprio contador, que some a cada cold start; a chave usa `x-forwarded-for`, controlável pelo cliente. Na prática não protege. | Contador em armazenamento compartilhado (Upstash/Redis ou tabela no Postgres). |
-| P3 | **Corte por `score` do reCAPTCHA desativado.** | Qualquer score passa; o reCAPTCHA v3 só bloqueia se houver limiar. | Definir limiar (0,5 é o ponto de partida usual) e monitorar. |
-| P4 | **Cadastro e "esqueci a senha" sem proteção.** | Sem reCAPTCHA nem limite: permite criação em massa de contas e disparo repetido de e-mails para terceiros. | Mesma proteção do login. |
-| P5 | **Sessão sem revogação.** | Token de 30 dias sem estado: logout só apaga o cookie local e trocar a senha não derruba sessões abertas em outros aparelhos. | Campo `sessionVersion` em `User` incluído no token e conferido em `getAuthenticatedUser`. |
+| P1 🗂️ | **Categoria referenciada por nome** em transações e orçamentos. | Renomear zera as métricas da categoria e o gasto do orçamento; excluir deixa lançamentos órfãos. A API não verifica se a categoria existe. | Migrar para `categoryId` (FK). Paliativo: ao renomear, atualizar transações e orçamentos na mesma transação de banco, e bloquear exclusão de categoria em uso. |
+| P2 🗂️ | **Limite de tentativas de login em memória.** | Na Vercel cada instância tem seu próprio contador, que some a cada cold start; a chave usa `x-forwarded-for`, controlável pelo cliente. Na prática não protege. | Contador em armazenamento compartilhado (Upstash/Redis ou tabela no Postgres). |
+| P3 🗂️ | **Corte por `score` do reCAPTCHA desativado.** | Qualquer score passa; o reCAPTCHA v3 só bloqueia se houver limiar. | Definir limiar (0,5 é o ponto de partida usual) e monitorar. |
+| P4 🗂️ | **Cadastro e "esqueci a senha" sem proteção.** | Sem reCAPTCHA nem limite: permite criação em massa de contas e disparo repetido de e-mails para terceiros. | Mesma proteção do login. |
+| P5 🗂️ | **Sessão sem revogação.** | Token de 30 dias sem estado: logout só apaga o cookie local e trocar a senha não derruba sessões abertas em outros aparelhos. | Campo `sessionVersion` em `User` incluído no token e conferido em `getAuthenticatedUser`. |
 
 ### Média
 
 | # | Item | Sugestão |
 |---|---|---|
-| P6 | Valores monetários em `Float`. Somas acumulam erro de ponto flutuante. | `Decimal(12,2)` no Prisma ou inteiros em centavos. |
+| P6 🗂️ | Valores monetários em `Float`. Somas acumulam erro de ponto flutuante. | `Decimal(12,2)` no Prisma ou inteiros em centavos. |
 | P7 | Regra do saldo: investimento é subtraído do saldo e da taxa de economia, mas os textos dizem "receitas e despesas". | Decidir a regra e alinhar cálculo e textos. |
-| P8 | Receita/despesa separadas pelo sinal em `calculateSummary` e pelo tipo no resto do app; a API não confere sinal x tipo. | Classificar sempre pelo tipo; validar o sinal na API. |
+| P8 🗂️ | Receita/despesa separadas pelo sinal em `calculateSummary` e pelo tipo no resto do app; a API não confere sinal x tipo. | Classificar sempre pelo tipo; validar o sinal na API. |
 | P9 | Cards do topo do Dashboard são de todo o histórico, ao lado de um "Resumo do mês", sem rótulo de período. | Rotular como "acumulado" ou trocar para o mês. |
-| P10 | Sessão expirada mostra telas vazias em vez de levar ao login (um `401` vira lista vazia). | Tratar `401` nos serviços e redirecionar. |
-| P11 | Sem estado de carregamento: as telas mostram zeros e "nenhum registro" enquanto os dados chegam. | Flag `loading` no contexto e nas páginas. |
-| P12 | Tokens de redefinição gravados em texto puro; duas requisições simultâneas com o mesmo token podem passar. | Gravar hash do token; `updateMany` condicional em `usedAt: null`. |
+| P10 🗂️ | Sessão expirada mostra telas vazias em vez de levar ao login (um `401` vira lista vazia). | Tratar `401` nos serviços e redirecionar. |
+| P11 🗂️ | Sem estado de carregamento: as telas mostram zeros e "nenhum registro" enquanto os dados chegam. | Flag `loading` no contexto e nas páginas. |
+| P12 🗂️ | Tokens de redefinição gravados em texto puro; duas requisições simultâneas com o mesmo token podem passar. | Gravar hash do token; `updateMany` condicional em `usedAt: null`. |
 | P13 | `GET /api/transactions` devolve tudo, sem paginação nem filtro de período. | Paginação ou filtro por intervalo. |
 | P14 | Proxy protege só caminhos exatos; uma futura `/transactions/123` ficaria aberta. | Casar por prefixo. |
 | P15 | "Evolução do saldo" e "Linha do saldo" mostram o resultado de cada mês, não o saldo acumulado. | Renomear para "Resultado mensal" ou acumular. |
-| P16 | Foco não fica preso no modal nem volta ao botão de origem ao fechar; o drawer mobile continua alcançável por teclado quando fechado e não fecha com `Esc`. | Focus trap e `inert`. |
-| P17 | Falha ao **carregar** dados é indistinguível de "sem dados": transações, categorias, orçamentos e metas só registram o erro no console. As funções `fetch*` chamam `response.json()` antes de checar o status. | Estado de erro nas páginas e checagem de `response.ok` antes do `json()`. |
+| P16 🗂️ | Foco não fica preso no modal nem volta ao botão de origem ao fechar; o drawer mobile continua alcançável por teclado quando fechado e não fecha com `Esc`. | Focus trap e `inert`. |
+| P17 🗂️ | Falha ao **carregar** dados é indistinguível de "sem dados": transações, categorias, orçamentos e metas só registram o erro no console. As funções `fetch*` chamam `response.json()` antes de checar o status. | Estado de erro nas páginas e checagem de `response.ok` antes do `json()`. |
 | P18 | Metas: percentual passa de 100% no card ("125%") enquanto a barra para em 100%; não existe estado "concluída"; o contador "meta(s) em andamento" inclui as concluídas. | Estado de meta concluída e contador separado. |
-| P19 | Busca de transações só considera a descrição e diferencia acentos ("salario" não encontra "Salário"). | Normalizar acentos; buscar também em categoria e observação. |
+| P19 🗂️ | Busca de transações só considera a descrição e diferencia acentos ("salario" não encontra "Salário"). | Normalizar acentos; buscar também em categoria e observação. |
 
 ### Baixa
 
@@ -137,8 +139,8 @@ Aplicado: nova interface (ver `docs/design/` e a seção 0 de `docs/FUNCIONALIDA
 
 Pendentes:
 
-- **Média:** `fetchImportBatches` (`src/services/imports.ts`) devolve `[]` quando a API responde com erro; o estado de erro do histórico em Importar só aparece em falha de rede, e o lembrete de fatura do Mês pode aparecer indevidamente. Fazer o serviço lançar `ApiError`.
-- **Baixa:** Relatórios e Planejar usam `<input type="month">` invisível sob o rótulo do mês; no Safari de desktop e Firefox antigo ele vira texto. As setas funcionam; um seletor próprio resolveria.
+- **Média** 🗂️ (spec [001](specs/001-carga-erros-sessao/spec.md)): `fetchImportBatches` (`src/services/imports.ts`) devolve `[]` quando a API responde com erro; o estado de erro do histórico em Importar só aparece em falha de rede, e o lembrete de fatura do Mês pode aparecer indevidamente. Fazer o serviço lançar `ApiError`.
+- **Baixa** 🗂️ (spec [010](specs/010-acessibilidade-folhas-mes/spec.md)): Relatórios e Planejar usam `<input type="month">` invisível sob o rótulo do mês; no Safari de desktop e Firefox antigo ele vira texto. As setas funcionam; um seletor próprio resolveria.
 - **Baixa:** ícones próprios por categoria (hoje só o ponto de cor).
 
 ## 5. Banco de produção sincronizado (17/10/2026)
